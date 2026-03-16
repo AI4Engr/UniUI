@@ -33,7 +33,7 @@ Same code. Four backends. Zero changes.
 
 1. **Qt → Jupyter**: Your Qt app works, but colleagues want to test it in Jupyter notebooks
 2. **Jupyter → Standalone**: Your Jupyter app needs to run on machines without Python — package it as a Qt .exe with PyInstaller
-3. **Desktop → Web**: Port your Qt app to web with minimal changes
+3. **Desktop → Web**: Run your desktop UI in the browser via Jupyter/ipywidgets with minimal changes
 
 **The problem:** Python has Qt, Jupyter, wxPython and Tkinter — each with different APIs. Switching means rewriting everything.
 
@@ -77,7 +77,7 @@ pip install ipywidgets # Jupyter
 - **GroupBox** with titled borders on all platforms
 - **HBox/VBox** flex layouts that work everywhere
 - **Event system** - `button.connect(callback)` across all backends
-- **Value parsing** - `input.getValue()` with automatic type conversion
+- **Value parsing** - `input.get_value()` with automatic type conversion
 
 ## Example: Hello World
 

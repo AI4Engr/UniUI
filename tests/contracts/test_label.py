@@ -18,7 +18,7 @@ class TestLabelContract(VisibilityContractTest):
 
     def create_widget(self, factory):
         """Create label widget"""
-        return factory.createLabel()
+        return factory.create_label()
 
     @pytest.mark.contract
     def test_set_get_text(self, factory):

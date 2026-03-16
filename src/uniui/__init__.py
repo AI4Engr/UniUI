@@ -165,7 +165,7 @@ def parse_args_ui() -> str:
 
 def Label(text: str = "") -> ILabel:
     """Create a label widget"""
-    label = _get_factory().createLabel()
+    label = _get_factory().create_label()
     if text:
         label.set_text(text)
     return label
@@ -173,7 +173,7 @@ def Label(text: str = "") -> ILabel:
 
 def Button(text: str = "", on_click=None) -> IButton:
     """Create a button widget"""
-    button = _get_factory().createButton()
+    button = _get_factory().create_button()
     if text:
         button.set_text(text)
     if on_click:
@@ -183,7 +183,7 @@ def Button(text: str = "", on_click=None) -> IButton:
 
 def LineEdit(text: str = "", on_change=None) -> ILineEdit:
     """Create a line edit widget"""
-    line_edit = _get_factory().createLineEdit()
+    line_edit = _get_factory().create_line_edit()
     if text:
         line_edit.set_text(text)
     if on_change:
@@ -193,7 +193,7 @@ def LineEdit(text: str = "", on_change=None) -> ILineEdit:
 
 def TextArea(text: str = "", on_change=None) -> ITextArea:
     """Create a text area widget"""
-    text_area = _get_factory().createTextArea()
+    text_area = _get_factory().create_text_area()
     if text:
         text_area.set_text(text)
     if on_change:
@@ -203,7 +203,7 @@ def TextArea(text: str = "", on_change=None) -> ITextArea:
 
 def ComboBox(items=None, on_change=None) -> IComboBox:
     """Create a combo box widget"""
-    combo = _get_factory().createComboBox()
+    combo = _get_factory().create_combo_box()
     if items:
         for item in items:
             combo.add_item(item)
@@ -214,7 +214,7 @@ def ComboBox(items=None, on_change=None) -> IComboBox:
 
 def Dropdown(items=None, on_change=None) -> IDropdown:
     """Create a dropdown widget"""
-    dropdown = _get_factory().createDropdown()
+    dropdown = _get_factory().create_dropdown()
     if items:
         for item in items:
             dropdown.add_item(item)
@@ -225,7 +225,7 @@ def Dropdown(items=None, on_change=None) -> IDropdown:
 
 def VBox(*children) -> IVBoxLayout:
     """Create a vertical box layout"""
-    vbox = _get_factory().createVBox()
+    vbox = _get_factory().create_vbox()
     for child in children:
         if child is not None:
             vbox.add_item(child)
@@ -234,7 +234,7 @@ def VBox(*children) -> IVBoxLayout:
 
 def HBox(*children) -> IHBoxLayout:
     """Create a horizontal box layout"""
-    hbox = _get_factory().createHBox()
+    hbox = _get_factory().create_hbox()
     for child in children:
         if child is not None:
             hbox.add_item(child)
@@ -243,12 +243,12 @@ def HBox(*children) -> IHBoxLayout:
 
 def TabWidget() -> ITabWidget:
     """Create a tab widget"""
-    return _get_factory().createTabWidget()
+    return _get_factory().create_tab_widget()
 
 
 def GroupBox(title: str = "", layout=None) -> IGroupBox:
     """Create a group box widget"""
-    group = _get_factory().createGroupBox()
+    group = _get_factory().create_group_box()
     if title:
         group.set_title(title)
     if layout:
@@ -258,7 +258,7 @@ def GroupBox(title: str = "", layout=None) -> IGroupBox:
 
 def Image(path: str = "") -> IImage:
     """Create an image widget"""
-    image = _get_factory().createImage()
+    image = _get_factory().create_image()
     if path:
         image.set_image(path)
     return image
@@ -283,27 +283,27 @@ class UniUI:
         """Create a widget by kind string"""
         factory = _get_factory()
         if kind == LABEL:
-            return factory.createLabel()
+            return factory.create_label()
         elif kind == BUTTON:
-            return factory.createButton()
+            return factory.create_button()
         elif kind == LINE_EDIT:
-            return factory.createLineEdit()
+            return factory.create_line_edit()
         elif kind == TEXT_AREA:
-            return factory.createTextArea()
+            return factory.create_text_area()
         elif kind == COMBO_BOX:
-            return factory.createComboBox()
+            return factory.create_combo_box()
         elif kind == DROPDOWN:
-            return factory.createDropdown()
+            return factory.create_dropdown()
         elif kind == VBOX:
-            return factory.createVBox()
+            return factory.create_vbox()
         elif kind == HBOX:
-            return factory.createHBox()
+            return factory.create_hbox()
         elif kind == TAB_WIDGET:
-            return factory.createTabWidget()
+            return factory.create_tab_widget()
         elif kind == GROUP_BOX:
-            return factory.createGroupBox()
+            return factory.create_group_box()
         elif kind == IMAGE:
-            return factory.createImage()
+            return factory.create_image()
         else:
             raise ValueError(f"Unknown widget kind: {kind}")
 

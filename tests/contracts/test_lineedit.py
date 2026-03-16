@@ -23,7 +23,7 @@ class TestLineEditContract(
 
     def create_widget(self, factory):
         """Create line edit widget"""
-        return factory.createLineEdit()
+        return factory.create_line_edit()
 
     # Text capability tests
     @pytest.mark.contract

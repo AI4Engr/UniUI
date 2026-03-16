@@ -700,11 +700,11 @@ if __name__ == "__main__":
 
     # 创建 UI
     factory = create_factory()
-    vbox = factory.createVBox()
+    vbox = factory.create_vbox()
 
-    label = factory.createLabel()
+    label = factory.create_label()
     label.set_text("Hello!")
-    vbox.addItem(label)
+    vbox.add_item(label)
 
     # 显示（自动检测框架）
     show_ui(vbox, "我的应用")

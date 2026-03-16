@@ -16,19 +16,19 @@ def demo_all_widgets():
 
     # 1. Label
     print("  - Label (标签)")
-    label = factory.createLabel()
+    label = factory.create_label()
     label.set_text("这是标签")
     label.set_fixed_width(200)
 
     # 2. Button
     print("  - Button (按钮)")
-    button = factory.createButton()
+    button = factory.create_button()
     button.set_text("点击按钮")
     button.connect(lambda: print("     按钮被点击"))
 
     # 3. LineEdit
     print("  - LineEdit (输入框)")
-    line_edit = factory.createLineEdit()
+    line_edit = factory.create_line_edit()
     line_edit.set_text("输入文本")
     line_edit.set_value(123.45)  # 也可以设置数字
     print(f"     get_text(): {line_edit.get_text()}")
@@ -36,14 +36,14 @@ def demo_all_widgets():
 
     # 4. TextArea
     print("  - TextArea (文本区域)")
-    text_area = factory.createTextArea()
+    text_area = factory.create_text_area()
     text_area.set_text("第一行")
     text_area.append("第二行")
     text_area.set_maximum_height(100)
 
     # 5. ComboBox
     print("  - ComboBox (可编辑下拉框)")
-    combo = factory.createComboBox()
+    combo = factory.create_combo_box()
     combo.add_item("选项A")
     combo.add_item("选项B")
     combo.set_selection("选项A")
@@ -51,26 +51,26 @@ def demo_all_widgets():
 
     # 6. Dropdown
     print("  - Dropdown (下拉列表)")
-    dropdown = factory.createDropdown()
+    dropdown = factory.create_dropdown()
     dropdown.set_value(["选项1", "选项2", "选项3"])
     print(f"     get_text(): {dropdown.get_text()}")
 
     # 7. VBox
     print("  - VBox (垂直布局)")
-    vbox = factory.createVBox()
+    vbox = factory.create_vbox()
     vbox.add_item(label)
     vbox.add_item(button)
     vbox.add_stretch()
 
     # 8. HBox
     print("  - HBox (水平布局)")
-    hbox = factory.createHBox()
+    hbox = factory.create_hbox()
     hbox.add_item(combo)
     hbox.add_item(dropdown)
 
     # 9. TabWidget
     print("  - TabWidget (选项卡)")
-    tab = factory.createTabWidget()
+    tab = factory.create_tab_widget()
     tab.add_tab(vbox, "选项卡1")
     tab.add_tab(hbox, "选项卡2")
     print(f"     get_current_index(): {tab.get_current_index()}")
@@ -78,13 +78,13 @@ def demo_all_widgets():
     print("\n 所有组件创建成功")
 
     # 构建完整 UI
-    main = factory.createVBox()
+    main = factory.create_vbox()
     main.add_item(label)
     main.add_item(line_edit)
     main.add_item(button)
     main.add_item(text_area)
 
-    button_row = factory.createHBox()
+    button_row = factory.create_hbox()
     button_row.add_item(combo)
     button_row.add_item(dropdown)
     main.add_item(button_row)

@@ -350,3 +350,37 @@ class IWidgetFactory(ABC):
         """Create group box widget (optional, not all platforms support this)"""
         raise NotSupportedError("GroupBox not supported on this platform")
 
+    # snake_case aliases
+    def create_label(self) -> ILabel:
+        return self.createLabel()
+
+    def create_button(self) -> IButton:
+        return self.createButton()
+
+    def create_line_edit(self) -> ILineEdit:
+        return self.createLineEdit()
+
+    def create_text_area(self) -> ITextArea:
+        return self.createTextArea()
+
+    def create_combo_box(self) -> IComboBox:
+        return self.createComboBox()
+
+    def create_dropdown(self) -> IDropdown:
+        return self.createDropdown()
+
+    def create_vbox(self) -> IVBoxLayout:
+        return self.createVBox()
+
+    def create_hbox(self) -> IHBoxLayout:
+        return self.createHBox()
+
+    def create_tab_widget(self) -> ITabWidget:
+        return self.createTabWidget()
+
+    def create_image(self) -> IImage:
+        return self.createImage()
+
+    def create_group_box(self) -> IGroupBox:
+        return self.createGroupBox()
+

@@ -794,18 +794,18 @@ class QtGroupBoxAdapter(IGroupBox):
 
 class QtWidgetFactory(IWidgetFactory):
     """
-    Qt Widget 工厂
+    Qt Widget Factory
 
-    职责：创建 Qt 适配器实例
-    设计模式：抽象工厂模式
+    Responsibility: create Qt adapter instances
+    Design pattern: Abstract Factory
     """
 
     def __init__(self):
-        """初始化工厂，确保 QApplication 存在"""
+        """Initialize factory, ensuring QApplication exists"""
         from PySide2.QtWidgets import QApplication
         import sys
 
-        # 确保 QApplication 已创建
+        # Ensure QApplication has been created
         app = QApplication.instance()
         if app is None:
             self.app = QApplication(sys.argv)

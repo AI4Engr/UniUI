@@ -336,22 +336,22 @@ def refresh_theme_wx(panel):
 
 class UniversalDisplay:
     """
-    通用 UI 显示器
+    Universal UI display.
 
-    职责：根据容器类型自动选择正确的显示方式
-    使用策略模式
+    Responsibility: automatically select the correct display method based on container type.
+    Uses the strategy pattern.
     """
 
     @staticmethod
-    def show(container, title="应用", width=500, height=400):
+    def show(container, title="App", width=500, height=400):
         """
-        显示 UI 容器（自动检测框架）
+        Display a UI container (auto-detects framework).
 
         Args:
-            container: UI 容器（VBox/HBox 等）
-            title: 窗口标题
-            width: 窗口宽度
-            height: 窗口高度
+            container: UI container (VBox/HBox etc.)
+            title: window title
+            width: window width
+            height: window height
         """
         native = container.get_native()
 
@@ -360,8 +360,8 @@ class UniversalDisplay:
             global _root_widget
             _root_widget = root_widget
 
-        # 尝试各种显示方式（顺序很重要）
-        # Tkinter 检查必须在 Qt 之前，因为 Qt 可能会干扰 Tkinter
+        # Try each display method in order (order matters)
+        # Tkinter check must come before Qt, as Qt can interfere with Tkinter
         if UniversalDisplay._show_tkinter(native, title, width, height, _set_refresh_root):
             return
 
@@ -374,23 +374,23 @@ class UniversalDisplay:
         if UniversalDisplay._show_wx(native, title, width, height, _set_refresh_root):
             return
 
-        raise RuntimeError("无法识别的 UI 框架！")
+        raise RuntimeError("Unrecognized UI framework!")
 
     # ========================================================================
-    # Qt/PySide2 显示
+    # Qt/PySide2 display
     # ========================================================================
 
     @staticmethod
     def _show_qt(native, title, width, height, _set_refresh_root=None):
-        """Qt 显示方式"""
+        """Qt display method"""
         try:
             from PySide2.QtWidgets import QWidget, QApplication, QLayout
             from PySide2.QtGui import QFont
             from PySide2.QtCore import Qt
 
-            # 检查是否是 Qt 布局
+            # Check if it's a Qt layout
             if isinstance(native, QLayout):
-                # 先创建 QApplication（如果还没有）
+                # Create QApplication if not already running
                 app = QApplication.instance()
                 if app is None:
                     app = QApplication(sys.argv)
@@ -399,7 +399,7 @@ class UniversalDisplay:
                 font = QFont(T["font_family"], T["font_size"])
                 app.setFont(font)
 
-                # 创建窗口
+                # Create the window
                 widget = QWidget()
                 widget.setLayout(native)
                 widget.setWindowTitle(title)
@@ -436,7 +436,7 @@ class UniversalDisplay:
 
                 widget.show()
 
-                # 运行事件循环
+                # Run the event loop
                 sys.exit(app.exec_())
                 return True
 
@@ -446,17 +446,17 @@ class UniversalDisplay:
         return False
 
     # ========================================================================
-    # Jupyter 显示
+    # Jupyter display
     # ========================================================================
 
     @staticmethod
     def _show_jupyter(native, _set_refresh_root=None):
-        """Jupyter 显示方式"""
+        """Jupyter display method"""
         try:
             from IPython.display import display
             import ipywidgets
 
-            # 检查是否是 ipywidgets
+            # Check if it's an ipywidgets widget
             if isinstance(native, (ipywidgets.Widget, ipywidgets.Box)):
                 # Store root widget reference for theme refresh
                 if _set_refresh_root:
@@ -475,12 +475,12 @@ class UniversalDisplay:
         return False
 
     # ========================================================================
-    # Tkinter 显示
+    # Tkinter display
     # ========================================================================
 
     @staticmethod
     def _show_tkinter(native, title, width=420, height=700, _set_refresh_root=None):
-        """Tkinter 显示方式"""
+        """Tkinter display method"""
         try:
             import tkinter as tk
 
@@ -531,18 +531,18 @@ class UniversalDisplay:
         return False
 
     # ========================================================================
-    # wxPython 显示
+    # wxPython display
     # ========================================================================
 
     @staticmethod
     def _show_wx(native, title, width, height, _set_refresh_root=None):
-        """wxPython 显示方式"""
+        """wxPython display method"""
         try:
             import wx
 
-            # 检查是否是 wx.Sizer
+            # Check if it's a wx.Sizer
             if isinstance(native, wx.Sizer):
-                # 创建应用和窗口
+                # Create app and window
                 app = wx.App.Get()
                 if not app:
                     app = wx.App()
@@ -556,7 +556,7 @@ class UniversalDisplay:
 
                 # Reparent all widgets in the sizer to the panel
                 def reparent_sizer_items(sizer, parent):
-                    """递归地重新设置 Sizer 中所有组件的父窗口"""
+                    """Recursively reparent all widgets in a sizer to the given parent window"""
                     # Handle StaticBoxSizer: reparent the StaticBox itself
                     if isinstance(sizer, wx.StaticBoxSizer):
                         static_box = sizer.GetStaticBox()
@@ -606,60 +606,60 @@ class UniversalDisplay:
 
 
 # ============================================================================
-# 便捷函数
+# Convenience functions
 # ============================================================================
 
-def show_ui(container, title="应用", width=500, height=400):
+def show_ui(container, title="App", width=500, height=400):
     """
-    显示 UI 的便捷函数
+    Convenience function to display a UI.
 
     Args:
-        container: UI 容器
-        title: 窗口标题
-        width: 窗口宽度
-        height: 窗口高度
+        container: UI container
+        title: window title
+        width: window width
+        height: window height
 
     Example:
         vbox = factory.createVBox()
         vbox.addItem(label)
-        show_ui(vbox, "我的应用")
+        show_ui(vbox, "My App")
     """
     UniversalDisplay.show(container, title, width, height)
 
 
 # ============================================================================
-# 框架特定的便捷函数
+# Framework-specific convenience functions
 # ============================================================================
 
-def show_qt(container, title="Qt 应用", width=500, height=400):
-    """强制使用 Qt 显示"""
+def show_qt(container, title="Qt App", width=500, height=400):
+    """Force display using Qt"""
     from PySide2.QtWidgets import QWidget, QApplication
     import sys
 
-    # 先创建 QApplication
+    # Create QApplication first
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
 
-    # 创建窗口
+    # Create the window
     widget = QWidget()
     widget.setLayout(container.get_native())
     widget.setWindowTitle(title)
     widget.setMinimumSize(width, height)
     widget.show()
 
-    # 运行事件循环
+    # Run the event loop
     sys.exit(app.exec_())
 
 
 def show_jupyter(container):
-    """强制使用 Jupyter 显示"""
+    """Force display using Jupyter"""
     from IPython.display import display
     display(container.get_native())
 
 
-def show_tkinter(container, title="Tkinter 应用"):
-    """强制使用 Tkinter 显示"""
+def show_tkinter(container, title="Tkinter App"):
+    """Force display using Tkinter"""
     import tkinter as tk
 
     native = container.get_native()
@@ -669,8 +669,8 @@ def show_tkinter(container, title="Tkinter 应用"):
         root.mainloop()
 
 
-def show_wx(container, title="wxPython 应用", width=500, height=400):
-    """强制使用 wxPython 显示"""
+def show_wx(container, title="wxPython App", width=500, height=400):
+    """Force display using wxPython"""
     import wx
 
     app = wx.App.Get()
@@ -688,17 +688,17 @@ def show_wx(container, title="wxPython 应用", width=500, height=400):
 
 
 # ============================================================================
-# 使用示例
+# Usage example
 # ============================================================================
 
 if __name__ == "__main__":
     """
-    使用示例：
+    Usage example:
 
     from uniui import create_factory
     from uniui.display import show_ui
 
-    # 创建 UI
+    # Create UI
     factory = create_factory()
     vbox = factory.create_vbox()
 
@@ -706,13 +706,13 @@ if __name__ == "__main__":
     label.set_text("Hello!")
     vbox.add_item(label)
 
-    # 显示（自动检测框架）
-    show_ui(vbox, "我的应用")
+    # Display (auto-detect framework)
+    show_ui(vbox, "My App")
 
-    # 或强制指定框架
-    show_qt(vbox, "Qt 应用")
+    # Or force a specific framework
+    show_qt(vbox, "Qt App")
     show_jupyter(vbox)
-    show_tkinter(vbox, "Tk 应用")
-    show_wx(vbox, "wx 应用")
+    show_tkinter(vbox, "Tk App")
+    show_wx(vbox, "wx App")
     """
     print(__doc__)

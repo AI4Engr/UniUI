@@ -1,17 +1,17 @@
 """
-统一测试文件 - 展示重构后的 widgets 系统
-支持多种运行模式
+Unified test file - demonstrates the refactored widgets system.
+Supports multiple run modes.
 
-运行方式
-    python tests/test_ui.py                    # 自动检测框架
-    python tests/test_ui.py --ui qt            # 使用 Qt
-    python tests/test_ui.py --mode simple      # 简单模式
-    python tests/test_ui.py --mode advanced    # 高级模式
+Usage:
+    python tests/test_ui.py                    # auto-detect framework
+    python tests/test_ui.py --ui qt            # use Qt
+    python tests/test_ui.py --mode simple      # simple mode
+    python tests/test_ui.py --mode advanced    # advanced mode
 
 Jupyter:
     from tests.test_ui import create_test_ui
     from uniui.display import show_ui
-    show_ui(create_test_ui("jupyter", "simple"), "简单测试", 600, 450)
+    show_ui(create_test_ui("jupyter", "simple"), "Simple Test", 600, 450)
 """
 from uniui import use, VBox, HBox, Label, Button, LineEdit, TextArea, GroupBox, Dropdown, ComboBox
 from uniui.display import show_ui, toggle_theme_and_refresh
@@ -34,33 +34,33 @@ def _set_btn_type(btn, btntype):
 
 
 # ============================================================================
-# 模式 1: 简单测试
+# Mode 1: Simple test
 # ============================================================================
 
 def _build_simple_ui():
-    """构建简单测试 UI，返回根布局。"""
+    """Build simple test UI, returns root layout."""
     count = [0]
 
-    title = Label(" 简单测试 - VBox & HBox")
+    title = Label(" Simple Test - VBox & HBox")
     input_field = LineEdit()
-    btn_click = Button("点击我")
+    btn_click = Button("Click Me")
     _set_btn_type(btn_click, "action")
-    btn_clear = Button("清空")
+    btn_clear = Button("Clear")
     _set_btn_type(btn_clear, "neutral")
     output = TextArea()
     output.set_maximum_height(150)
-    status = Label("状态: 就绪")
+    status = Label("Status: Ready")
 
     def on_click():
         count[0] += 1
-        name = input_field.get_text() or "匿名"
-        msg = f"[{count[0]}] {name} 点击了按钮"
+        name = input_field.get_text() or "Anonymous"
+        msg = f"[{count[0]}] {name} clicked the button"
         output.append(msg)
-        status.set_text(f"状态: 点击 {count[0]} 次")
+        status.set_text(f"Status: {count[0]} click(s)")
 
     def on_clear():
         output.clear()
-        status.set_text("状态: 已清空")
+        status.set_text("Status: Cleared")
         count[0] = 0
 
     btn_click.connect(on_click)
@@ -71,21 +71,21 @@ def _build_simple_ui():
 
 
 # ============================================================================
-# 模式 2: 高级测试
+# Mode 2: Advanced test
 # ============================================================================
 
 def _build_advanced_ui():
-    """构建高级测试 UI，返回根布局。"""
-    title = Label(" 高级测试 - 多种组件")
+    """Build advanced test UI, returns root layout."""
+    title = Label(" Advanced Test - Multiple Widgets")
 
     name_input = LineEdit()
     email_input = LineEdit()
-    type_dropdown = Dropdown(["选项 1", "选项 2", "选项 3"])
-    combo = ComboBox(["苹果", "香蕉", "橙子"])
+    type_dropdown = Dropdown(["Option 1", "Option 2", "Option 3"])
+    combo = ComboBox(["Apple", "Banana", "Orange"])
 
-    btn_submit = Button("提交")
+    btn_submit = Button("Submit")
     _set_btn_type(btn_submit, "action")
-    btn_clear = Button("清空")
+    btn_clear = Button("Clear")
     _set_btn_type(btn_clear, "neutral")
 
     output = TextArea()
@@ -96,7 +96,7 @@ def _build_advanced_ui():
         email = email_input.get_text()
         type_val = type_dropdown.get_text()
         fruit = combo.get_text()
-        info = f"表单提交:\n  姓名: {name}\n  邮箱: {email}\n  类型: {type_val}\n  水果: {fruit}"
+        info = f"Form submitted:\n  Name: {name}\n  Email: {email}\n  Type: {type_val}\n  Fruit: {fruit}"
         output.append(info)
         output.append("---")
 
@@ -115,10 +115,10 @@ def _build_advanced_ui():
 
     return VBox(
         title,
-        _form_row("姓名:", name_input),
-        _form_row("邮箱:", email_input),
-        _form_row("类型:", type_dropdown),
-        _form_row("水果:", combo),
+        _form_row("Name:", name_input),
+        _form_row("Email:", email_input),
+        _form_row("Type:", type_dropdown),
+        _form_row("Fruit:", combo),
         HBox(btn_submit, btn_clear),
         output,
     )
@@ -162,18 +162,18 @@ def create_test_ui(framework="auto", mode="simple"):
 
 
 # ============================================================================
-# 主程序
+# Main entry point
 # ============================================================================
 
 if __name__ == "__main__":
     import argparse
     from uniui import parse_args_ui
 
-    parser = argparse.ArgumentParser(description='统一测试程序')
+    parser = argparse.ArgumentParser(description='UniUI test runner')
     parser.add_argument('--ui', choices=['auto', 'qt', 'jupyter', 'wx', 'tk'], default='auto')
     parser.add_argument('--mode', choices=['simple', 'advanced'], default='simple')
     args = parser.parse_args()
 
     layout = create_test_ui(args.ui, args.mode)
-    title = "简单测试" if args.mode == "simple" else "高级测试"
+    title = "Simple Test" if args.mode == "simple" else "Advanced Test"
     show_ui(layout, title, 600, 450)

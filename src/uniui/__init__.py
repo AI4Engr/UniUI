@@ -70,10 +70,12 @@ IMAGE = 'image'
 
 def _detect_framework() -> str:
     """Auto-detect available framework (priority order)"""
-    # 1. Detect Jupyter
+    # 1. Detect Jupyter notebook/lab (must have an active kernel with a comm_info
+    #    method — plain IPython console and IDE kernels lack this).
     try:
-        get_ipython()
-        return 'jupyter'
+        ip = get_ipython()
+        if ip is not None and hasattr(ip, 'kernel'):
+            return 'jupyter'
     except NameError:
         pass
 
@@ -273,7 +275,7 @@ class UniUI:
 
     def __init__(self, framework: str = 'auto'):
         self._framework = framework
-        use(framework)
+        self._factory = _create_factory(framework)
 
     @property
     def framework(self) -> str:
@@ -281,7 +283,7 @@ class UniUI:
 
     def create(self, kind: str) -> IWidget:
         """Create a widget by kind string"""
-        factory = _get_factory()
+        factory = self._factory
         if kind == LABEL:
             return factory.create_label()
         elif kind == BUTTON:
@@ -333,6 +335,9 @@ class UniUI:
 
     def tab_widget(self) -> ITabWidget:
         return self.create(TAB_WIDGET)
+
+    def group_box(self) -> IGroupBox:
+        return self.create(GROUP_BOX)
 
     def image(self) -> IImage:
         return self.create(IMAGE)

@@ -194,6 +194,10 @@ class IComboBox(IWidget):
         pass
 
     @abstractmethod
+    def set_selection(self, item: str) -> None:
+        pass
+
+    @abstractmethod
     def get_text(self) -> str:
         pass
 
@@ -235,6 +239,10 @@ class IDropdown(IWidget):
 
     @abstractmethod
     def set_enabled(self, enabled: bool) -> None:
+        pass
+
+    @abstractmethod
+    def is_enabled(self) -> bool:
         pass
 
     @abstractmethod
@@ -287,6 +295,14 @@ class ITabWidget(IWidget):
 
     @abstractmethod
     def show(self) -> None:
+        pass
+
+    @abstractmethod
+    def hide(self) -> None:
+        pass
+
+    @abstractmethod
+    def is_visible(self) -> bool:
         pass
 
 

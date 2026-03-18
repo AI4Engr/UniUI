@@ -909,6 +909,7 @@ class TkComboBoxAdapter(IComboBox):
 
     def __init__(self, native_widget: TkComboBox):
         self._native = native_widget
+        self._enabled = True
 
     def get_native(self):
         return self._native
@@ -933,10 +934,10 @@ class TkComboBoxAdapter(IComboBox):
     # IEnableCapable
     def set_enabled(self, enabled: bool):
         self._native.setEnabled(enabled)
+        self._enabled = bool(enabled)
 
     def is_enabled(self) -> bool:
-        state = self._native.cget('state')
-        return state in ['normal', 'readonly']
+        return self._enabled
 
     # ISizeCapable
     def set_fixed_width(self, width: int):

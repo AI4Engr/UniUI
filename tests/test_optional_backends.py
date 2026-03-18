@@ -89,6 +89,14 @@ def test_optional_backend_widget_smoke(optional_framework):
     image = factory.create_image()
     image.set_fixed_width(120)
 
+    button_called = []
+    button.connect(lambda: button_called.append(1))
+    assert button_called == []
+
+    combo_called = []
+    combo_box.on_change(lambda: combo_called.append(1))
+    assert combo_called == []
+
 
 @pytest.mark.parametrize(
     "python_executable",

@@ -64,10 +64,16 @@ class TestComboBoxContract(WidgetContractTest):
         assert combo_box.is_enabled() is False
 
     @pytest.mark.contract
-    @pytest.mark.skip("Event testing requires platform-specific triggers")
     def test_on_change_callback(self, factory):
         """Test change callback registration."""
         combo_box = self.create_widget(factory)
         called = []
 
+        combo_box.add_item("Alpha")
+        combo_box.add_item("Beta")
         combo_box.on_change(lambda: called.append(1))
+        native = combo_box.get_native()
+        combo_box.set_selection("Beta")
+        native.event_generate("<<ComboboxSelected>>")
+
+        assert called == [1]

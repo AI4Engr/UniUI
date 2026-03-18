@@ -113,6 +113,28 @@ src/uniui/
     # Platform auto-detection lives in __init__.py
 ```
 
+## Testing
+
+Run the full default test suite with:
+
+```bash
+pytest
+```
+
+The suite includes:
+
+- Contract tests for the public widget API on the default backend
+- Display/theme dispatch tests
+- Optional backend smoke tests for wxPython and Jupyter when installed
+- External Qt smoke tests through a separate Python interpreter when a PySide2 environment is available
+
+Notes:
+
+- Tkinter is exercised by the main `pytest` run in the current environment
+- Optional backend checks skip automatically when that backend dependency is unavailable
+- In this repository, Qt smoke coverage can be delegated to a Python 3.11 interpreter that has `PySide2` installed, even if the main test runner uses Python 3.12
+- If you want Qt to run in the main process too, install `PySide2` into the same interpreter that runs `pytest`
+
 ## License
 
 MIT

@@ -64,10 +64,16 @@ class TestDropdownContract(VisibilityContractTest):
         assert dropdown.is_enabled() is False
 
     @pytest.mark.contract
-    @pytest.mark.skip("Event testing requires platform-specific triggers")
     def test_on_change_callback(self, factory):
         """Test change callback registration."""
         dropdown = self.create_widget(factory)
         called = []
 
+        dropdown.add_item("Alpha")
+        dropdown.add_item("Beta")
         dropdown.on_change(lambda: called.append(1))
+        native = dropdown.get_native()
+        dropdown.set_selection("Beta")
+        native.event_generate("<<ComboboxSelected>>")
+
+        assert called == [1]

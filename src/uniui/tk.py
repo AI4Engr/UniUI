@@ -891,8 +891,13 @@ class TkTextAreaAdapter(ITextArea):
 
     # IChangeEventCapable
     def on_change(self, callback):
-        # Text widget doesn't have easy change tracking
-        pass
+        def _handle_modified(_event=None):
+            if self._native.edit_modified():
+                self._native.edit_modified(False)
+                callback()
+
+        self._native.bind("<<Modified>>", _handle_modified, add="+")
+        self._native.edit_modified(False)
 
     # ISizeCapable
     def set_fixed_width(self, width: int):

@@ -128,7 +128,6 @@ class TestLineEditContract(
 
     # Change event tests
     @pytest.mark.contract
-    @pytest.mark.skip("Event testing requires platform-specific triggers")
     def test_on_change_callback(self, factory):
         """Test on_change event"""
         line_edit = self.create_widget(factory)
@@ -138,6 +137,4 @@ class TestLineEditContract(
 
         # Change text programmatically
         line_edit.set_text("Hello")
-
-        # Note: Programmatic changes may not trigger events on all platforms
-        # This test may need platform-specific implementation
+        assert called, "expected on_change callback to fire"

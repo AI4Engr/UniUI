@@ -65,10 +65,14 @@ class TestButtonContract(WidgetContractTest):
         assert button.is_enabled() is False
 
     @pytest.mark.contract
-    @pytest.mark.skip("Event testing requires platform-specific triggers")
     def test_connect_callback(self, factory):
         """Test click callback registration."""
         button = self.create_widget(factory)
         called = []
 
         button.connect(lambda: called.append(1))
+        native = button.get_native()
+
+        native._callback()
+
+        assert called == [1]

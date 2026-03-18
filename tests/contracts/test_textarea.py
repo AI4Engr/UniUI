@@ -71,10 +71,14 @@ class TestTextAreaContract(WidgetContractTest):
         text_area.set_maximum_height(100)
 
     @pytest.mark.contract
-    @pytest.mark.skip("Event testing requires platform-specific triggers")
     def test_on_change_callback(self, factory):
         """Test change callback registration."""
         text_area = self.create_widget(factory)
         called = []
 
         text_area.on_change(lambda: called.append(1))
+        native = text_area.get_native()
+        native.edit_modified(True)
+        native.event_generate("<<Modified>>")
+
+        assert called, "expected on_change callback to fire"

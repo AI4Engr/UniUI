@@ -5,6 +5,10 @@ These tests exercise the core widget surface on Qt, wx, and Jupyter when the
 dependencies are available in the current environment.
 """
 import importlib
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -84,3 +88,60 @@ def test_optional_backend_widget_smoke(optional_framework):
 
     image = factory.create_image()
     image.set_fixed_width(120)
+
+
+@pytest.mark.parametrize(
+    "python_executable",
+    [
+        Path(r"C:\apps\miniforge3\envs\py311a\python.exe"),
+        Path(r"C:\apps\miniforge3\envs\py31\python.exe"),
+    ],
+)
+def test_external_qt_backend_smoke(python_executable):
+    """Run a Qt smoke test in an external interpreter that has PySide2 installed."""
+    if not python_executable.exists():
+        pytest.skip(f"{python_executable} does not exist")
+
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root / "src")
+    env["QT_QPA_PLATFORM"] = "offscreen"
+
+    script = """
+from uniui import create_factory
+factory = create_factory("qt")
+label = factory.create_label()
+label.set_text("Label")
+assert label.get_text() == "Label"
+button = factory.create_button()
+button.set_text("Press")
+button.set_enabled(False)
+assert button.is_enabled() is False
+line_edit = factory.create_line_edit()
+line_edit.set_text("12.5")
+assert abs(line_edit.get_value() - 12.5) < 0.001
+combo = factory.create_combo_box()
+combo.add_item("A")
+combo.add_item("B")
+combo.set_selection("B")
+assert combo.get_text() == "B"
+dropdown = factory.create_dropdown()
+dropdown.add_item("One")
+dropdown.add_item("Two")
+dropdown.set_selection("Two")
+assert dropdown.get_text() == "Two"
+tab = factory.create_tab_widget()
+tab.add_tab(factory.create_label(), "General")
+assert tab.get_current_index() == 0
+"""
+
+    result = subprocess.run(
+        [str(python_executable), "-c", script],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, (
+        f"{python_executable} failed\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )

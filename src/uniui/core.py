@@ -137,6 +137,10 @@ class ILineEdit(IWidget):
         pass
 
     @abstractmethod
+    def is_enabled(self) -> bool:
+        pass
+
+    @abstractmethod
     def set_fixed_width(self, width: int) -> None:
         pass
 

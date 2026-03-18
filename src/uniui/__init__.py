@@ -74,7 +74,8 @@ def _detect_framework() -> str:
     #    method — plain IPython console and IDE kernels lack this).
     try:
         ip = get_ipython()
-        if ip is not None and hasattr(ip, 'kernel'):
+        kernel = getattr(ip, "kernel", None)
+        if ip is not None and callable(getattr(kernel, "comm_info", None)):
             return 'jupyter'
     except NameError:
         pass

@@ -141,6 +141,10 @@ class ILineEdit(IWidget):
         pass
 
     @abstractmethod
+    def is_enabled(self) -> bool:
+        pass
+
+    @abstractmethod
     def set_fixed_width(self, width: int) -> None:
         pass
 
@@ -231,6 +235,10 @@ class IDropdown(IWidget):
 
     @abstractmethod
     def set_enabled(self, enabled: bool) -> None:
+        pass
+
+    @abstractmethod
+    def is_enabled(self) -> bool:
         pass
 
 

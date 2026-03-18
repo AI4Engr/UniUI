@@ -755,10 +755,12 @@ class TkButtonAdapter(IButton):
 
     # ITextCapable
     def set_text(self, text: str):
-        self._native.setText(text)
+        value = "" if text is None else str(text).strip()
+        self._native.setText(value)
 
     def get_text(self) -> str:
-        return self._native.cget('text')
+        value = self._native.cget('text')
+        return "" if value is None else str(value).strip()
 
     # IEventCapable
     def connect(self, callback):
@@ -957,6 +959,7 @@ class TkDropdownAdapter(IDropdown):
 
     def __init__(self, native_widget: TkDropdown):
         self._native = native_widget
+        self._enabled = True
 
     def get_native(self):
         return self._native
@@ -996,10 +999,10 @@ class TkDropdownAdapter(IDropdown):
     # IEnableCapable
     def set_enabled(self, enabled: bool):
         self._native.setEnabled(enabled)
+        self._enabled = bool(enabled)
 
     def is_enabled(self) -> bool:
-        state = self._native.cget('state')
-        return state == 'readonly'
+        return self._enabled
 
     # ISizeCapable
     def set_fixed_width(self, width: int):

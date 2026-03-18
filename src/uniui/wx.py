@@ -500,12 +500,11 @@ class WxVBoxLayout(wx.BoxSizer):
 
     def addItem(self, item):
         if isinstance(item, wx.Sizer):
-            # Use 2px gap for tighter button rows
-            self.Add(item, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, 2)
+            self.Add(item, 0, wx.EXPAND | wx.ALL, 2)
         elif isinstance(item, wx.TextCtrl) and item.IsMultiLine():
-            self.Add(item, 0, wx.EXPAND | wx.ALL, T["padding_inner"])
+            self.Add(item, 1, wx.EXPAND | wx.ALL, T["padding_inner"])
         else:
-            self.Add(item, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.TOP, T["padding_inner"])
+            self.Add(item, 0, wx.EXPAND | wx.ALL, T["padding_inner"])
 
     def addStretch(self):
         self.AddStretchSpacer()
@@ -588,23 +587,105 @@ class WxImage(wx.StaticBitmap):
         )
 
 
-class WxGroupBox(wx.StaticBoxSizer):
-    """wxPython Group Box - native implementation"""
+class WxGroupBox(wx.BoxSizer):
+    """wxPython Group Box - custom panel-based implementation (no StaticBox white border).
+
+    Uses a wx.Panel with a themed border drawn via wx.BoxSizer nesting,
+    avoiding the native wx.StaticBox which renders an unthemeable white border
+    on Windows.
+    """
     def __init__(self, parent=None):
-        box = wx.StaticBox(parent or wx.GetApp().GetTopWindow())
-        # Apply theme foreground so title is visible in dark mode from the start
-        h = T["fg_muted"].lstrip('#')
-        box.SetForegroundColour(wx.Colour(int(h[0:2],16), int(h[2:4],16), int(h[4:6],16)))
-        box.SetBackgroundColour(_hex_to_wx(T["bg"]))
-        super().__init__(box, wx.VERTICAL)
+        super().__init__(wx.VERTICAL)
+        self._parent = parent or wx.GetApp().GetTopWindow()
+        self._title = ""
+        self._panel = None   # created lazily in setLayout / setTitle
+        self._inner_sizer = None
+
+    def _ensure_panel(self):
+        if self._panel is not None:
+            return
+        self._panel = _WxGroupPanel(self._parent, self._title)
+        # Add panel to self (the outer BoxSizer) so callers can add self to a parent sizer
+        self.Add(self._panel, 0, wx.EXPAND | wx.ALL, 2)
 
     def setTitle(self, title):
-        self.GetStaticBox().SetLabel(title)
+        self._title = title
+        if self._panel is not None:
+            self._panel.set_title(title)
 
     def setLayout(self, layout):
-        """Add all items from the given layout (sizer) into this group box sizer"""
+        """Embed the inner sizer into the group panel."""
+        self._ensure_panel()
         if isinstance(layout, wx.Sizer):
-            self.Add(layout, 0, wx.EXPAND | wx.ALL, T["padding_inner"])
+            self._panel.set_inner_sizer(layout)
+
+
+class _WxGroupPanel(wx.Panel):
+    """A themed panel that mimics a GroupBox with a colored border and title label."""
+
+    def __init__(self, parent, title=""):
+        super().__init__(parent, style=wx.BORDER_NONE)
+        self.SetBackgroundColour(_hex_to_wx(T["bg"]))
+
+        self._title_label = wx.StaticText(self, label=title)
+        font = self._title_label.GetFont()
+        font.SetPointSize(T["font_size"] - 1)
+        font.SetFaceName(T["font_family"])
+        self._title_label.SetFont(font)
+        self._title_label.SetForegroundColour(_hex_to_wx(T["fg_muted"]))
+        self._title_label.SetBackgroundColour(_hex_to_wx(T["bg"]))
+
+        self._border_panel = wx.Panel(self, style=wx.BORDER_NONE)
+        self._border_panel.SetBackgroundColour(_hex_to_wx(T["bg"]))
+        self._border_panel.SetBackgroundStyle(wx.BG_STYLE_PAINT)
+        self._border_panel.Bind(wx.EVT_PAINT, self._on_border_paint)
+        self._border_panel.Bind(wx.EVT_ERASE_BACKGROUND, lambda e: None)
+
+        self._content_sizer = wx.BoxSizer(wx.VERTICAL)
+        self._border_panel.SetSizer(self._content_sizer)
+
+        outer = wx.BoxSizer(wx.VERTICAL)
+        outer.Add(self._title_label, 0, wx.LEFT | wx.TOP, 4)
+        outer.Add(self._border_panel, 0, wx.EXPAND | wx.ALL, 0)
+        self.SetSizer(outer)
+
+    def _on_border_paint(self, event):
+        dc = wx.BufferedPaintDC(self._border_panel)
+        w, h = self._border_panel.GetClientSize()
+        bg = _hex_to_wx(T["bg"])
+        dc.SetBackground(wx.Brush(bg))
+        dc.Clear()
+        col = _hex_to_wx(T["border"])
+        dc.SetPen(wx.Pen(col, 1))
+        dc.SetBrush(wx.TRANSPARENT_BRUSH)
+        dc.DrawRectangle(0, 0, w, h)
+
+    def set_title(self, title):
+        self._title_label.SetLabel(title)
+        self.Layout()
+
+    def set_inner_sizer(self, sizer):
+        # Reparent all widgets in the sizer to _border_panel before adding,
+        # because wx requires sizer-managed windows to be children of the
+        # window owning the sizer.
+        def _reparent(s, parent):
+            for item in s.GetChildren():
+                if item.IsWindow():
+                    item.GetWindow().Reparent(parent)
+                elif item.IsSizer():
+                    _reparent(item.GetSizer(), parent)
+        _reparent(sizer, self._border_panel)
+        self._content_sizer.Add(sizer, 0, wx.EXPAND | wx.ALL, T["padding_inner"])
+        self._border_panel.Layout()
+        self.Layout()
+
+    def apply_theme(self):
+        self.SetBackgroundColour(_hex_to_wx(T["bg"]))
+        self._title_label.SetForegroundColour(_hex_to_wx(T["fg_muted"]))
+        self._title_label.SetBackgroundColour(_hex_to_wx(T["bg"]))
+        self._border_panel.SetBackgroundColour(_hex_to_wx(T["bg"]))
+        self._border_panel.Refresh()
+        self.Refresh()
 
 
 # ============================================================================

@@ -305,6 +305,9 @@ def refresh_theme_wx(panel):
         if hasattr(window, '_btntype'):
             # Owner-draw button: paint handler reads THEME directly on next Refresh()
             pass
+        elif hasattr(window, 'apply_theme') and callable(window.apply_theme):
+            # _WxGroupPanel or any themed panel
+            window.apply_theme()
         elif isinstance(window, wx.Button):
             # Fallback for any legacy native wx.Button
             window.SetBackgroundColour(_hex_to_wx(T["accent"]))
@@ -312,11 +315,8 @@ def refresh_theme_wx(panel):
         elif isinstance(window, (wx.TextCtrl, wx.Choice, wx.ComboBox)):
             window.SetBackgroundColour(_hex_to_wx(T["bg_input"]))
             window.SetForegroundColour(_hex_to_wx(T["fg"]))
-        elif isinstance(window, wx.StaticBox):
-            window.SetForegroundColour(_hex_to_wx(T["fg_muted"]))
-            window.SetBackgroundColour(_hex_to_wx(T["bg"]))
         elif isinstance(window, wx.StaticText):
-            window.SetForegroundColour(_hex_to_wx(T["fg"]))
+            window.SetForegroundColour(_hex_to_wx(T["fg_muted"]))
             window.SetBackgroundColour(_hex_to_wx(T["bg"]))
         elif isinstance(window, wx.Panel):
             window.SetBackgroundColour(_hex_to_wx(T["bg"]))
@@ -548,25 +548,23 @@ class UniversalDisplay:
                     app = wx.App()
 
                 frame = wx.Frame(None, title=title, size=(width, height))
+                bg_col = wx.Colour(
+                    int(T["bg"][1:3], 16),
+                    int(T["bg"][3:5], 16),
+                    int(T["bg"][5:7], 16),
+                )
+                frame.SetBackgroundColour(bg_col)
                 panel = wx.Panel(frame)
-
-                # Set panel background color
-                h = T["bg"].lstrip('#')
-                panel.SetBackgroundColour(wx.Colour(int(h[0:2],16), int(h[2:4],16), int(h[4:6],16)))
+                panel.SetBackgroundColour(bg_col)
 
                 # Reparent all widgets in the sizer to the panel
                 def reparent_sizer_items(sizer, parent):
                     """Recursively reparent all widgets in a sizer to the given parent window"""
-                    # Handle StaticBoxSizer: reparent the StaticBox itself
-                    if isinstance(sizer, wx.StaticBoxSizer):
-                        static_box = sizer.GetStaticBox()
-                        if static_box:
-                            static_box.Reparent(parent)
                     for item in sizer.GetChildren():
                         if item.IsWindow():
                             window = item.GetWindow()
                             window.Reparent(parent)
-                            # Set better font for widgets
+                            # Set font for standard input widgets
                             if isinstance(window, (wx.StaticText, wx.TextCtrl, wx.Button, wx.ComboBox, wx.Choice)):
                                 font = window.GetFont()
                                 font.SetPointSize(T["font_size"])

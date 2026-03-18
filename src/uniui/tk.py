@@ -638,9 +638,13 @@ class TkImage(tk.Label):
 
     def setImage(self, image_path):
         self._image_path = image_path
-        from PIL import Image, ImageTk
-        img = Image.open(image_path)
-        self._photo = ImageTk.PhotoImage(img)
+        try:
+            from PIL import Image, ImageTk
+        except ImportError:
+            self._photo = tk.PhotoImage(file=image_path)
+        else:
+            img = Image.open(image_path)
+            self._photo = ImageTk.PhotoImage(img)
         self.config(image=self._photo)
 
     def setImageFromUrl(self, url):

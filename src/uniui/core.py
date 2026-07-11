@@ -164,6 +164,15 @@ class ITextArea(IWidget):
     def set_maximum_height(self, height: int) -> None:
         pass
 
+    def set_html(self, html: str) -> None:
+        """Render HTML content. Backends that support HTML override this.
+        Default: strip tags and fall back to plain text."""
+        import re
+        plain = re.sub(r'<[^>]+>', '', html)
+        plain = (plain.replace('&nbsp;', ' ').replace('&amp;', '&')
+                      .replace('&lt;', '<').replace('&gt;', '>'))
+        self.set_text(plain)
+
 
 class IComboBox(IWidget):
     """Combo box widget interface"""

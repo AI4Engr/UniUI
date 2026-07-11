@@ -306,29 +306,39 @@ class JupyterLineEdit(widgets.Text):
         self.style.background = background
 
 
-class JupyterTextarea(widgets.Textarea):
-    """Jupyter Text Area Widget - native implementation"""
+class JupyterTextarea(widgets.HTML):
+    """Jupyter Text Area Widget — uses HTML for rich text support."""
     def __init__(self):
         super().__init__()
-        self.disabled = True
-        self.style.description_width = '0px'
         self.layout.width = 'auto'
+        self.layout.overflow_y = 'auto'
 
     def setText(self, text):
-        self.value = text
+        import html as _html
+        escaped = _html.escape(text)
+        self.value = (
+            f'<pre style="margin:0;font-family:Consolas,\'Courier New\',monospace;'
+            f'font-size:9pt;white-space:pre-wrap">{escaped}</pre>'
+        )
+
+    def setHtml(self, html):
+        self.value = html
 
     def getText(self):
-        return self.value
+        import re
+        return re.sub(r'<[^>]+>', '', self.value)
 
     def append(self, text):
-        current = self.value
-        self.value = f"{current}\n{text}" if current else text
+        import html as _html
+        current = self.getText()
+        self.setText(f"{current}\n{text}" if current else text)
 
     def clear(self):
         self.value = ""
 
     def setMaximumHeight(self, height):
         self.layout.max_height = str(height) + 'px'
+        self.layout.overflow_y = 'auto'
 
     def setFixedWidth(self, width):
         self.layout.width = str(width) + 'px'
@@ -779,6 +789,15 @@ class JupyterTextAreaAdapter(ITextArea):
     # ITextCapable
     def set_text(self, text: str):
         self._native.setText(text)
+
+    def set_html(self, html: str):
+        from .theme import THEME as T
+        full = (
+            f'<div style="font-family:Cascadia Code,Consolas,\'Courier New\',monospace;'
+            f'font-size:9pt;color:{T["fg"]};background:{T["bg_input"]};'
+            f'padding:6px;white-space:pre">{html}</div>'
+        )
+        self._native.setHtml(full)
 
     def get_text(self) -> str:
         return self._native.getText()

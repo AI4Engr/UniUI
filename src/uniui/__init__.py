@@ -42,7 +42,7 @@ from .strategies import parse_float, parse_int, parse_flexible, normalize_text
 from .theme import THEME, THEME_LIGHT, THEME_DARK, toggle_theme, is_dark
 
 # Display
-from .display import show_ui, refresh_theme
+from .display import show_ui, refresh_theme, schedule_after
 
 from typing import Optional
 
@@ -405,6 +405,7 @@ __all__ = [
     # Display
     'show_ui',
     'refresh_theme',
+    'schedule_after',
 ]
 
 __version__ = '0.6.0'

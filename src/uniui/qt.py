@@ -522,6 +522,15 @@ class QtTextAreaAdapter(ITextArea):
     def set_text(self, text: str):
         self._native.setText(text)
 
+    def set_html(self, html: str):
+        from .theme import THEME as T
+        full = (
+            f'<div style="font-family:Cascadia Code,Consolas,\'Courier New\',monospace;'
+            f'font-size:9pt;color:{T["fg"]};background:{T["bg_input"]};white-space:pre">'
+            f'{html}</div>'
+        )
+        self._native.setHtml(full)
+
     def get_text(self) -> str:
         return self._native.getText()
 

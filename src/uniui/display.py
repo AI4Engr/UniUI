@@ -609,6 +609,48 @@ class UniversalDisplay:
 # Convenience functions
 # ============================================================================
 
+def schedule_after(ms: int, callback) -> None:
+    """Schedule callback after `ms` milliseconds using the correct mechanism for the active framework.
+
+    Works with Qt (QTimer), Tkinter (.after()), Jupyter (asyncio), and falls back to threading.Timer.
+    """
+    # Qt
+    try:
+        from PySide2.QtCore import QTimer
+        from PySide2.QtWidgets import QApplication
+        if QApplication.instance() is not None:
+            QTimer.singleShot(ms, callback)
+            return
+    except Exception:
+        pass
+
+    # Tkinter
+    try:
+        import tkinter as tk
+        root = tk._default_root
+        if root is not None:
+            root.after(ms, callback)
+            return
+    except Exception:
+        pass
+
+    # Jupyter / asyncio
+    try:
+        import asyncio
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.call_later(ms / 1000, callback)
+            return
+    except Exception:
+        pass
+
+    # Fallback
+    import threading
+    t = threading.Timer(ms / 1000, callback)
+    t.daemon = True
+    t.start()
+
+
 def show_ui(container, title="App", width=500, height=400):
     """
     Convenience function to display a UI.

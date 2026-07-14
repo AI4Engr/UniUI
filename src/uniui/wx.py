@@ -1,9 +1,10 @@
 """
-wxPython backend.
+wxPython backend (LEGACY - UNSUPPORTED).
 
 Native widgets, adapters, and factory for the wxPython platform.
-Each widget class wraps a wx widget and exposes the IWidget interface.
+This backend is deprecated and no longer supported. No new features should be developed.
 """
+
 from __future__ import annotations
 from typing import List, Optional, Callable
 

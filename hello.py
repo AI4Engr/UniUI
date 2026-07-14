@@ -2,10 +2,8 @@
 UniUI Hello World (Declarative API)
 
 Desktop:
-    python hello.py              # auto-detect (Qt > wx > Tk)
+    python hello.py              # auto-detect
     python hello.py --ui qt      # Qt
-    python hello.py --ui wx      # wxPython
-    python hello.py --ui tk      # Tkinter
 
 Jupyter Notebook:
     from hello import create_hello

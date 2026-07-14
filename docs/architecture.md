@@ -3,18 +3,18 @@
 ## How a widget gets created
 
 ```
-create_factory("tk")          # selector.py  - picks TkWidgetFactory
-  -> factory.createLabel()    # tk.py        - creates TkLabel + TkLabelAdapter
-     -> TkLabelAdapter        # implements ILabel interface from core.py
+create_factory("qt")          # selector.py  - picks QtWidgetFactory
+  -> factory.createLabel()    # qt.py        - creates QtLabel + QtLabelAdapter
+     -> QtLabelAdapter        # implements ILabel interface from core.py
 ```
 
 Or via the UniUI facade:
 
 ```
-ui = UniUI("tk")              # __init__.py  - wraps create_factory
+ui = UniUI("qt")              # __init__.py  - wraps create_factory
   -> ui.label()               #              - calls create_widget(LABEL, factory)
      -> registry lookup       # registry.py  - maps LABEL -> factory.createLabel
-        -> TkLabelAdapter
+        -> QtLabelAdapter
 ```
 
 ## Module dependency graph
@@ -32,7 +32,7 @@ ui = UniUI("tk")              # __init__.py  - wraps create_factory
                 |
     +-----------+-----------+-----------+
     |           |           |           |
-  qt.py      wx.py       tk.py    jupyter.py
+  qt.py                 jupyter.py
 ```
 
 Each platform module only depends on `core.py` (for interfaces) and `theme.py` (for colors).
@@ -40,14 +40,12 @@ Each platform module only depends on `core.py` (for interfaces) and `theme.py` (
 ## Key design decisions
 
 **Adapter pattern**: Each platform has two layers:
-- Native widget (`TkLabel`, `QtLabel`, ...) - platform-specific API
-- Adapter (`TkLabelAdapter`, `QtLabelAdapter`, ...) - unified ILabel interface
+- Native widget (`QtLabel`, ...) - platform-specific API
+- Adapter (`QtLabelAdapter`, ...) - unified ILabel interface
 
 App code only sees adapters. This allows camelCase backward compatibility aliases on adapters without polluting the interface.
 
 **Theme as mutable dict**: `THEME` is a single dict object. `toggle_theme()` calls `THEME.update(THEME_DARK)` in place. All modules hold a reference to the same dict (`T = THEME`), so changes propagate instantly without re-import.
-
-**Virtual containers (Tk only)**: Tkinter requires a parent widget at creation time, but UniUI creates layouts before display. So `TkVBoxLayout`/`TkHBoxLayout` are plain Python objects that defer real widget creation to `build(parent)` at show-time.
 
 **Jupyter theming**: ipywidgets has limited inline style support. Dark mode uses a hybrid approach:
 - CSS injection (`<style>` via `widgets.HTML`) for backgrounds, dropdown arrows
@@ -100,8 +98,6 @@ App code:  button.connect(my_callback)
               |
            Native widget (platform-specific):
               Qt:      clicked.connect(my_callback)
-              Tk:      command=my_callback
-              wx:      Bind(wx.EVT_BUTTON, lambda e: my_callback())
               Jupyter: on_click(lambda btn: my_callback())
 ```
 

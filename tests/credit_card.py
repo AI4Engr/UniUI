@@ -5,8 +5,6 @@ Demonstrates how to create a form with input fields and display results
 Usage:
     python tests/credit_card.py           # Auto-detect UI
     python tests/credit_card.py --ui qt   # Qt
-    python tests/credit_card.py --ui wx   # wxPython
-    python tests/credit_card.py --ui tk   # Tkinter
 
 Jupyter:
     from tests.credit_card import create_credit_card_ui
@@ -51,7 +49,7 @@ def create_credit_card_ui(framework="auto"):
     """Create credit card information form UI.
 
     Args:
-        framework: 'auto', 'qt', 'jupyter', 'wx', or 'tk'
+        framework: 'auto', 'qt', or 'jupyter'
 
     Returns:
         The root layout container

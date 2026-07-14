@@ -3,10 +3,8 @@ BMI Calculator - Quick Start Example
 Simple BMI calculator demonstrating UniUI declarative API
 
 Usage:
-    python quick_start.py           # Auto-detect (Qt > wx > Tk)
+    python quick_start.py           # Auto-detect
     python quick_start.py --ui qt   # Force Qt
-    python quick_start.py --ui wx   # Force wxPython
-    python quick_start.py --ui tk   # Force Tkinter
 
 Jupyter Notebook:
     from quick_start import create_bmi_ui
@@ -21,7 +19,7 @@ def create_bmi_ui(framework="auto"):
     """Create BMI Calculator UI.
 
     Args:
-        framework: 'auto', 'qt', 'jupyter', 'wx', or 'tk'
+        framework: 'auto', 'qt', or 'jupyter'
 
     Returns:
         The root layout container, ready for show_ui()

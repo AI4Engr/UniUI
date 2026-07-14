@@ -1,10 +1,10 @@
 """
-Tkinter backend.
+Tkinter backend (LEGACY - UNSUPPORTED).
 
 Native widgets, adapters, and factory for the Tkinter platform.
-Uses virtual layout containers (TkVBoxLayout/TkHBoxLayout) that build
-real tk widgets when build(parent) is called.
+This backend is deprecated and no longer supported. No new features should be developed.
 """
+
 from __future__ import annotations
 
 # Import capability interfaces from core

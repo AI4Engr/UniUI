@@ -1,5 +1,5 @@
 # UniUI
-**Write once, run anywhere.** A unified Python GUI API across Qt, Jupyter, wxPython and Tkinter.
+**Write once, run anywhere.** A unified Python GUI API across Qt and Jupyter.
 
 ```python
 from uniui import use, VBox, Label, Button
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     show_ui(layout, "Hello UniUI")
 ```
 
-Same code. Four backends. Zero changes.
+Same code. Two backends. Zero changes.
 
 ---
 
@@ -35,9 +35,10 @@ Same code. Four backends. Zero changes.
 2. **Jupyter → Standalone**: Your Jupyter app needs to run on machines without Python — package it as a Qt .exe with PyInstaller
 3. **Desktop → Web**: Run your desktop UI in the browser via Jupyter/ipywidgets with minimal changes
 
-**The problem:** Python has Qt, Jupyter, wxPython and Tkinter — each with different APIs. Switching means rewriting everything.
+**The problem:** Python has Qt and Jupyter — each with different APIs. Switching means rewriting everything.
 
-**The solution:** UniUI gives you one API for all four backends. Change frameworks with a single line.
+**The solution:** UniUI gives you one API for both backends. Change frameworks with a single line.
+
 
 ---
 
@@ -51,25 +52,23 @@ Then install any backend you want:
 
 ```bash
 pip install PySide2    # Qt
-pip install wxPython   # wx
 pip install ipywidgets # Jupyter
-# Tkinter is built-in
 ```
 
 ## Widgets
 
-| Widget | Qt | wx | Tk | Jupyter |
-|--------|:--:|:--:|:--:|:-------:|
-| Label | + | + | + | + |
-| Button | + | + | + | + |
-| LineEdit | + | + | + | + |
-| TextArea | + | + | + | + |
-| ComboBox | + | + | + | + |
-| Dropdown | + | + | + | + |
-| GroupBox | + | + | + | + |
-| TabWidget | + | + | + | + |
-| HBox / VBox | + | + | + | + |
-| Image | + | + | + | + |
+| Widget | Qt | Jupyter |
+|--------|:--:|:-------:|
+| Label | + | + |
+| Button | + | + |
+| LineEdit | + | + |
+| TextArea | + | + |
+| ComboBox | + | + |
+| Dropdown | + | + |
+| GroupBox | + | + |
+| TabWidget | + | + |
+| HBox / VBox | + | + |
+| Image | + | + |
 
 ## Features
 
@@ -82,10 +81,8 @@ pip install ipywidgets # Jupyter
 ## Example: Hello World
 
 ```bash
-python hello.py              # auto-detect (Qt > wx > Tk)
+python hello.py              # auto-detect
 python hello.py --ui qt      # Qt
-python hello.py --ui wx      # wxPython
-python hello.py --ui tk      # Tkinter
 ```
 
 In Jupyter notebook:
@@ -106,8 +103,6 @@ src/uniui/
     display.py      # show_ui(), refresh_theme()
     theme.py        # Dark/light theme system
     qt.py           # Qt/PySide2 backend
-    wx.py           # wxPython backend
-    tk.py           # Tkinter backend
     jupyter.py      # Jupyter/ipywidgets backend
     strategies.py   # Value parsing strategies
     # Platform auto-detection lives in __init__.py
@@ -125,12 +120,11 @@ The suite includes:
 
 - Contract tests for the public widget API on the default backend
 - Display/theme dispatch tests
-- Optional backend smoke tests for wxPython and Jupyter when installed
+- Optional Jupyter backend smoke tests when installed
 - External Qt smoke tests through a separate Python interpreter when a PySide2 environment is available
 
 Notes:
 
-- Tkinter is exercised by the main `pytest` run in the current environment
 - Optional backend checks skip automatically when that backend dependency is unavailable
 - In this repository, Qt smoke coverage can be delegated to a Python 3.11 interpreter that has `PySide2` installed, even if the main test runner uses Python 3.12
 - If you want Qt to run in the main process too, install `PySide2` into the same interpreter that runs `pytest`

@@ -2,12 +2,11 @@
 System Monitor - UniUI Demo  (btop-style)
 
 Shows per-core CPU bars, memory bar, and top processes.
-Same code runs on Qt, Tkinter, wxPython, and Jupyter — no platform checks.
+Same code runs on Qt and Jupyter — no platform checks.
 
 Desktop:
     python sysmon.py              # auto-detect
     python sysmon.py --ui qt
-    python sysmon.py --ui tk
 
 Jupyter:
     from sysmon import create_sysmon_ui

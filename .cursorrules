@@ -1,0 +1,10 @@
+# Cursor Rules for UniUI
+
+## Legacy Backends Notice
+
+The `wxPython` (wx) and `Tkinter` (tk) backends are marked as **legacy** and **unsupported**.
+
+### Rules for Cursor:
+- **Do not** add new widgets, features, or design improvements to `src/uniui/wx.py` or `src/uniui/tk.py`.
+- Focus all coding, enhancements, and features on **Qt** (`src/uniui/qt.py`) and **Jupyter** (`src/uniui/jupyter.py`).
+- Avoid recommending code extensions or modifications to the legacy backends.

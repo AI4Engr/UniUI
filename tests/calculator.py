@@ -13,8 +13,6 @@ Features:
 Usage:
     python tests/calculator.py           # Auto-detect UI
     python tests/calculator.py --ui qt   # Qt
-    python tests/calculator.py --ui wx   # wxPython
-    python tests/calculator.py --ui tk   # Tkinter
 
 Jupyter:
     from tests.calculator import create_calculator_ui
@@ -48,7 +46,7 @@ def create_calculator_ui(framework="auto"):
     """Create scientific calculator UI.
 
     Args:
-        framework: 'auto', 'qt', 'jupyter', 'wx', or 'tk'
+        framework: 'auto', 'qt', or 'jupyter'
 
     Returns:
         The root layout container

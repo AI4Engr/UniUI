@@ -1,6 +1,6 @@
 """
 UniUI - Universal UI Framework
-Write once, run anywhere (Qt, Jupyter, wxPython, Tkinter)
+Write once, run anywhere (Qt, Jupyter; Legacy: wxPython, Tkinter)
 
 Example:
     >>> from uniui import Label, Button, VBox
@@ -119,9 +119,23 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
         from .jupyter import JupyterWidgetFactory
         return JupyterWidgetFactory()
     elif framework == 'wx':
+        import warnings
+        warnings.warn(
+            "The wxPython backend ('wx') is legacy and no longer supported. "
+            "No new features will be developed. Please migrate to 'qt' or 'jupyter'.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         from .wx import WxWidgetFactory
         return WxWidgetFactory()
     elif framework == 'tk':
+        import warnings
+        warnings.warn(
+            "The Tkinter backend ('tk') is legacy and no longer supported. "
+            "No new features will be developed. Please migrate to 'qt' or 'jupyter'.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         from .tk import TkWidgetFactory
         return TkWidgetFactory()
     else:

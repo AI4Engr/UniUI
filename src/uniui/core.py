@@ -3,7 +3,7 @@ Core types and interfaces - Simplified.
 
 Defines:
 - Widget interfaces: ILabel, IButton, ILineEdit, etc.
-- IWidgetFactory: abstract factory that each platform (Qt/wx/Tk/Jupyter) implements
+- IWidgetFactory: abstract factory that each supported platform implements
 - Exception classes: NotSupportedError, WidgetCreationError, etc.
 
 This is the only module that platform implementations depend on.

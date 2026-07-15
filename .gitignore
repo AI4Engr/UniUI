@@ -148,6 +148,7 @@ smoke_test_output.txt
 
 # pytest
 .pytest_cache/
+.test-tmp-web/
 
 # Coverage
 .coverage

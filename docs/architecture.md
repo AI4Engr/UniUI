@@ -32,7 +32,7 @@ ui = UniUI("qt")              # __init__.py  - wraps create_factory
                 |
     +-----------+-----------+-----------+
     |           |           |           |
-  qt.py                 jupyter.py
+  qt.py        web.py   jupyter.py
 ```
 
 Each platform module only depends on `core.py` (for interfaces) and `theme.py` (for colors).
@@ -51,6 +51,8 @@ App code only sees adapters. This allows camelCase backward compatibility aliase
 - CSS injection (`<style>` via `widgets.HTML`) for backgrounds, dropdown arrows
 - Inline `widget.style.*` for text colors, button colors
 - Recursive tree walk (`_refresh_widget_tree`) to update all widgets
+
+**Web backend**: `web.py` maps the same adapters to NiceGUI elements. The public selector is `web`, so NiceGUI remains replaceable. Children are created eagerly and moved into NiceGUI containers when HBox/VBox/GroupBox/Tab layouts are assembled.
 
 ## Two API styles
 
@@ -98,6 +100,7 @@ App code:  button.connect(my_callback)
               |
            Native widget (platform-specific):
               Qt:      clicked.connect(my_callback)
+              Web:     on("click", lambda event: my_callback())
               Jupyter: on_click(lambda btn: my_callback())
 ```
 

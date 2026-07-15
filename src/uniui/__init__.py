@@ -1,6 +1,6 @@
 """
 UniUI - Universal UI Framework
-Write once, run anywhere (Qt, Jupyter; Legacy: wxPython, Tkinter)
+Write once, run anywhere (Qt, Web, and Jupyter)
 
 Example:
     >>> from uniui import Label, Button, VBox
@@ -45,6 +45,7 @@ from .theme import THEME, THEME_LIGHT, THEME_DARK, toggle_theme, is_dark
 from .display import show_ui, refresh_theme, schedule_after
 
 from typing import Optional
+import sys
 
 
 # ============================================================================
@@ -112,12 +113,25 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
     if framework == 'auto':
         framework = _detect_framework()
 
+    web_module = sys.modules.get("uniui.web")
+    if web_module is not None:
+        web_module.set_backend_active(framework == "web")
+
     if framework == 'qt':
         from .qt import QtWidgetFactory
         return QtWidgetFactory()
     elif framework == 'jupyter':
         from .jupyter import JupyterWidgetFactory
         return JupyterWidgetFactory()
+    elif framework == 'web':
+        try:
+            from .web import NiceGUIWidgetFactory
+        except ImportError as exc:
+            raise ImportError(
+                "The Web backend requires NiceGUI. Install it with "
+                "'pip install -e .[web]'."
+            ) from exc
+        return NiceGUIWidgetFactory()
     elif framework == 'wx':
         import warnings
         warnings.warn(

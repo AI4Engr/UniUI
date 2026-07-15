@@ -18,6 +18,7 @@ BACKEND_MODULES = {
     "qt": "PySide2",
     "wx": "wx",
     "jupyter": "ipywidgets",
+    "web": "nicegui",
 }
 
 
@@ -30,7 +31,7 @@ def backend_available(framework: str) -> bool:
     return True
 
 
-@pytest.fixture(params=["qt", "wx", "jupyter"])
+@pytest.fixture(params=["qt", "wx", "jupyter", "web"])
 def optional_framework(request):
     """Yield each optional framework that is installed locally."""
     framework = request.param

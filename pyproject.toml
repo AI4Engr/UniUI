@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "uniui"
 version = "0.6.0"  # Step 3: Engineering and Extension Mechanisms
-description = "Universal UI Framework - Write once, run anywhere (Qt, Jupyter, wxPython, Tkinter)"
+description = "Universal UI Framework for Qt, Web, and Jupyter"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
     {name = "UniUI Contributors"}
 ]
-keywords = ["ui", "gui", "qt", "jupyter", "wxpython", "tkinter", "cross-platform"]
+keywords = ["ui", "gui", "qt", "web", "nicegui", "jupyter", "cross-platform"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -32,8 +32,9 @@ dependencies = []
 [project.optional-dependencies]
 qt = ["PySide2>=5.15.0"]
 jupyter = ["ipywidgets>=7.6.0"]
+web = ["nicegui>=3.14.0; python_version >= '3.10'"]
 wx = ["wxPython>=4.0.0"]
-all = ["PySide2>=5.15.0", "ipywidgets>=7.6.0", "wxPython>=4.0.0"]
+all = ["PySide2>=5.15.0", "ipywidgets>=7.6.0", "nicegui>=3.14.0; python_version >= '3.10'", "wxPython>=4.0.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=3.0.0",
@@ -127,6 +128,7 @@ markers = [
     "contract: Contract tests ensuring consistent behavior across platforms",
     "qt: Tests requiring Qt/PySide2",
     "jupyter: Tests requiring ipywidgets",
+    "web: Tests requiring NiceGUI",
     "wx: Tests requiring wxPython",
     "tk: Tests requiring Tkinter",
     "slow: Slow tests",

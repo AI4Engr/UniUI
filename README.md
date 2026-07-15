@@ -1,5 +1,5 @@
 # UniUI
-**Write once, run anywhere.** A unified Python GUI API across Qt and Jupyter.
+**Write once, run anywhere.** A unified Python UI API across Qt, Web, and Jupyter.
 
 ```python
 from uniui import use, VBox, Label, Button
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     show_ui(layout, "Hello UniUI")
 ```
 
-Same code. Two backends. Zero changes.
+Same code. Desktop, browser, or notebook. Zero UI rewrites.
 
 ---
 
@@ -32,12 +32,12 @@ Same code. Two backends. Zero changes.
 **Real-world scenarios:**
 
 1. **Qt → Jupyter**: Your Qt app works, but colleagues want to test it in Jupyter notebooks
-2. **Jupyter → Standalone**: Your Jupyter app needs to run on machines without Python — package it as a Qt .exe with PyInstaller
-3. **Desktop → Web**: Run your desktop UI in the browser via Jupyter/ipywidgets with minimal changes
+2. **Desktop → Web**: Run the same UI in a browser with the NiceGUI-powered Web backend
+3. **Web → Standalone**: Serve the application on a local network or deployment host
 
-**The problem:** Python has Qt and Jupyter — each with different APIs. Switching means rewriting everything.
+**The problem:** Desktop, browser, and notebook UI libraries have different APIs. Switching means rewriting everything.
 
-**The solution:** UniUI gives you one API for both backends. Change frameworks with a single line.
+**The solution:** UniUI gives them one API. Change frameworks with a single line.
 
 
 ---
@@ -53,22 +53,23 @@ Then install any backend you want:
 ```bash
 pip install PySide2    # Qt
 pip install ipywidgets # Jupyter
+pip install -e ".[web]" # Web (NiceGUI, Python 3.10+)
 ```
 
 ## Widgets
 
-| Widget | Qt | Jupyter |
-|--------|:--:|:-------:|
-| Label | + | + |
-| Button | + | + |
-| LineEdit | + | + |
-| TextArea | + | + |
-| ComboBox | + | + |
-| Dropdown | + | + |
-| GroupBox | + | + |
-| TabWidget | + | + |
-| HBox / VBox | + | + |
-| Image | + | + |
+| Widget | Qt | Web | Jupyter |
+|--------|:--:|:---:|:-------:|
+| Label | + | + | + |
+| Button | + | + | + |
+| LineEdit | + | + | + |
+| TextArea | + | + | + |
+| ComboBox | + | + | + |
+| Dropdown | + | + | + |
+| GroupBox | + | + | + |
+| TabWidget | + | + | + |
+| HBox / VBox | + | + | + |
+| Image | + | + | + |
 
 ## Features
 
@@ -83,6 +84,8 @@ pip install ipywidgets # Jupyter
 ```bash
 python hello.py              # auto-detect
 python hello.py --ui qt      # Qt
+python hello.py --ui web     # Web; opens http://127.0.0.1:8080
+python hello.py --ui web --host 0.0.0.0 --port 9000 --no-browser
 ```
 
 In Jupyter notebook:
@@ -94,6 +97,26 @@ from uniui.display import show_ui
 show_ui(create_hello("jupyter"), "Hello UniUI")
 ```
 
+## Web runtime
+
+The public backend name is `web`; NiceGUI is an internal implementation detail.
+
+```bash
+python hello.py --ui web
+python sysmon.py --ui web --port 9000
+python quick_start.py --ui web --host 0.0.0.0 --port 9000 --no-browser
+```
+
+Defaults can also be set with `UNIUI_WEB_HOST`, `UNIUI_WEB_PORT`, and
+`UNIUI_WEB_BROWSER`. Binding to `0.0.0.0` exposes the service to the local
+network; production deployments should place it behind an authenticated HTTPS
+reverse proxy. Multiple browser sessions currently share the same application
+state.
+
+NiceGUI supports running from Jupyter Notebooks. UniUI's existing `jupyter`
+backend remains available for ipywidgets output; validating and integrating the
+NiceGUI Notebook execution path for `--ui web` is tracked in the TODO.
+
 ## Project Structure
 
 ```
@@ -103,6 +126,7 @@ src/uniui/
     display.py      # show_ui(), refresh_theme()
     theme.py        # Dark/light theme system
     qt.py           # Qt/PySide2 backend
+    web.py          # Web backend, implemented with NiceGUI
     jupyter.py      # Jupyter/ipywidgets backend
     strategies.py   # Value parsing strategies
     # Platform auto-detection lives in __init__.py
@@ -120,12 +144,15 @@ The suite includes:
 
 - Contract tests for the public widget API on the default backend
 - Display/theme dispatch tests
-- Optional Jupyter backend smoke tests when installed
+- Optional Web and Jupyter backend smoke tests when installed
+- Web server lifecycle tests for `hello.py` and `sysmon.py`
 - External Qt smoke tests through a separate Python interpreter when a PySide2 environment is available
 
 Notes:
 
 - Optional backend checks skip automatically when that backend dependency is unavailable
+- The public backend name is `web`; application code does not depend directly on NiceGUI
+- Web application state is currently shared by simultaneous browser sessions
 - In this repository, Qt smoke coverage can be delegated to a Python 3.11 interpreter that has `PySide2` installed, even if the main test runner uses Python 3.12
 - If you want Qt to run in the main process too, install `PySide2` into the same interpreter that runs `pytest`
 

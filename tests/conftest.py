@@ -10,14 +10,14 @@ SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from uniui import create_factory
+from uniui import create_factory, use
 
 
 def pytest_addoption(parser):
     parser.addoption(
         "--ui",
         default="tk",
-        choices=["tk", "qt", "wx", "jupyter"],
+        choices=["tk", "qt", "wx", "jupyter", "web"],
         help="UI framework to use for contract tests (default: tk)",
     )
 
@@ -26,6 +26,8 @@ def pytest_addoption(parser):
 def factory(request):
     """Session-scoped widget factory for the chosen UI framework."""
     framework = request.config.getoption("--ui")
+    if framework == "web":
+        use(framework)
     return create_factory(framework)
 
 

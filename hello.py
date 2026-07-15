@@ -4,6 +4,7 @@ UniUI Hello World (Declarative API)
 Desktop:
     python hello.py              # auto-detect
     python hello.py --ui qt      # Qt
+    python hello.py --ui web     # NiceGUI Web
 
 Jupyter Notebook:
     from hello import create_hello

@@ -1,7 +1,7 @@
 """
 Display and theme refresh.
 
-Shows a UniUI layout in a window (Qt/wx/Tk) or inline (Jupyter).
+Shows a UniUI layout in a desktop window, browser, or Jupyter output.
 Also handles theme refresh: auto-detects framework and reapplies colors.
 
 Public API:
@@ -186,6 +186,12 @@ def refresh_theme(root_widget):
     if root_widget is None:
         return
 
+    # Web / NiceGUI (avoid importing the optional dependency for other backends)
+    if root_widget.__class__.__module__.startswith("nicegui."):
+        from .web import refresh_theme_web
+        refresh_theme_web(root_widget)
+        return
+
     # Qt
     try:
         from PySide2.QtWidgets import QWidget
@@ -361,6 +367,9 @@ class UniversalDisplay:
             _root_widget = root_widget
 
         # Try each display method in order (order matters)
+        if UniversalDisplay._show_web(native, title, width, height, _set_refresh_root):
+            return
+
         # Tkinter check must come before Qt, as Qt can interfere with Tkinter
         if UniversalDisplay._show_tkinter(native, title, width, height, _set_refresh_root):
             return
@@ -375,6 +384,64 @@ class UniversalDisplay:
             return
 
         raise RuntimeError("Unrecognized UI framework!")
+
+    # ========================================================================
+    # Web / NiceGUI display
+    # ========================================================================
+
+    @staticmethod
+    def _show_web(native, title, width, height, _set_refresh_root=None):
+        """Run a NiceGUI-backed layout as a standalone Web application."""
+        if not native.__class__.__module__.startswith("nicegui."):
+            return False
+        try:
+            import os
+            from nicegui import ui
+            from nicegui.element import Element
+
+            if not isinstance(native, Element):
+                return False
+
+            def option(name, default=None):
+                flag = f"--{name}"
+                if flag in sys.argv:
+                    index = sys.argv.index(flag)
+                    if index + 1 < len(sys.argv):
+                        return sys.argv[index + 1]
+                return default
+
+            host = option("host", os.environ.get("UNIUI_WEB_HOST", "127.0.0.1"))
+            port_value = option("port", os.environ.get("UNIUI_WEB_PORT", "8080"))
+            try:
+                port = int(port_value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid Web port: {port_value}") from exc
+
+            show_browser = "--no-browser" not in sys.argv
+            if os.environ.get("UNIUI_WEB_BROWSER", "").lower() in {"0", "false", "no"}:
+                show_browser = False
+
+            native.classes(add="uniui-root")
+            native.style(
+                f"width: 100%; max-width: 100%; min-height: {height}px; margin: 0 auto"
+            )
+
+            from .web import refresh_theme_web
+            refresh_theme_web(native)
+
+            if _set_refresh_root:
+                _set_refresh_root(native)
+
+            ui.run(
+                host=host,
+                port=port,
+                title=title,
+                show=show_browser,
+                reload=False,
+            )
+            return True
+        except ImportError:
+            return False
 
     # ========================================================================
     # Qt/PySide2 display
@@ -610,8 +677,13 @@ class UniversalDisplay:
 def schedule_after(ms: int, callback) -> None:
     """Schedule callback after `ms` milliseconds using the correct mechanism for the active framework.
 
-    Works with Qt (QTimer), Tkinter (.after()), Jupyter (asyncio), and falls back to threading.Timer.
+    Works with Qt, Web/NiceGUI, Tkinter, Jupyter, and falls back to threading.Timer.
     """
+    # Web / NiceGUI (only when the optional backend has already been selected)
+    web_module = sys.modules.get("uniui.web")
+    if web_module is not None and web_module.schedule_after_web(ms, callback):
+        return
+
     # Qt
     try:
         from PySide2.QtCore import QTimer

@@ -156,11 +156,8 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
         raise ValueError(f"Unsupported framework: {framework}")
 
 
-# Public alias for create_factory
-def create_factory(framework: str = 'auto') -> IWidgetFactory:
-    """Create factory for specified framework (public API)"""
-    return _create_factory(framework)
-
+# create_factory is the public name; _create_factory is the internal implementation
+create_factory = _create_factory
 
 # Global factory instance
 _factory: Optional[IWidgetFactory] = None

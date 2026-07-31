@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "uniui"
-version = "0.6.0"  # Step 3: Engineering and Extension Mechanisms
+version = "0.6.0"
 description = "Universal UI Framework for Qt, Web, and Jupyter"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -31,10 +31,10 @@ dependencies = []
 
 [project.optional-dependencies]
 qt = ["PySide2>=5.15.0"]
-jupyter = ["ipywidgets>=7.6.0"]
+jupyter = ["ipywidgets>=8.0.0"]
 web = ["nicegui>=3.14.0; python_version >= '3.10'"]
 wx = ["wxPython>=4.0.0"]
-all = ["PySide2>=5.15.0", "ipywidgets>=7.6.0", "nicegui>=3.14.0; python_version >= '3.10'", "wxPython>=4.0.0"]
+all = ["PySide2>=5.15.0", "ipywidgets>=8.0.0", "nicegui>=3.14.0; python_version >= '3.10'"]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=3.0.0",
@@ -45,15 +45,14 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/uniui"
-Documentation = "https://github.com/yourusername/uniui/docs"
-Repository = "https://github.com/yourusername/uniui.git"
-Changelog = "https://github.com/yourusername/uniui/blob/main/CHANGELOG.md"
-"Bug Tracker" = "https://github.com/yourusername/uniui/issues"
+Homepage = "https://github.com/AI4Engr/UniUI"
+Documentation = "https://github.com/AI4Engr/UniUI#readme"
+Repository = "https://github.com/AI4Engr/UniUI.git"
+Changelog = "https://github.com/AI4Engr/UniUI/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/AI4Engr/UniUI/issues"
 
-[tool.setuptools]
-packages = ["uniui"]
-package-dir = {"uniui" = "src/uniui"}
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 uniui = ["py.typed"]

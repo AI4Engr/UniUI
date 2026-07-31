@@ -16,9 +16,9 @@ from uniui import create_factory, use
 def pytest_addoption(parser):
     parser.addoption(
         "--ui",
-        default="tk",
-        choices=["tk", "qt", "wx", "jupyter", "web"],
-        help="UI framework to use for contract tests (default: tk)",
+        default="qt",
+        choices=["qt", "jupyter", "web", "tk", "wx"],
+        help="UI framework to use for contract tests (default: qt)",
     )
 
 

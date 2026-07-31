@@ -16,11 +16,6 @@ from typing import Callable, Any, Optional
 # Exception Classes
 # ============================================================================
 
-
-# ============================================================================
-# Exception Classes
-# ============================================================================
-
 class UniUIException(Exception):
     """Base exception for all UniUI errors"""
     pass
@@ -81,6 +76,10 @@ class ILabel(IWidget):
         pass
 
     @abstractmethod
+    def is_visible(self) -> bool:
+        pass
+
+    @abstractmethod
     def set_fixed_width(self, width: int) -> None:
         pass
 
@@ -102,6 +101,10 @@ class IButton(IWidget):
 
     @abstractmethod
     def set_enabled(self, enabled: bool) -> None:
+        pass
+
+    @abstractmethod
+    def is_enabled(self) -> bool:
         pass
 
 
@@ -133,11 +136,15 @@ class ILineEdit(IWidget):
         pass
 
     @abstractmethod
-    def set_enabled(self, enabled: bool) -> None:
+    def hide(self) -> None:
         pass
 
     @abstractmethod
-    def is_enabled(self) -> bool:
+    def is_visible(self) -> bool:
+        pass
+
+    @abstractmethod
+    def set_enabled(self, enabled: bool) -> None:
         pass
 
     @abstractmethod
@@ -162,6 +169,10 @@ class ITextArea(IWidget):
 
     @abstractmethod
     def append(self, text: str) -> None:
+        pass
+
+    @abstractmethod
+    def clear(self) -> None:
         pass
 
     @abstractmethod
@@ -209,6 +220,10 @@ class IComboBox(IWidget):
     def set_enabled(self, enabled: bool) -> None:
         pass
 
+    @abstractmethod
+    def is_enabled(self) -> bool:
+        pass
+
 
 class IDropdown(IWidget):
     """Dropdown widget interface"""
@@ -230,6 +245,10 @@ class IDropdown(IWidget):
         pass
 
     @abstractmethod
+    def set_value(self, value: Any) -> None:
+        pass
+
+    @abstractmethod
     def on_change(self, callback: Callable[[], None]) -> None:
         pass
 
@@ -238,11 +257,15 @@ class IDropdown(IWidget):
         pass
 
     @abstractmethod
-    def set_enabled(self, enabled: bool) -> None:
+    def hide(self) -> None:
         pass
 
     @abstractmethod
-    def is_enabled(self) -> bool:
+    def is_visible(self) -> bool:
+        pass
+
+    @abstractmethod
+    def set_enabled(self, enabled: bool) -> None:
         pass
 
     @abstractmethod
@@ -275,6 +298,10 @@ class IHBoxLayout(IWidget):
 
     @abstractmethod
     def add_stretch(self) -> None:
+        pass
+
+    @abstractmethod
+    def set_alignment_top(self) -> None:
         pass
 
 

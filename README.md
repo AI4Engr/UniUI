@@ -121,16 +121,22 @@ NiceGUI Notebook execution path for `--ui web` is tracked in the TODO.
 
 ```
 src/uniui/
-    __init__.py     # Public API, UniUI facade
-    core.py         # Interfaces, WidgetKind enum
-    display.py      # show_ui(), refresh_theme()
-    theme.py        # Dark/light theme system
+    __init__.py     # Public API, framework selection, UniUI facade
+    core.py         # Widget interfaces, factory interface, exceptions
+    display.py      # show_ui(), refresh_theme(), schedule_after()
+    theme.py        # Dark/light theme system and design tokens
     qt.py           # Qt/PySide2 backend
-    web.py          # Web backend, implemented with NiceGUI
+    web.py          # Web backend (NiceGUI)
     jupyter.py      # Jupyter/ipywidgets backend
     strategies.py   # Value parsing strategies
-    # Platform auto-detection lives in __init__.py
+    wx.py           # wxPython backend (legacy, unsupported)
+    tk.py           # Tkinter backend (legacy, unsupported)
 ```
+
+Official backends: **Qt** and **Jupyter**. The `wx` and `tk` backends are
+frozen legacy code — they receive no new features and are excluded from main
+CI. Auto-detection and the `--ui` flag still accept `wx` and `tk` for
+backward compatibility.
 
 ## Testing
 

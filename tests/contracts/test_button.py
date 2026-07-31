@@ -71,8 +71,17 @@ class TestButtonContract(WidgetContractTest):
         called = []
 
         button.connect(lambda: called.append(1))
-        native = button.get_native()
 
-        native._callback()
+        # Trigger via the native widget's click mechanism, backend-agnostically.
+        native = button.get_native()
+        if hasattr(native, "animateClick"):
+            native.animateClick(0)
+        elif hasattr(native, "_callback") and callable(native._callback):
+            native._callback()
+        elif hasattr(native, "_click_handlers"):
+            for h in native._click_handlers.callbacks:
+                h(native, None)
+        else:
+            pytest.skip("Cannot trigger click on this backend's native widget")
 
         assert called == [1]

@@ -457,9 +457,10 @@ class UniversalDisplay:
 
             # Check if it's a Qt layout
             if isinstance(native, QLayout):
-                # Create QApplication if not already running
+                # Create QApplication only if one doesn't already exist.
                 app = QApplication.instance()
-                if app is None:
+                _app_is_ours = app is None
+                if _app_is_ours:
                     app = QApplication(sys.argv)
 
                 # Set application-wide font
@@ -503,8 +504,12 @@ class UniversalDisplay:
 
                 widget.show()
 
-                # Run the event loop
-                sys.exit(app.exec_())
+                # Run the event loop only when we own the QApplication.
+                # If a QApplication already existed, the caller owns the event
+                # loop and we must not call sys.exit() — return immediately so
+                # the caller can embed this window in their existing loop.
+                if _app_is_ours:
+                    app.exec_()
                 return True
 
         except (ImportError, AttributeError):
@@ -746,22 +751,20 @@ def show_ui(container, title="App", width=500, height=400):
 def show_qt(container, title="Qt App", width=500, height=400):
     """Force display using Qt"""
     from PySide2.QtWidgets import QWidget, QApplication
-    import sys
 
-    # Create QApplication first
     app = QApplication.instance()
-    if app is None:
+    _app_is_ours = app is None
+    if _app_is_ours:
         app = QApplication(sys.argv)
 
-    # Create the window
     widget = QWidget()
     widget.setLayout(container.get_native())
     widget.setWindowTitle(title)
     widget.setMinimumSize(width, height)
     widget.show()
 
-    # Run the event loop
-    sys.exit(app.exec_())
+    if _app_is_ours:
+        app.exec_()
 
 
 def show_jupyter(container):

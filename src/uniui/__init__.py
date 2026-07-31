@@ -299,6 +299,20 @@ def Image(path: str = "") -> IImage:
 class UniUI:
     """Backward compatible UniUI facade class"""
 
+    _KIND_MAP = {
+        'label':      'create_label',
+        'button':     'create_button',
+        'line_edit':  'create_line_edit',
+        'text_area':  'create_text_area',
+        'combo_box':  'create_combo_box',
+        'dropdown':   'create_dropdown',
+        'vbox':       'create_vbox',
+        'hbox':       'create_hbox',
+        'tab_widget': 'create_tab_widget',
+        'group_box':  'create_group_box',
+        'image':      'create_image',
+    }
+
     def __init__(self, framework: str = 'auto'):
         self._framework = framework
         self._factory = _create_factory(framework)
@@ -309,64 +323,22 @@ class UniUI:
 
     def create(self, kind: str) -> IWidget:
         """Create a widget by kind string"""
-        factory = self._factory
-        if kind == LABEL:
-            return factory.create_label()
-        elif kind == BUTTON:
-            return factory.create_button()
-        elif kind == LINE_EDIT:
-            return factory.create_line_edit()
-        elif kind == TEXT_AREA:
-            return factory.create_text_area()
-        elif kind == COMBO_BOX:
-            return factory.create_combo_box()
-        elif kind == DROPDOWN:
-            return factory.create_dropdown()
-        elif kind == VBOX:
-            return factory.create_vbox()
-        elif kind == HBOX:
-            return factory.create_hbox()
-        elif kind == TAB_WIDGET:
-            return factory.create_tab_widget()
-        elif kind == GROUP_BOX:
-            return factory.create_group_box()
-        elif kind == IMAGE:
-            return factory.create_image()
-        else:
+        method = self._KIND_MAP.get(kind)
+        if method is None:
             raise ValueError(f"Unknown widget kind: {kind}")
+        return getattr(self._factory, method)()
 
-    def label(self) -> ILabel:
-        return self.create(LABEL)
-
-    def button(self) -> IButton:
-        return self.create(BUTTON)
-
-    def line_edit(self) -> ILineEdit:
-        return self.create(LINE_EDIT)
-
-    def text_area(self) -> ITextArea:
-        return self.create(TEXT_AREA)
-
-    def combo_box(self) -> IComboBox:
-        return self.create(COMBO_BOX)
-
-    def dropdown(self) -> IDropdown:
-        return self.create(DROPDOWN)
-
-    def vbox(self) -> IVBoxLayout:
-        return self.create(VBOX)
-
-    def hbox(self) -> IHBoxLayout:
-        return self.create(HBOX)
-
-    def tab_widget(self) -> ITabWidget:
-        return self.create(TAB_WIDGET)
-
-    def group_box(self) -> IGroupBox:
-        return self.create(GROUP_BOX)
-
-    def image(self) -> IImage:
-        return self.create(IMAGE)
+    def label(self) -> ILabel:        return self._factory.create_label()
+    def button(self) -> IButton:      return self._factory.create_button()
+    def line_edit(self) -> ILineEdit: return self._factory.create_line_edit()
+    def text_area(self) -> ITextArea: return self._factory.create_text_area()
+    def combo_box(self) -> IComboBox: return self._factory.create_combo_box()
+    def dropdown(self) -> IDropdown:  return self._factory.create_dropdown()
+    def vbox(self) -> IVBoxLayout:    return self._factory.create_vbox()
+    def hbox(self) -> IHBoxLayout:    return self._factory.create_hbox()
+    def tab_widget(self) -> ITabWidget: return self._factory.create_tab_widget()
+    def group_box(self) -> IGroupBox: return self._factory.create_group_box()
+    def image(self) -> IImage:        return self._factory.create_image()
 
 
 __all__ = [

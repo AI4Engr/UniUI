@@ -474,7 +474,7 @@ class Breakpoints:
     """Container-width breakpoints for responsive layout mode switching.
 
     mode_for(width) returns "compact", "medium", or "wide".
-    Default thresholds match todo.md: compact < 720, medium < 1200, wide >= 1200.
+    Default thresholds match TODO.md: compact < 720, medium < 1200, wide >= 1200.
     """
     compact: int = 720
     medium: int = 1200

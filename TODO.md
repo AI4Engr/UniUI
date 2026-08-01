@@ -62,10 +62,89 @@ app.run(page)
 - [ ] If needed, provide a thin compatibility layer for temporary PySide2 support
 - [ ] `show_ui()` must not call `sys.exit()` directly; allow embedding in existing Qt applications
 - [ ] Support high DPI, system scaling, keyboard navigation, and basic accessibility attributes
-- [ ] Fix the primary supported backends to Qt and Jupyter
+- [ ] Fix the primary supported backends to Qt, Jupyter, and Web
 - [ ] Remove wxPython/Tkinter from auto-detection, default tests, and main CI
 - [ ] Move wxPython/Tkinter to a legacy package, separate branch, or an explicitly frozen compatibility layer
 - [ ] Legacy backends must report unsupported uniformly for new components; no further expansion
+
+### Qt Web-Quality Visual Parity Roadmap
+
+> Use the Web Admin implementation as the visual baseline. Qt should reach the
+> same level of polish with native rendering, while continuing to share business
+> state, routing, data, and task code with Jupyter and Web. The target is visual
+> and behavioral parity, not identical backend implementation details.
+
+#### Phase 1: Design System and Shell
+
+- [ ] Extract shared Admin design tokens: color, typography, spacing, radius, border, shadow, and semantic status colors
+- [ ] Add Qt-specific theme, icon, and visual-effect modules (`qt_theme.py`, `qt_icons.py`, `qt_effects.py`)
+- [ ] Use one SVG icon set across Qt, Jupyter, and Web; remove text glyphs and operating-system-dependent icons
+- [ ] Rebuild the Qt Header, Sidebar, Content, and Footer against the Web visual baseline
+- [ ] Match Web navigation states: normal, hover, active, disabled, collapsed, and keyboard focus
+- [ ] Match Web controls: primary/secondary/icon buttons, inputs, status pills, cards, and table chrome
+- [ ] Keep the Sidebar draggable in wide mode and restore the last user-selected width
+- [ ] Support wide Sidebar, medium icon rail, and compact drawer modes without recreating route pages
+- [ ] Verify light/dark switching updates existing widgets without losing route, selection, form, chart, or splitter state
+
+#### Phase 2: Native Dashboard Components
+
+- [ ] Add a backend-neutral `Gauge` / `RadialProgress` interface
+- [ ] Implement Qt Gauge using `QPainter` with antialiasing, semantic colors, units, and animated value transitions
+- [ ] Add line, area, and bar charts; prefer `pyqtgraph` for native real-time engineering data
+- [ ] Keep chart dependencies optional, e.g. `uniui[charts]`
+- [ ] Add chart theme switching, empty/loading/error states, and responsive resize handling
+- [ ] Replace `QTableWidget` with `QTableView + QAbstractTableModel` for production DataGrid performance
+- [ ] Add delegates for status pills, numeric alignment, progress cells, and row action buttons
+- [ ] Add a themed Calendar component suitable for dashboard and scheduling pages
+- [ ] Create an IoT/engineering Dashboard example containing gauges, charts, calendar, table, and live status
+
+Proposed API:
+
+```python
+Gauge(
+    label="Temperature",
+    value=88,
+    unit="°C",
+    status="ok",
+)
+
+Chart(
+    type="line",
+    x=timestamps,
+    series=[{"name": "Temperature", "data": values}],
+)
+```
+
+#### Phase 3: Interaction and Motion
+
+- [ ] Add Sidebar expand/collapse animation without changing route state
+- [ ] Add page fade/slide transitions with an option to disable motion
+- [ ] Add card hover/focus feedback without expensive full-widget repaints
+- [ ] Add an animated settings drawer using `QStackedLayout.StackAll` or an equivalent overlay
+- [ ] Add smooth Gauge and metric-value transitions
+- [ ] Add Toast, Dialog, loading overlay, and Skeleton feedback components
+- [ ] Use `QPropertyAnimation`, `QParallelAnimationGroup`, `QGraphicsOpacityEffect`, and `QEasingCurve` through reusable helpers
+- [ ] Keep ordinary animation and resize interaction at 60 FPS on a typical engineering workstation
+
+#### Phase 4: Responsive, DPI, and Production Quality
+
+- [ ] Verify Qt layouts at container widths of 1440, 1180, 900, and 640 logical pixels
+- [ ] Verify Windows scaling at 100%, 125%, 150%, and 200%
+- [ ] Ensure responsive reflow does not flicker or recreate gauges, charts, tables, or route pages
+- [ ] Debounce chart and viewport resizing by 50–100 ms
+- [ ] Ensure real-time charts and data refresh do not block the Qt UI thread
+- [ ] Support keyboard navigation, visible focus rings, tooltips, and accessible names
+- [ ] Add offscreen geometry/state tests and reference screenshot checks for the Qt Admin example
+- [ ] Package SVG icons, fonts, and optional chart dependencies correctly for PyInstaller builds
+
+#### Qt Visual Parity Completion Criteria
+
+- [ ] Qt and Web use the same Admin theme tokens and semantic component states
+- [ ] Qt Dashboard reaches the same hierarchy, spacing, density, and clarity as the Web Dashboard
+- [ ] Theme switching preserves loaded data, route, table selection, chart range, and Sidebar width
+- [ ] Sidebar drag, responsive collapse, settings drawer, table interaction, and charts work without visible jank
+- [ ] The flagship Admin business/page code contains no direct `PySide2` / `PySide6` imports
+- [ ] The same flagship app runs with `--ui qt`, `--ui jupyter`, and `--ui web`
 
 ## P0: Adaptive Cross-Backend Layout (Highest Priority)
 

@@ -49,6 +49,10 @@ from .core import (
     IWidgetFactory,
 )
 
+# Reactive state and scheduling
+from .state import State, Computed, Handle, TaskRunner
+from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
+
 # Value parsing helpers
 from .strategies import parse_float, parse_int, parse_flexible, normalize_text
 
@@ -435,6 +439,17 @@ class UniUI:
 
 
 __all__ = [
+    # Reactive state
+    'State',
+    'Computed',
+    'Handle',
+    'TaskRunner',
+    'bind_text',
+    'bind_value',
+    'bind_items',
+    'bind_enabled',
+    'bind_visible',
+
     # Widget creation functions
     'Label',
     'Button',

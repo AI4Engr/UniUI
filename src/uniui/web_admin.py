@@ -1,36 +1,46 @@
 """Modern Admin components for the NiceGUI Web backend."""
 from __future__ import annotations
 
+from html import escape
 from typing import Callable, Dict, List, Optional
 
 from nicegui import ui
 
-from .admin import IAppShell, IBreadcrumb, ICard, ISidebar, IStatCard, ITable
+from .admin import (
+    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    ISidebar, IStatCard, ITable,
+)
+from .admin_icons import ADMIN_ICON_NAMES, css_mask
+from .admin_theme import get_admin_metrics, get_admin_tokens
+from .admin_visuals import (
+    CHART_TYPES, append_chart_point, normalized_series,
+    render_chart_svg, render_gauge_svg,
+)
 from .web import NiceGUIWidgetFactory, _WebAdapter
 
 
-_LIGHT = {
-    "bg": "#f6f8fc", "surface": "#ffffff", "surface_subtle": "#f8fafc",
-    "text": "#182230", "text_muted": "#667085", "border": "#e7ebf0",
-    "border_strong": "#d5dae1", "accent": "#2563eb", "accent_hover": "#1d4ed8",
-    "ok": "#16a34a", "warn": "#d97706", "error": "#dc2626",
-    "sidebar_bg": "#111827", "sidebar_fg": "#cbd5e1", "sidebar_active": "#1e293b",
-    "header_bg": "#ffffff", "input_bg": "#ffffff",
-    "shadow": "0 1px 2px rgba(16,24,40,.04),0 4px 12px rgba(16,24,40,.04)",
-}
-_DARK = {
-    "bg": "#0b0f19", "surface": "#121826", "surface_subtle": "#182131",
-    "text": "#f1f5f9", "text_muted": "#94a3b8", "border": "#263244",
-    "border_strong": "#344154", "accent": "#60a5fa", "accent_hover": "#93c5fd",
-    "ok": "#4ade80", "warn": "#fbbf24", "error": "#fb7185",
-    "sidebar_bg": "#080c14", "sidebar_fg": "#cbd5e1", "sidebar_active": "#1e293b",
-    "header_bg": "#121826", "input_bg": "#182131",
-    "shadow": "0 1px 2px rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.16)",
-}
+_LIGHT = get_admin_tokens(False)
+_DARK = get_admin_tokens(True)
+_M = get_admin_metrics()
 
 _admin_dark = False
 _shells: List["WebAppShellAdapter"] = []
+_visuals: List[object] = []
 _css_installed = False
+
+
+def _shared_icon_css() -> str:
+    rules = [
+        ".uniui-svg-icon{display:inline-block;width:18px;height:18px;"
+        "flex:0 0 18px;margin-right:9px;color:inherit;vertical-align:-4px}"
+    ]
+    for name in ADMIN_ICON_NAMES:
+        rules.append(f".uniui-svg-icon.uniui-icon-{name}{{{css_mask(name)}}}")
+        rules.append(
+            f".uniui-icon-{name} .q-btn__content::before{{content:'';display:inline-block;"
+            f"width:18px;height:18px;flex:0 0 18px;margin-right:7px;{css_mask(name)}}}"
+        )
+    return "".join(rules)
 
 
 def get_admin_palette() -> Dict[str, str]:
@@ -49,6 +59,11 @@ def set_admin_theme(dark: bool) -> bool:
             shell.apply_theme()
         except Exception:
             continue
+    for visual in list(_visuals):
+        try:
+            visual.apply_theme()
+        except Exception:
+            continue
     return _admin_dark
 
 
@@ -57,7 +72,7 @@ def _install_admin_css() -> None:
     if _css_installed:
         return
     ui.add_css(
-        """
+        _shared_icon_css() + """
         body:has(.uniui-web-admin) {margin:0;overflow:hidden;background:var(--uniui-bg)}
         .nicegui-content:has(.uniui-web-admin) {width:100%!important;max-width:none!important;padding:0!important;margin:0!important}
         .uniui-web-admin {container-type:inline-size;width:100%;height:100dvh;min-width:0;min-height:0;overflow:hidden;
@@ -67,18 +82,18 @@ def _install_admin_css() -> None:
         .uniui-web-admin * {box-sizing:border-box}
         .uniui-web-admin .uniui-label {color:var(--uniui-text_muted)!important}
         .uniui-web-admin .q-btn {text-transform:none;letter-spacing:0;font-weight:600}
-        .uniui-web-admin .uniui-button {min-height:38px;padding:0 15px;background:var(--uniui-accent)!important;
+        .uniui-web-admin .uniui-button {min-height:var(--uniui-control-height);padding:0 15px;background:var(--uniui-accent)!important;
           color:#fff!important;border-radius:9px!important;box-shadow:0 1px 2px rgba(37,99,235,.18)}
         .uniui-web-admin .uniui-button:hover {background:var(--uniui-accent_hover)!important}
-        .uniui-web-header {height:60px;min-height:60px;width:100%;padding:0 20px!important;gap:10px!important;
+        .uniui-web-header {height:var(--uniui-header-height);min-height:var(--uniui-header-height);width:100%;padding:0 20px!important;gap:10px!important;
           flex-wrap:nowrap!important;align-items:center!important;background:var(--uniui-header_bg);
           border-bottom:1px solid var(--uniui-border);box-shadow:0 1px 2px rgba(16,24,40,.025);z-index:2}
-        .uniui-web-body {width:100%;height:calc(100dvh - 96px);min-height:0;background:var(--uniui-bg)}
+        .uniui-web-body {width:100%;height:calc(100dvh - var(--uniui-shell-bars));min-height:0;background:var(--uniui-bg)}
         .uniui-web-body .q-splitter__separator {width:5px!important;background:var(--uniui-border);transition:.15s}
         .uniui-web-body .q-splitter__separator:hover {background:var(--uniui-accent)}
         .uniui-web-content {width:100%;min-width:0;height:100%;padding:28px 32px 32px;overflow:auto;background:var(--uniui-bg);
           scrollbar-width:thin;scrollbar-color:var(--uniui-border_strong) transparent}
-        .uniui-web-footer {height:36px;min-height:36px;width:100%;padding:7px 20px;background:var(--uniui-surface);
+        .uniui-web-footer {height:var(--uniui-footer-height);min-height:var(--uniui-footer-height);width:100%;padding:7px 20px;background:var(--uniui-surface);
           border-top:1px solid var(--uniui-border)}
         .uniui-web-sidebar {width:100%;height:100%;padding:18px 12px;gap:6px!important;overflow:auto;background:var(--uniui-sidebar_bg)}
         .uniui-web-sidebar .q-btn {position:relative;width:100%;min-height:42px;justify-content:flex-start;padding:8px 12px;
@@ -86,7 +101,9 @@ def _install_admin_css() -> None:
         .uniui-web-sidebar .q-btn .q-icon {width:22px;margin-right:10px;color:#94a3b8;font-size:19px}
         .uniui-web-sidebar .q-btn:hover {color:#fff!important;background:rgba(255,255,255,.055)!important}
         .uniui-web-sidebar .uniui-active {color:#fff!important;background:var(--uniui-sidebar_active)!important;box-shadow:inset 3px 0 0 var(--uniui-accent)}
-        .uniui-web-sidebar .uniui-active .q-icon {color:var(--uniui-accent)}
+        .uniui-web-sidebar .uniui-active .uniui-svg-icon {color:var(--uniui-accent)}
+        .uniui-web-sidebar .uniui-collapsed .uniui-nav-label {display:none}
+        .uniui-web-sidebar .uniui-collapsed .uniui-svg-icon {margin-right:0}
         .uniui-web-card {width:100%;min-width:0;padding:20px 22px;border:1px solid var(--uniui-border)!important;
           border-radius:14px!important;background:var(--uniui-surface)!important;color:var(--uniui-text);box-shadow:var(--uniui-shadow)!important}
         .uniui-web-card-title {color:var(--uniui-text);font-size:16px;font-weight:700;line-height:1.3}
@@ -136,19 +153,32 @@ def _install_admin_css() -> None:
         .uniui-web-admin .uniui-demo-primary-action {white-space:nowrap;min-width:max-content;background:var(--uniui-accent)!important;color:#fff!important}
         .uniui-web-admin .uniui-web-status-ok {color:var(--uniui-ok)!important;font-size:12px;font-weight:600}
         .uniui-web-admin .uniui-web-footer-meta {color:var(--uniui-text_muted)!important;font-size:12px}
+        .uniui-web-gauge,.uniui-web-chart {width:100%;min-width:0}
+        .uniui-web-gauge svg,.uniui-web-chart svg {display:block;width:100%;height:auto;max-height:250px}
+        .uniui-web-drawer-root {position:fixed;inset:0;z-index:5000;pointer-events:none;visibility:hidden}
+        .uniui-web-drawer-root.uniui-open {pointer-events:auto;visibility:visible}
+        .uniui-web-drawer-scrim {position:absolute;inset:0;background:rgba(2,6,23,.34);opacity:0;transition:opacity .18s ease}
+        .uniui-web-drawer-panel {position:absolute;right:0;top:0;height:100%;width:min(380px,92vw);margin:0!important;
+          padding:20px 22px!important;border-radius:0!important;background:var(--uniui-surface)!important;
+          border-left:1px solid var(--uniui-border)!important;transform:translateX(100%);transition:transform .2s ease}
+        .uniui-web-drawer-root.uniui-open .uniui-web-drawer-scrim {opacity:1}
+        .uniui-web-drawer-root.uniui-open .uniui-web-drawer-panel {transform:none}
+        .uniui-web-drawer-header {width:100%;align-items:center;gap:10px!important}
+        .uniui-web-drawer-title {flex:1 1 auto;color:var(--uniui-text)!important;font-size:18px;font-weight:700}
         .uniui-status-pill {display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
-        .uniui-status-pill.uniui-status-ok {color:#15803d;background:#dcfce7}
-        .uniui-status-pill.uniui-status-warn {color:#b45309;background:#fef3c7}
-        .uniui-status-pill.uniui-status-error {color:#b91c1c;background:#fee2e2}
+        .uniui-status-pill.uniui-status-ok {color:var(--uniui-status_ok_fg);background:var(--uniui-status_ok_bg)}
+        .uniui-status-pill.uniui-status-warn {color:var(--uniui-status_warn_fg);background:var(--uniui-status_warn_bg)}
+        .uniui-status-pill.uniui-status-error {color:var(--uniui-status_error_fg);background:var(--uniui-status_error_bg)}
+        .uniui-status-pill.uniui-status-neutral {color:var(--uniui-status_neutral_fg);background:var(--uniui-status_neutral_bg)}
         .uniui-demo-title {color:var(--uniui-text)!important;font-size:26px!important;line-height:1.2;font-weight:750!important}
         .uniui-demo-subtitle,.uniui-demo-hint {color:var(--uniui-text_muted)!important;font-size:13px}
         .uniui-demo-stats {gap:16px!important;align-items:stretch!important}
         @media(max-width:1019px) {
-          .uniui-web-body .q-splitter__before {width:72px!important}
-          .uniui-web-body .q-splitter__after {width:calc(100% - 72px)!important}
+          .uniui-web-body .q-splitter__before {width:var(--uniui-sidebar-collapsed)!important}
+          .uniui-web-body .q-splitter__after {width:calc(100% - var(--uniui-sidebar-collapsed))!important}
           .uniui-web-body .q-splitter__separator {display:none!important}
           .uniui-web-sidebar {padding:16px 8px}.uniui-web-sidebar .q-btn{font-size:0;justify-content:center;padding:8px 4px}
-          .uniui-web-sidebar .q-btn .q-icon {margin:0;font-size:20px}
+          .uniui-web-sidebar .uniui-svg-icon {margin:0;width:20px;height:20px;flex-basis:20px}
           .uniui-web-content {padding:24px 20px}
           .uniui-demo-product {display:none}
         }
@@ -251,7 +281,8 @@ class WebTableAdapter(_WebAdapter, ITable):
                     :class="{
                       'uniui-status-ok': ['active','delivered','shipped'].includes(String(props.value).toLowerCase()),
                       'uniui-status-warn': ['processing','pending','warning'].includes(String(props.value).toLowerCase()),
-                      'uniui-status-error': ['inactive','cancelled','failed','error'].includes(String(props.value).toLowerCase())
+                      'uniui-status-error': ['inactive','cancelled','failed','error'].includes(String(props.value).toLowerCase()),
+                      'uniui-status-neutral': !['active','delivered','shipped','processing','pending','warning','inactive','cancelled','failed','error'].includes(String(props.value).toLowerCase())
                     }">{{ props.value }}</span>
                 </q-td>
                 """,
@@ -272,11 +303,76 @@ class WebTableAdapter(_WebAdapter, ITable):
         if self._row_click_cb and isinstance(row, dict): self._row_click_cb(row)
 
 
-_ICONS = {
-    "dashboard": "space_dashboard",
-    "users": "group",
-    "settings": "settings",
-}
+class WebGaugeAdapter(_WebAdapter, IGauge):
+    def __init__(self):
+        _install_admin_css()
+        self._label = ""; self._value = 0.0; self._unit = ""
+        self._minimum = 0.0; self._maximum = 100.0; self._status = "ok"
+        super().__init__(ui.html("", sanitize=False).classes("uniui-web-gauge"))
+        _visuals.append(self)
+        self._render()
+    def set_label(self, label: str) -> None: self._label = str(label); self._render()
+    def set_value(self, value: float) -> None: self._value = float(value); self._render()
+    def set_range(self, minimum: float, maximum: float) -> None:
+        self._minimum = float(minimum); self._maximum = max(float(maximum), self._minimum + 1.0); self._render()
+    def set_unit(self, unit: str) -> None: self._unit = str(unit); self._render()
+    def set_status(self, status: str) -> None:
+        self._status = status if status in {"ok", "warn", "error"} else "ok"; self._render()
+    def _render(self) -> None:
+        self._native.set_content(render_gauge_svg(
+            self._label, self._value, self._unit, self._minimum,
+            self._maximum, self._status, get_admin_palette(),
+        ))
+    def apply_theme(self) -> None: self._render()
+
+
+class WebChartAdapter(_WebAdapter, IChart):
+    def __init__(self):
+        _install_admin_css(); self._chart_type = "line"; self._title = ""
+        self._x: List = []; self._series: List[Dict] = []; self._max_points = 120
+        super().__init__(ui.html("", sanitize=False).classes("uniui-web-chart"))
+        _visuals.append(self); self._render()
+    def set_type(self, chart_type: str) -> None:
+        self._chart_type = chart_type if chart_type in CHART_TYPES else "line"; self._render()
+    def set_title(self, title: str) -> None: self._title = str(title); self._render()
+    def set_data(self, x: List, series: List[Dict]) -> None:
+        self._x = list(x)[-self._max_points:]; self._series = normalized_series(series)
+        for item in self._series: item["data"] = item["data"][-self._max_points:]
+        self._render()
+    def append_data(self, x, values) -> None:
+        append_chart_point(self._x, self._series, x, values, self._max_points); self._render()
+    def set_max_points(self, max_points: int) -> None:
+        self._max_points = max(2, int(max_points)); self._x = self._x[-self._max_points:]
+        for item in self._series: item["data"] = item["data"][-self._max_points:]
+        self._render()
+    def _render(self) -> None:
+        self._native.set_content(render_chart_svg(
+            self._chart_type, self._title, self._x, self._series, get_admin_palette()
+        ))
+    def apply_theme(self) -> None: self._render()
+
+
+class WebDrawerAdapter(_WebAdapter, IDrawer):
+    def __init__(self):
+        _install_admin_css(); self._open = False
+        root = ui.element("div").classes("uniui-web-drawer-root")
+        with root:
+            scrim = ui.element("div").classes("uniui-web-drawer-scrim")
+            panel = ui.card().classes("uniui-web-drawer-panel")
+            with panel:
+                with ui.row().classes("uniui-web-drawer-header"):
+                    self._title = ui.label("").classes("uniui-web-drawer-title")
+                    close = ui.button("", color=None, on_click=lambda _event: self.close()).props("flat round dense")
+                    close.add_slot("default", '<span class="uniui-svg-icon uniui-icon-close"></span>')
+                self._content = ui.column().classes("w-full items-stretch")
+        scrim.on("click", lambda _event: self.close())
+        super().__init__(root)
+    def set_title(self, title: str) -> None: self._title.set_text(str(title))
+    def set_content(self, widget) -> None: _clear(self._content); _native(widget).move(self._content)
+    def open(self) -> None: self._open = True; self._native.classes(add="uniui-open")
+    def close(self) -> None: self._open = False; self._native.classes(remove="uniui-open")
+    def toggle(self) -> None: self.close() if self._open else self.open()
+    def is_open(self) -> bool: return self._open
 
 
 class WebSidebarAdapter(_WebAdapter, ISidebar):
@@ -285,15 +381,18 @@ class WebSidebarAdapter(_WebAdapter, ISidebar):
         self._keys: List[str] = []; self._buttons = []; self._select_cb = None; self._active = ""; self._collapsed = False
         super().__init__(ui.column().classes("uniui-web-sidebar items-stretch"))
     def add_item(self, key: str, label: str, icon: str = "") -> None:
-        material_icon = _ICONS.get(icon, icon or "circle")
         with self._native:
             button = ui.button(
-                label,
+                "",
                 color=None,
-                icon=material_icon,
                 on_click=lambda _e, k=key: self._emit(k),
             ).props("flat no-caps")
-        button._uniui_full_label = label
+        if icon in ADMIN_ICON_NAMES:
+            button.add_slot(
+                "default",
+                f'<span class="uniui-svg-icon uniui-icon-{icon}"></span>'
+                f'<span class="uniui-nav-label">{escape(label)}</span>',
+            )
         button.tooltip(label)
         self._keys.append(key); self._buttons.append(button)
     def set_active(self, key: str) -> None:
@@ -304,7 +403,10 @@ class WebSidebarAdapter(_WebAdapter, ISidebar):
     def set_collapsed(self, collapsed: bool) -> None:
         self._collapsed = bool(collapsed)
         for button in self._buttons:
-            button.set_text("" if collapsed else button._uniui_full_label)
+            button.classes(
+                add="uniui-collapsed" if collapsed else "",
+                remove="" if collapsed else "uniui-collapsed",
+            )
     def _emit(self, key: str) -> None:
         if self._select_cb: self._select_cb(key)
 
@@ -335,7 +437,15 @@ class WebAppShellAdapter(_WebAdapter, IAppShell):
         _clear(self._footer); _native(widget).move(self._footer); self._footer.set_visibility(True)
     def apply_theme(self) -> None:
         p = get_admin_palette()
-        self._native.style(";".join(f"--uniui-{key}:{value}" for key, value in p.items()))
+        variables = {f"--uniui-{key}": value for key, value in p.items()}
+        variables.update({
+            "--uniui-header-height": f"{_M['header_height']}px",
+            "--uniui-footer-height": f"{_M['footer_height']}px",
+            "--uniui-shell-bars": f"{_M['header_height'] + _M['footer_height']}px",
+            "--uniui-sidebar-collapsed": f"{_M['sidebar_collapsed']}px",
+            "--uniui-control-height": f"{_M['control_height']}px",
+        })
+        self._native.style(";".join(f"{key}:{value}" for key, value in variables.items()))
 
 
 class WebBreadcrumbAdapter(_WebAdapter, IBreadcrumb):
@@ -363,6 +473,9 @@ def _register(factory_class) -> None:
     factory_class.createSidebar = lambda self: WebSidebarAdapter()
     factory_class.createAppShell = lambda self: WebAppShellAdapter()
     factory_class.createBreadcrumb = lambda self: WebBreadcrumbAdapter()
+    factory_class.createGauge = lambda self: WebGaugeAdapter()
+    factory_class.createChart = lambda self: WebChartAdapter()
+    factory_class.createDrawer = lambda self: WebDrawerAdapter()
 
 
 _register(NiceGUIWidgetFactory)
@@ -371,4 +484,5 @@ _register(NiceGUIWidgetFactory)
 __all__ = [
     "WebCardAdapter", "WebStatCardAdapter", "WebTableAdapter", "WebSidebarAdapter",
     "WebAppShellAdapter", "WebBreadcrumbAdapter", "get_admin_palette", "is_admin_dark", "set_admin_theme",
+    "WebGaugeAdapter", "WebChartAdapter", "WebDrawerAdapter",
 ]

@@ -1179,6 +1179,14 @@ class QtWidgetFactory(IWidgetFactory):
         from PySide2.QtWidgets import QApplication
         import sys
 
+        # Qt 5 requires these flags before QApplication construction. They are
+        # no-ops on platforms where high-DPI scaling is already automatic.
+        if QApplication.instance() is None:
+            if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):
+                QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+            if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):
+                QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+
         # Ensure QApplication has been created
         app = QApplication.instance()
         if app is None:

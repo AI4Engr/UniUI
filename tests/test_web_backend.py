@@ -107,6 +107,9 @@ def test_web_admin_sidebar_and_table_events():
     factory = create_factory("web")
     sidebar = factory.create_sidebar()
     sidebar.add_item("users", "Users", "users")
+    assert "uniui-svg-icon uniui-icon-users" in (
+        sidebar._buttons[0].slots["default"].template
+    )
     selected = []
     sidebar.on_select(selected.append)
     sidebar._emit("users")
@@ -123,6 +126,26 @@ def test_web_admin_sidebar_and_table_events():
 
     table._on_row_event(Event())
     assert rows == [{"id": 3}]
+
+
+@pytest.mark.web
+def test_web_gauge_chart_and_drawer_update_in_place():
+    factory = create_factory("web")
+    gauge = factory.create_gauge(); native_gauge = gauge.get_native()
+    gauge.set_label("Load"); gauge.set_unit("%"); gauge.set_value(72)
+    chart = factory.create_chart(); native_chart = chart.get_native()
+    chart.set_max_points(3)
+    chart.set_data([1, 2], [{"name": "Load", "data": [20, 30]}])
+    chart.append_data(3, [40]); chart.append_data(4, [50])
+    drawer = factory.create_drawer(); drawer.set_title("Details")
+    drawer.set_content(factory.create_label()); drawer.open()
+
+    assert gauge.get_native() is native_gauge
+    assert chart.get_native() is native_chart
+    assert "uniui-gauge-svg" in native_gauge.content
+    assert len(chart._x) == 3
+    assert drawer.is_open()
+    drawer.close(); assert not drawer.is_open()
 
 
 @pytest.mark.web
@@ -151,7 +174,7 @@ def test_nicegui_is_lazy_imported():
     [
         ("hello.py", b"Hello UniUI"),
         ("quick_start.py", b"BMI Calculator"),
-        ("sysmon.py", b"System Monitor"),
+        ("examples/sysmon.py", b"System Monitor"),
     ],
 )
 def test_web_server_smoke(script, expected_title):

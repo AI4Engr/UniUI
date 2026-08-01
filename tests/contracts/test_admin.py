@@ -4,8 +4,10 @@ Contract tests for Admin components: Card, StatCard, Table, Sidebar, AppShell, B
 import pytest
 
 from tests.contract_framework import WidgetContractTest
-from uniui import CARD, STAT_CARD, TABLE, SIDEBAR, APP_SHELL, BREADCRUMB
-from uniui.admin import ICard, IStatCard, ITable, ISidebar, IAppShell, IBreadcrumb
+from uniui import (
+    APP_SHELL, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
+    SIDEBAR, STAT_CARD, TABLE,
+)
 
 
 class TestCardContract(WidgetContractTest):
@@ -299,3 +301,55 @@ class TestBreadcrumbContract(WidgetContractTest):
     def test_on_click_registers(self, factory):
         bc = self.create_widget(factory)
         bc.on_click(lambda path: None)
+
+
+class TestGaugeContract(WidgetContractTest):
+    widget_kind = GAUGE
+
+    def create_widget(self, factory):
+        return factory.create_gauge()
+
+    @pytest.mark.contract
+    def test_configure_gauge(self, factory):
+        gauge = self.create_widget(factory)
+        gauge.set_range(0, 120)
+        gauge.set_label("Temperature")
+        gauge.set_unit("°C")
+        gauge.set_status("warn")
+        gauge.set_value(88)
+
+
+class TestChartContract(WidgetContractTest):
+    widget_kind = CHART
+
+    def create_widget(self, factory):
+        return factory.create_chart()
+
+    @pytest.mark.contract
+    def test_set_and_append_chart_data(self, factory):
+        chart = self.create_widget(factory)
+        chart.set_type("area")
+        chart.set_title("Temperature")
+        chart.set_max_points(3)
+        chart.set_data([1, 2], [{"name": "T", "data": [20, 22]}])
+        chart.append_data(3, [24])
+        chart.append_data(4, [23])
+
+
+class TestDrawerContract(WidgetContractTest):
+    widget_kind = DRAWER
+
+    def create_widget(self, factory):
+        return factory.create_drawer()
+
+    @pytest.mark.contract
+    def test_drawer_content_and_visibility(self, factory):
+        drawer = self.create_widget(factory)
+        label = factory.create_label()
+        label.set_text("Settings")
+        drawer.set_title("Details")
+        drawer.set_content(label)
+        drawer.open()
+        assert drawer.is_open()
+        drawer.toggle()
+        assert not drawer.is_open()

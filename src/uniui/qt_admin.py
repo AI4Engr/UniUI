@@ -6,83 +6,40 @@ when 'qt' framework is selected).
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 import weakref
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
-from uniui.admin import ICard, IStatCard, ITable, ISidebar, IAppShell, IBreadcrumb
+from uniui.admin import (
+    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    ISidebar, IStatCard, ITable,
+)
+from uniui.admin_theme import get_admin_metrics, get_admin_tokens
+from uniui.admin_visuals import CHART_TYPES, append_chart_point, normalized_series
 from uniui.core import IWidget
+from uniui.qt_effects import animate_value, motion_duration
+from uniui.qt_icons import admin_icon
 
 
 # ---------------------------------------------------------------------------
 # Theme tokens
 # ---------------------------------------------------------------------------
-_LIGHT = {
-    "bg":           "#f5f7fb",   # page background
-    "surface":      "#ffffff",   # card / panel background
-    "surface_subtle":"#f9fafb",
-    "border":       "#e4e7ec",   # subtle border
-    "border_strong":"#d0d5dd",
-    "sidebar_bg":   "#101828",   # dark sidebar
-    "sidebar_fg":   "#d0d5dd",   # sidebar text
-    "sidebar_act":  "#344054",   # active item highlight
-    "sidebar_hover":"#1d2939",
-    "sidebar_edge": "#53b1fd",
-    "sidebar_act_fg": "#ffffff",
-    "header_bg":    "#ffffff",
-    "header_border":"#eaecf0",
-    "text":         "#101828",   # primary text
-    "text_muted":   "#667085",   # secondary text
-    "ok":           "#12b76a",
-    "warn":         "#f79009",
-    "error":        "#f04438",
-    "accent":       "#2563eb",
-    "accent_hover": "#1d4ed8",
-    "accent_press": "#1e40af",
-    "accent_soft":  "#eff6ff",
-    "row_alt":      "#f9fafb",   # alternating table row
-    "row_sel":      "#eff6ff",   # selected row
-    "row_sel_fg":   "#1d4ed8",
-    "input_bg":     "#ffffff",
-    "disabled":     "#b2ccff",
-    "scrollbar":    "#d0d5dd",
-    "avatar_bg":    "#e0e7ff",
-    "avatar_fg":    "#3730a3",
-}
+def _qt_tokens(dark: bool) -> Dict[str, str]:
+    """Add temporary aliases used by the existing Qt renderer."""
+    tokens = get_admin_tokens(dark)
+    tokens.update({
+        "sidebar_act": tokens["sidebar_active"],
+        "sidebar_act_fg": tokens["sidebar_active_fg"],
+        "row_sel": tokens["row_selected"],
+        "row_sel_fg": tokens["row_selected_fg"],
+    })
+    return tokens
 
-_DARK = {
-    "bg":           "#0b1120",
-    "surface":      "#111827",
-    "surface_subtle":"#0f172a",
-    "border":       "#263244",
-    "border_strong":"#344054",
-    "sidebar_bg":   "#070d19",
-    "sidebar_fg":   "#cbd5e1",
-    "sidebar_act":  "#172554",
-    "sidebar_hover":"#111c30",
-    "sidebar_edge": "#60a5fa",
-    "sidebar_act_fg": "#ffffff",
-    "header_bg":    "#111827",
-    "header_border":"#263244",
-    "text":         "#f8fafc",
-    "text_muted":   "#94a3b8",
-    "ok":           "#34d399",
-    "warn":         "#fbbf24",
-    "error":        "#fb7185",
-    "accent":       "#3b82f6",
-    "accent_hover": "#60a5fa",
-    "accent_press": "#2563eb",
-    "accent_soft":  "#172554",
-    "row_alt":      "#0f172a",
-    "row_sel":      "#172554",
-    "row_sel_fg":   "#dbeafe",
-    "input_bg":     "#0f172a",
-    "disabled":     "#334155",
-    "scrollbar":    "#475569",
-    "avatar_bg":    "#312e81",
-    "avatar_fg":    "#e0e7ff",
-}
+
+_LIGHT = _qt_tokens(False)
+_DARK = _qt_tokens(True)
+_M = get_admin_metrics()
 
 _C = dict(_LIGHT)
 _ADMIN_DARK = False
@@ -94,7 +51,7 @@ def _card_style() -> str:
     QFrame[card="1"] {{
         background: {_C['surface']};
         border: 1px solid {_C['border']};
-        border-radius: 12px;
+        border-radius: {_M['radius_large']}px;
     }}
 """
 
@@ -114,6 +71,9 @@ def _table_style() -> str:
         padding: 0 14px;
         border: none;
     }}
+    QTableWidget::item:hover {{
+        background: {_C['surface_subtle']};
+    }}
     QTableWidget::item:alternate {{
         background: {_C['row_alt']};
     }}
@@ -122,7 +82,7 @@ def _table_style() -> str:
         color: {_C['row_sel_fg']};
     }}
     QHeaderView::section {{
-        background: {_C['bg']};
+        background: {_C['surface_subtle']};
         color: {_C['text_muted']};
         font-weight: 600;
         font-size: 12px;
@@ -139,7 +99,7 @@ def _sidebar_style() -> str:
         background: {_C['sidebar_bg']};
         border: none;
         outline: none;
-        padding: 12px 0;
+        padding: 14px 0;
     }}
     QListWidget::item {{
         color: {_C['sidebar_fg']};
@@ -153,6 +113,15 @@ def _sidebar_style() -> str:
         background: {_C['sidebar_hover']};
     }}
     QListWidget::item:selected {{
+        background: {_C['sidebar_act']};
+        color: {_C['sidebar_act_fg']};
+        border-left: 3px solid {_C['sidebar_edge']};
+    }}
+    QListWidget::item:disabled {{
+        color: {_C['text_muted']};
+        background: transparent;
+    }}
+    QListWidget::item:selected:active {{
         background: {_C['sidebar_act']};
         color: {_C['sidebar_act_fg']};
         border-left: 3px solid {_C['sidebar_edge']};
@@ -200,7 +169,12 @@ def set_admin_theme(dark: bool) -> bool:
     _C.clear()
     _C.update(_DARK if _ADMIN_DARK else _LIGHT)
     for adapter in list(_THEMED_ADAPTERS):
-        adapter.apply_theme()
+        try:
+            adapter.apply_theme()
+        except RuntimeError as exc:
+            if "already deleted" not in str(exc):
+                raise
+            _THEMED_ADAPTERS.discard(adapter)
     return _ADMIN_DARK
 
 
@@ -208,6 +182,9 @@ def _track_themed(adapter, native_widget) -> None:
     """Keep the adapter alive for as long as its native Qt widget is alive."""
     _THEMED_ADAPTERS.add(adapter)
     native_widget._uniui_theme_adapter = adapter
+    native_widget.destroyed.connect(
+        lambda *_args, tracked=adapter: _THEMED_ADAPTERS.discard(tracked)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -251,43 +228,17 @@ def _label(text: str, bold: bool = False, size: int = 13,
     return lbl
 
 
-def _nav_icon(name: str, color: str = "#98a2b3") -> QtGui.QIcon:
-    """Draw a small backend-owned line icon; avoids platform-dependent emoji."""
-    pixmap = QtGui.QPixmap(20, 20)
-    pixmap.fill(QtCore.Qt.transparent)
-    painter = QtGui.QPainter(pixmap)
-    painter.setRenderHint(QtGui.QPainter.Antialiasing)
-    pen = QtGui.QPen(QtGui.QColor(color), 1.7)
-    pen.setCapStyle(QtCore.Qt.RoundCap)
-    pen.setJoinStyle(QtCore.Qt.RoundJoin)
-    painter.setPen(pen)
-    painter.setBrush(QtCore.Qt.NoBrush)
-
-    if name == "dashboard":
-        for rect in (
-            QtCore.QRectF(3, 3, 5, 5), QtCore.QRectF(12, 3, 5, 5),
-            QtCore.QRectF(3, 12, 5, 5), QtCore.QRectF(12, 12, 5, 5),
-        ):
-            painter.drawRoundedRect(rect, 1.2, 1.2)
-    elif name == "users":
-        painter.drawEllipse(QtCore.QRectF(7, 3, 6, 6))
-        painter.drawArc(QtCore.QRectF(4, 9, 12, 8), 10 * 16, 160 * 16)
-        painter.drawEllipse(QtCore.QRectF(2.5, 6, 4, 4))
-        painter.drawEllipse(QtCore.QRectF(13.5, 6, 4, 4))
-    elif name == "settings":
-        painter.drawLine(3, 5, 17, 5)
-        painter.drawLine(3, 10, 17, 10)
-        painter.drawLine(3, 15, 17, 15)
-        painter.setBrush(QtGui.QColor(_C["sidebar_bg"]))
-        painter.drawEllipse(QtCore.QRectF(6, 3, 4, 4))
-        painter.drawEllipse(QtCore.QRectF(11, 8, 4, 4))
-        painter.drawEllipse(QtCore.QRectF(5, 13, 4, 4))
-    else:
-        painter.end()
+def _nav_icon(name: str, color: Optional[str] = None,
+              selected_color: Optional[str] = None) -> QtGui.QIcon:
+    try:
+        return admin_icon(
+            name,
+            color or _C["sidebar_fg"],
+            size=20,
+            selected_color=selected_color or _C["sidebar_edge"],
+        )
+    except KeyError:
         return QtGui.QIcon()
-
-    painter.end()
-    return QtGui.QIcon(pixmap)
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +256,7 @@ class QtCardAdapter(ICard):
         self._frame.setStyleSheet(_card_style())
 
         outer = QtWidgets.QVBoxLayout(self._frame)
-        outer.setContentsMargins(20, 18, 20, 20)
+        outer.setContentsMargins(22, 20, 22, 20)
         outer.setSpacing(12)
 
         # Header row: title/subtitle on the left, optional action on the right.
@@ -370,7 +321,7 @@ class QtCardAdapter(ICard):
     def apply_theme(self) -> None:
         self._frame.setStyleSheet(_card_style())
         self._title_lbl.setStyleSheet(
-            f"color: {_C['text']}; font-size: 16px; font-weight: 600; background: transparent;"
+            f"color: {_C['text']}; font-size: 16px; font-weight: 700; background: transparent;"
         )
         self._subtitle_lbl.setStyleSheet(
             f"color: {_C['text_muted']}; font-size: 12px; background: transparent;"
@@ -387,7 +338,7 @@ class QtStatCardAdapter(IStatCard):
         self._frame.setProperty("card", "1")
         self._status = "ok"
         self._trend = 0.0
-        self._frame.setMinimumWidth(150)
+        self._frame.setMinimumWidth(0)
         self._frame.setFixedHeight(136)
         self._frame.setSizePolicy(
             QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Fixed
@@ -489,6 +440,56 @@ class QtStatCardAdapter(IStatCard):
 # ITable
 # ---------------------------------------------------------------------------
 
+
+def _status_colors(value) -> Tuple[str, str]:
+    status = str(value).strip().lower()
+    if status in {"active", "delivered", "shipped", "success", "ok"}:
+        return _C["status_ok_fg"], _C["status_ok_bg"]
+    if status in {"processing", "pending", "warning", "warn"}:
+        return _C["status_warn_fg"], _C["status_warn_bg"]
+    if status in {"inactive", "cancelled", "failed", "error"}:
+        return _C["status_error_fg"], _C["status_error_bg"]
+    return _C["status_neutral_fg"], _C["status_neutral_bg"]
+
+
+class _StatusPillDelegate(QtWidgets.QStyledItemDelegate):
+    """Paint status values as compact semantic pills matching the Web table."""
+
+    def paint(self, painter, option, index) -> None:
+        base_option = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(base_option, index)
+        base_option.text = ""
+        super().paint(painter, base_option, index)
+
+        text = str(index.data(QtCore.Qt.DisplayRole) or "")
+        foreground, background = _status_colors(text)
+        font = QtGui.QFont(option.font)
+        font.setPixelSize(11)
+        font.setWeight(QtGui.QFont.DemiBold)
+        metrics = QtGui.QFontMetrics(font)
+        pill_width = min(option.rect.width() - 16, metrics.horizontalAdvance(text) + 20)
+        if pill_width <= 8:
+            return
+        pill = QtCore.QRect(
+            option.rect.left() + 8,
+            option.rect.center().y() - 12,
+            pill_width,
+            24,
+        )
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.setBrush(QtGui.QColor(background))
+        painter.drawRoundedRect(pill, 12, 12)
+        painter.setFont(font)
+        painter.setPen(QtGui.QColor(foreground))
+        text = metrics.elidedText(
+            text, QtCore.Qt.ElideRight, max(1, pill.width() - 12)
+        )
+        painter.drawText(pill, QtCore.Qt.AlignCenter, text)
+        painter.restore()
+
+
 class QtTableAdapter(ITable):
     def __init__(self):
         self._container = QtWidgets.QWidget()
@@ -505,6 +506,7 @@ class QtTableAdapter(ITable):
         self._table.setStyleSheet(_table_style())
         self._table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self._table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self._table.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self._table.setAlternatingRowColors(True)
         self._table.verticalHeader().hide()
         self._table.horizontalHeader().setStretchLastSection(True)
@@ -512,12 +514,13 @@ class QtTableAdapter(ITable):
             QtWidgets.QHeaderView.Interactive
         )
         self._table.setShowGrid(False)
-        self._table.setFocusPolicy(QtCore.Qt.NoFocus)
+        self._table.setFocusPolicy(QtCore.Qt.StrongFocus)
         self._table.setWordWrap(False)
         self._table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self._table.setMouseTracking(True)
-        self._table.verticalHeader().setDefaultSectionSize(44)
-        self._table.horizontalHeader().setFixedHeight(40)
+        self._table.verticalHeader().setDefaultSectionSize(52)
+        self._table.horizontalHeader().setFixedHeight(44)
+        self._status_delegate = _StatusPillDelegate(self._table)
 
         self._overlay = QtWidgets.QLabel("")
         self._overlay.setAlignment(QtCore.Qt.AlignCenter)
@@ -542,9 +545,11 @@ class QtTableAdapter(ITable):
         self._columns = columns
         self._table.setColumnCount(len(columns))
         self._table.setHorizontalHeaderLabels(
-            [c.get("label", c.get("key", "")) for c in columns]
+            [str(c.get("label", c.get("key", ""))).upper() for c in columns]
         )
         for i, col in enumerate(columns):
+            if col.get("key") == "status":
+                self._table.setItemDelegateForColumn(i, self._status_delegate)
             if "width" in col:
                 self._table.setColumnWidth(i, col["width"])
                 self._table.horizontalHeader().setSectionResizeMode(
@@ -566,17 +571,7 @@ class QtTableAdapter(ITable):
         if key in {"amount", "total", "price"}:
             item.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         elif key == "status":
-            value = str(raw_value).lower()
-            color = {
-                "active": _C["ok"], "delivered": _C["ok"],
-                "shipped": _C["accent"], "processing": _C["warn"],
-                "inactive": _C["text_muted"], "cancelled": _C["error"],
-                "failed": _C["error"], "error": _C["error"],
-            }.get(value, _C["text"])
-            item.setForeground(QtGui.QColor(color))
-            font = item.font()
-            font.setBold(True)
-            item.setFont(font)
+            item.setTextAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
 
     def apply_theme(self) -> None:
         self._container.setStyleSheet(f"background: {_C['surface']};")
@@ -584,6 +579,7 @@ class QtTableAdapter(ITable):
         self._overlay.setStyleSheet(
             f"color: {_C['text_muted']}; font-size: 14px; background: transparent;"
         )
+        self._table.viewport().update()
         for r_idx, row in enumerate(self._rows):
             for c_idx, col in enumerate(self._columns):
                 item = self._table.item(r_idx, c_idx)
@@ -618,18 +614,308 @@ class QtTableAdapter(ITable):
 
 
 # ---------------------------------------------------------------------------
+# Gauge / Chart / Drawer
+# ---------------------------------------------------------------------------
+
+
+class _GaugeWidget(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.label = ""
+        self.value = 0.0
+        self.unit = ""
+        self.minimum = 0.0
+        self.maximum = 100.0
+        self.status = "ok"
+        self.setMinimumSize(190, 180)
+        self.setAccessibleName("Radial gauge")
+
+    def paintEvent(self, _event) -> None:
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        side = min(self.width(), self.height() - 28)
+        arc_size = max(80.0, min(150.0, side - 28.0))
+        rect = QtCore.QRectF(
+            (self.width() - arc_size) / 2,
+            10,
+            arc_size,
+            arc_size,
+        )
+        pen = QtGui.QPen(QtGui.QColor(_C["border"]), 13)
+        pen.setCapStyle(QtCore.Qt.RoundCap)
+        painter.setPen(pen)
+        painter.drawArc(rect, -225 * 16, -270 * 16)
+
+        span = max(1e-9, self.maximum - self.minimum)
+        ratio = max(0.0, min(1.0, (self.value - self.minimum) / span))
+        pen.setColor(QtGui.QColor(_C.get(self.status, _C["accent"])))
+        painter.setPen(pen)
+        painter.drawArc(rect, -225 * 16, int(-270 * 16 * ratio))
+
+        value_font = QtGui.QFont(self.font())
+        value_font.setPixelSize(25)
+        value_font.setBold(True)
+        painter.setFont(value_font)
+        painter.setPen(QtGui.QColor(_C["text"]))
+        center = rect.adjusted(0, 32, 0, -20)
+        painter.drawText(center, QtCore.Qt.AlignCenter, f"{self.value:g}")
+
+        unit_font = QtGui.QFont(self.font())
+        unit_font.setPixelSize(11)
+        painter.setFont(unit_font)
+        painter.setPen(QtGui.QColor(_C["text_muted"]))
+        painter.drawText(
+            QtCore.QRectF(rect.left(), rect.center().y() + 17, rect.width(), 20),
+            QtCore.Qt.AlignCenter,
+            self.unit,
+        )
+        label_font = QtGui.QFont(self.font())
+        label_font.setPixelSize(12)
+        label_font.setWeight(QtGui.QFont.DemiBold)
+        painter.setFont(label_font)
+        painter.drawText(
+            QtCore.QRectF(8, self.height() - 28, self.width() - 16, 20),
+            QtCore.Qt.AlignCenter,
+            self.label,
+        )
+
+
+class QtGaugeAdapter(IGauge):
+    def __init__(self):
+        self._widget = _GaugeWidget()
+        self._target_value = 0.0
+        _track_themed(self, self._widget)
+
+    def get_native(self): return self._widget
+    def set_label(self, label: str) -> None:
+        self._widget.label = str(label); self._widget.update()
+    def set_unit(self, unit: str) -> None:
+        self._widget.unit = str(unit); self._widget.update()
+    def set_range(self, minimum: float, maximum: float) -> None:
+        minimum, maximum = float(minimum), float(maximum)
+        if maximum <= minimum:
+            maximum = minimum + 1.0
+        self._widget.minimum, self._widget.maximum = minimum, maximum
+        self._widget.update()
+    def set_status(self, status: str) -> None:
+        self._widget.status = status if status in {"ok", "warn", "error"} else "ok"
+        self._widget.update()
+    def set_value(self, value: float) -> None:
+        self._target_value = float(value)
+        animate_value(
+            self._widget,
+            self._widget.value,
+            self._target_value,
+            self._set_display_value,
+        )
+    def _set_display_value(self, value: float) -> None:
+        self._widget.value = value
+        self._widget.setAccessibleDescription(
+            f"{self._widget.label}: {value:g} {self._widget.unit}".strip()
+        )
+        self._widget.update()
+    def apply_theme(self) -> None: self._widget.update()
+
+
+class _ChartWidget(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.chart_type = "line"
+        self.title = ""
+        self.x_values: List = []
+        self.series: List[Dict] = []
+        self.setMinimumSize(320, 210)
+        self.setAccessibleName("Data chart")
+
+    def paintEvent(self, _event) -> None:
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        title_height = 28 if self.title else 10
+        plot = QtCore.QRectF(48, title_height, max(40, self.width() - 64),
+                             max(40, self.height() - title_height - 28))
+        if self.title:
+            font = QtGui.QFont(self.font()); font.setPixelSize(13); font.setBold(True)
+            painter.setFont(font); painter.setPen(QtGui.QColor(_C["text"]))
+            painter.drawText(QtCore.QRectF(8, 2, self.width() - 16, 22),
+                             QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter, self.title)
+        values = [value for item in self.series for value in item.get("data", [])]
+        if not values:
+            painter.setPen(QtGui.QColor(_C["text_muted"]))
+            painter.drawText(plot, QtCore.Qt.AlignCenter, "No data")
+            return
+        low, high = min(values), max(values)
+        if low == high:
+            low -= 1.0; high += 1.0
+        padding = (high - low) * 0.08
+        low -= padding; high += padding
+        grid_pen = QtGui.QPen(QtGui.QColor(_C["border"]), 1)
+        painter.setPen(grid_pen)
+        for index in range(5):
+            y = plot.top() + plot.height() * index / 4
+            painter.drawLine(QtCore.QPointF(plot.left(), y), QtCore.QPointF(plot.right(), y))
+        colors = [_C["accent"], _C["ok"], _C["warn"], _C["error"]]
+        for series_index, item in enumerate(self.series):
+            data = item.get("data", [])
+            if not data:
+                continue
+            color = QtGui.QColor(colors[series_index % len(colors)])
+            points = []
+            for index, value in enumerate(data):
+                x = plot.left() + plot.width() * index / max(1, len(data) - 1)
+                y = plot.bottom() - ((value - low) / (high - low)) * plot.height()
+                points.append(QtCore.QPointF(x, y))
+            if self.chart_type == "bar":
+                slot = plot.width() / max(1, len(data))
+                bar_width = max(3.0, slot * 0.62 / max(1, len(self.series)))
+                painter.setPen(QtCore.Qt.NoPen); painter.setBrush(color)
+                for index, point in enumerate(points):
+                    x = plot.left() + index * slot + slot * 0.19 + series_index * bar_width
+                    painter.drawRoundedRect(
+                        QtCore.QRectF(x, point.y(), bar_width, plot.bottom() - point.y()), 3, 3
+                    )
+                continue
+            path = QtGui.QPainterPath(points[0])
+            for point in points[1:]:
+                path.lineTo(point)
+            if self.chart_type == "area":
+                area = QtGui.QPainterPath(path)
+                area.lineTo(points[-1].x(), plot.bottom())
+                area.lineTo(points[0].x(), plot.bottom())
+                area.closeSubpath()
+                fill = QtGui.QColor(color); fill.setAlpha(38)
+                painter.fillPath(area, fill)
+            pen = QtGui.QPen(color, 2.4)
+            pen.setCapStyle(QtCore.Qt.RoundCap); pen.setJoinStyle(QtCore.Qt.RoundJoin)
+            painter.setPen(pen); painter.setBrush(QtCore.Qt.NoBrush); painter.drawPath(path)
+
+
+class QtChartAdapter(IChart):
+    def __init__(self):
+        self._widget = _ChartWidget()
+        self._max_points = 120
+        _track_themed(self, self._widget)
+
+    def get_native(self): return self._widget
+    def set_type(self, chart_type: str) -> None:
+        self._widget.chart_type = chart_type if chart_type in CHART_TYPES else "line"
+        self._widget.update()
+    def set_title(self, title: str) -> None:
+        self._widget.title = str(title); self._widget.update()
+    def set_data(self, x: List, series: List[Dict]) -> None:
+        self._widget.x_values = list(x)[-self._max_points:]
+        self._widget.series = normalized_series(series)
+        for item in self._widget.series:
+            item["data"] = item["data"][-self._max_points:]
+        self._widget.update()
+    def append_data(self, x, values) -> None:
+        append_chart_point(
+            self._widget.x_values, self._widget.series, x, values, self._max_points
+        )
+        self._widget.update()
+    def set_max_points(self, max_points: int) -> None:
+        self._max_points = max(2, int(max_points))
+        self._widget.x_values = self._widget.x_values[-self._max_points:]
+        for item in self._widget.series:
+            item["data"] = item["data"][-self._max_points:]
+    def apply_theme(self) -> None: self._widget.update()
+
+
+class QtDrawerAdapter(IDrawer):
+    def __init__(self):
+        self._dialog = QtWidgets.QDialog()
+        self._dialog.setWindowFlags(QtCore.Qt.Tool | QtCore.Qt.FramelessWindowHint)
+        self._dialog.setModal(False)
+        self._dialog.setFixedWidth(360)
+        self._dialog.setProperty("adminDrawer", "1")
+        layout = QtWidgets.QVBoxLayout(self._dialog)
+        layout.setContentsMargins(22, 18, 22, 22)
+        layout.setSpacing(16)
+        header = QtWidgets.QHBoxLayout()
+        self._title = QtWidgets.QLabel("")
+        self._title.setProperty("drawerTitle", "1")
+        self._close_button = QtWidgets.QToolButton()
+        self._close_button.setIcon(admin_icon("close", _C["text_muted"], 20))
+        self._close_button.setAccessibleName("Close drawer")
+        self._close_button.clicked.connect(self.close)
+        header.addWidget(self._title, stretch=1)
+        header.addWidget(self._close_button)
+        self._content = QtWidgets.QWidget()
+        self._content_layout = QtWidgets.QVBoxLayout(self._content)
+        self._content_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(header)
+        layout.addWidget(self._content, stretch=1)
+        self._open = False
+        self._animation = None
+        _track_themed(self, self._dialog)
+        self.apply_theme()
+
+    def get_native(self): return self._dialog
+    def set_title(self, title: str) -> None: self._title.setText(str(title))
+    def set_content(self, widget) -> None:
+        _clear_layout(self._content_layout)
+        self._content_layout.addWidget(_as_widget(widget))
+    def open(self) -> None:
+        parent = QtWidgets.QApplication.activeWindow()
+        if parent is not None and parent is not self._dialog:
+            self._dialog.setParent(
+                parent, QtCore.Qt.Tool | QtCore.Qt.FramelessWindowHint
+            )
+            height = parent.height()
+            target = QtCore.QRect(parent.width() - 360, 0, 360, height)
+            start = QtCore.QRect(parent.width(), 0, 360, height)
+        else:
+            screen = QtWidgets.QApplication.primaryScreen().availableGeometry()
+            target = QtCore.QRect(screen.right() - 359, screen.top(), 360, screen.height())
+            start = QtCore.QRect(screen.right() + 1, screen.top(), 360, screen.height())
+        self._dialog.setGeometry(start)
+        self._dialog.show(); self._dialog.raise_()
+        self._animate_geometry(start, target)
+        self._open = True
+    def close(self) -> None:
+        if not self._dialog.isVisible():
+            self._open = False; return
+        start = self._dialog.geometry()
+        target = QtCore.QRect(start.right() + 1, start.top(), start.width(), start.height())
+        animation = self._animate_geometry(start, target)
+        animation.finished.connect(self._dialog.hide)
+        self._open = False
+    def toggle(self) -> None: self.close() if self._open else self.open()
+    def is_open(self) -> bool: return self._open
+    def _animate_geometry(self, start, end):
+        animation = QtCore.QPropertyAnimation(self._dialog, b"geometry", self._dialog)
+        animation.setStartValue(start); animation.setEndValue(end)
+        animation.setDuration(motion_duration(190))
+        animation.setEasingCurve(QtCore.QEasingCurve.OutCubic)
+        animation.start(); self._animation = animation
+        return animation
+    def apply_theme(self) -> None:
+        self._dialog.setStyleSheet(
+            f"QDialog[adminDrawer='1'] {{background:{_C['surface']};"
+            f"border-left:1px solid {_C['border']};}}"
+            f"QLabel[drawerTitle='1'] {{color:{_C['text']};font-size:18px;"
+            "font-weight:700;background:transparent;}"
+            "QToolButton {background:transparent;border:none;padding:5px;}"
+            f"QToolButton:hover {{background:{_C['surface_subtle']};border-radius:8px;}}"
+        )
+        self._close_button.setIcon(admin_icon("close", _C["text_muted"], 20))
+
+
+# ---------------------------------------------------------------------------
 # ISidebar
 # ---------------------------------------------------------------------------
 
-_SIDEBAR_EXPANDED = 236
-_SIDEBAR_COLLAPSED = 72
-_SIDEBAR_MIN = 168
-_SIDEBAR_MAX = 360
+_SIDEBAR_EXPANDED = _M["sidebar_expanded"]
+_SIDEBAR_COLLAPSED = _M["sidebar_collapsed"]
+_SIDEBAR_MIN = _M["sidebar_min"]
+_SIDEBAR_MAX = _M["sidebar_max"]
 
 
 class QtSidebarAdapter(ISidebar):
     def __init__(self):
         self._list = QtWidgets.QListWidget()
+        self._list.setAccessibleName("Primary navigation")
+        self._list.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self._list.setUniformItemSizes(True)
         self._list.setStyleSheet(_sidebar_style())
         self._list.setMinimumWidth(_SIDEBAR_MIN)
         self._list.setMaximumWidth(_SIDEBAR_MAX)
@@ -696,7 +982,9 @@ class QtSidebarAdapter(ISidebar):
     def apply_theme(self) -> None:
         self._list.setStyleSheet(_sidebar_style())
         for i, icon_name in enumerate(self._icons):
-            icon = _nav_icon(icon_name, _C["sidebar_fg"])
+            icon = _nav_icon(
+                icon_name, _C["sidebar_fg"], _C["sidebar_edge"]
+            )
             if not icon.isNull():
                 self._list.item(i).setIcon(icon)
 
@@ -734,11 +1022,12 @@ class QtAppShellAdapter(IAppShell):
         # Header strip
         self._header_area = QtWidgets.QWidget()
         self._header_area.setProperty("shellHeader", "1")
+        self._header_area.setAccessibleName("Application header")
         self._header_area.setStyleSheet(
             f"QWidget[shellHeader='1'] {{ background: {_C['header_bg']}; "
             f"border-bottom: 1px solid {_C['header_border']}; }}"
         )
-        self._header_area.setFixedHeight(64)
+        self._header_area.setFixedHeight(_M["header_height"])
         self._header_layout = QtWidgets.QHBoxLayout(self._header_area)
         self._header_layout.setContentsMargins(16, 0, 16, 0)
         self._header_layout.setSpacing(8)
@@ -746,6 +1035,7 @@ class QtAppShellAdapter(IAppShell):
 
         # Body: a real splitter so users can resize the navigation rail.
         self._splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        self._splitter.setAccessibleName("Navigation and content splitter")
         self._splitter.setChildrenCollapsible(False)
         self._splitter.setOpaqueResize(True)
         self._splitter.setHandleWidth(5)
@@ -760,21 +1050,34 @@ class QtAppShellAdapter(IAppShell):
         # Content area
         self._content_wrap = QtWidgets.QWidget()
         self._content_wrap.setProperty("shellContent", "1")
+        self._content_wrap.setAccessibleName("Application content")
         self._content_wrap.setStyleSheet(
             f"QWidget[shellContent='1'] {{ background: {_C['bg']}; }}"
         )
         self._content_layout = QtWidgets.QVBoxLayout(self._content_wrap)
-        self._content_layout.setContentsMargins(28, 24, 28, 28)
+        padding = _M["content_padding"]
+        self._content_layout.setContentsMargins(padding, 24, padding, padding)
         self._content_layout.setSpacing(0)
+        self._content_scroll = QtWidgets.QScrollArea()
+        self._content_scroll.setProperty("shellScroll", "1")
+        self._content_scroll.setWidgetResizable(True)
+        self._content_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self._content_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self._content_layout.addWidget(self._content_scroll)
         self._splitter.addWidget(self._content_wrap)
 
         # Footer strip
         self._footer_area = QtWidgets.QWidget()
+        self._footer_area.setProperty("shellFooter", "1")
+        self._footer_area.setAccessibleName("Application status bar")
         self._footer_area.setStyleSheet(
-            f"background: {_C['surface']}; border-top: 1px solid {_C['border']};"
+            f"QWidget[shellFooter='1'] {{ background: {_C['surface']}; "
+            f"border-top: 1px solid {_C['border']}; }}"
         )
+        self._footer_area.setFixedHeight(_M["footer_height"])
         self._footer_layout = QtWidgets.QHBoxLayout(self._footer_area)
-        self._footer_layout.setContentsMargins(16, 8, 16, 8)
+        self._footer_layout.setContentsMargins(20, 0, 20, 0)
+        self._footer_layout.setAlignment(QtCore.Qt.AlignVCenter)
         self._footer_area.hide()
 
         outer.addWidget(self._header_area)
@@ -809,8 +1112,12 @@ class QtAppShellAdapter(IAppShell):
         self._on_resize(self._root.width())
 
     def set_content(self, widget) -> None:
-        _clear_layout(self._content_layout)
-        self._content_layout.addWidget(_as_widget(widget))
+        old_widget = self._content_scroll.takeWidget()
+        if old_widget is not None:
+            old_widget.setParent(None)
+        content_widget = _as_widget(widget)
+        content_widget.setMinimumWidth(0)
+        self._content_scroll.setWidget(content_widget)
 
     def set_footer(self, widget) -> None:
         _clear_layout(self._footer_layout)
@@ -825,12 +1132,14 @@ class QtAppShellAdapter(IAppShell):
                 if current >= _SIDEBAR_MIN:
                     self._saved_sidebar_width = current
                 self._sidebar_adapter.set_collapsed(True)
+                self._splitter.setHandleWidth(0)
                 self._splitter.setSizes([
                     _SIDEBAR_COLLAPSED,
                     max(1, width - _SIDEBAR_COLLAPSED),
                 ])
             else:
                 self._sidebar_adapter.set_collapsed(False)
+                self._splitter.setHandleWidth(5)
                 restored = max(
                     _SIDEBAR_MIN, min(_SIDEBAR_MAX, self._saved_sidebar_width)
                 )
@@ -856,13 +1165,23 @@ class QtAppShellAdapter(IAppShell):
         self._content_wrap.setStyleSheet(
             f"QWidget[shellContent='1'] {{ background: {_C['bg']}; }}"
         )
+        self._content_scroll.setStyleSheet(
+            f"QScrollArea[shellScroll='1'] {{background:{_C['bg']};border:none;}}"
+            f"QScrollArea[shellScroll='1'] > QWidget > QWidget {{background:{_C['bg']};}}"
+        )
         self._splitter.setStyleSheet(
             f"QSplitter::handle {{ background: {_C['border']}; }}"
             f"QSplitter::handle:hover {{ background: {_C['accent']}; }}"
         )
         self._footer_area.setStyleSheet(
-            f"background: {_C['surface']}; border-top: 1px solid {_C['border']};"
+            f"QWidget[shellFooter='1'] {{ background: {_C['surface']}; "
+            f"border-top: 1px solid {_C['border']}; }}"
         )
+        footer_palette = self._footer_area.palette()
+        footer_palette.setColor(
+            QtGui.QPalette.WindowText, QtGui.QColor(_C["text_muted"])
+        )
+        self._footer_area.setPalette(footer_palette)
 
 
 # ---------------------------------------------------------------------------
@@ -939,14 +1258,15 @@ class QtBreadcrumbAdapter(IBreadcrumb):
 # ---------------------------------------------------------------------------
 
 def _register(factory_class):
-    from uniui.admin import ICard, IStatCard, ITable, ISidebar, IAppShell, IBreadcrumb
-
     def createCard(self)       -> ICard:       return QtCardAdapter()
     def createStatCard(self)   -> IStatCard:   return QtStatCardAdapter()
     def createTable(self)      -> ITable:      return QtTableAdapter()
     def createSidebar(self)    -> ISidebar:    return QtSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return QtAppShellAdapter()
     def createBreadcrumb(self) -> IBreadcrumb: return QtBreadcrumbAdapter()
+    def createGauge(self)      -> IGauge:      return QtGaugeAdapter()
+    def createChart(self)      -> IChart:      return QtChartAdapter()
+    def createDrawer(self)     -> IDrawer:     return QtDrawerAdapter()
 
     factory_class.createCard       = createCard
     factory_class.createStatCard   = createStatCard
@@ -954,6 +1274,9 @@ def _register(factory_class):
     factory_class.createSidebar    = createSidebar
     factory_class.createAppShell   = createAppShell
     factory_class.createBreadcrumb = createBreadcrumb
+    factory_class.createGauge      = createGauge
+    factory_class.createChart      = createChart
+    factory_class.createDrawer     = createDrawer
 
 
 try:

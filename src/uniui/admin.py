@@ -6,7 +6,7 @@ Pure Python — no backend dependencies.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from uniui.core import IWidget
 
@@ -138,3 +138,63 @@ class IBreadcrumb(IWidget):
     def on_click(self, fn: Callable[[str], None]) -> None:
         """Register callback fired when the user clicks a crumb (passes path)."""
         ...
+
+
+class IGauge(IWidget):
+    """Radial metric display with a numeric range and semantic status."""
+
+    @abstractmethod
+    def set_label(self, label: str) -> None: ...
+
+    @abstractmethod
+    def set_value(self, value: float) -> None: ...
+
+    @abstractmethod
+    def set_range(self, minimum: float, maximum: float) -> None: ...
+
+    @abstractmethod
+    def set_unit(self, unit: str) -> None: ...
+
+    @abstractmethod
+    def set_status(self, status: str) -> None: ...
+
+
+class IChart(IWidget):
+    """Backend-neutral line, area, or bar chart with streaming updates."""
+
+    @abstractmethod
+    def set_type(self, chart_type: str) -> None: ...
+
+    @abstractmethod
+    def set_title(self, title: str) -> None: ...
+
+    @abstractmethod
+    def set_data(self, x: List[Any], series: List[Dict]) -> None: ...
+
+    @abstractmethod
+    def append_data(self, x: Any, values: Any) -> None: ...
+
+    @abstractmethod
+    def set_max_points(self, max_points: int) -> None: ...
+
+
+class IDrawer(IWidget):
+    """Animated secondary panel which can be opened without replacing a page."""
+
+    @abstractmethod
+    def set_title(self, title: str) -> None: ...
+
+    @abstractmethod
+    def set_content(self, widget: IWidget) -> None: ...
+
+    @abstractmethod
+    def open(self) -> None: ...
+
+    @abstractmethod
+    def close(self) -> None: ...
+
+    @abstractmethod
+    def toggle(self) -> None: ...
+
+    @abstractmethod
+    def is_open(self) -> bool: ...

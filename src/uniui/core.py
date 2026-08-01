@@ -677,6 +677,15 @@ class IWidgetFactory(ABC):
         """Create a breadcrumb navigation widget (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Breadcrumb not supported on this platform")
 
+    def createGauge(self) -> "IGauge":
+        raise NotSupportedError("Gauge not supported on this platform")
+
+    def createChart(self) -> "IChart":
+        raise NotSupportedError("Chart not supported on this platform")
+
+    def createDrawer(self) -> "IDrawer":
+        raise NotSupportedError("Drawer not supported on this platform")
+
     # snake_case aliases
     def create_label(self) -> ILabel:
         return self.createLabel()
@@ -743,3 +752,12 @@ class IWidgetFactory(ABC):
 
     def create_breadcrumb(self) -> "IBreadcrumb":
         return self.createBreadcrumb()
+
+    def create_gauge(self) -> "IGauge":
+        return self.createGauge()
+
+    def create_chart(self) -> "IChart":
+        return self.createChart()
+
+    def create_drawer(self) -> "IDrawer":
+        return self.createDrawer()

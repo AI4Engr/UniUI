@@ -76,21 +76,21 @@ app.run(page)
 
 #### Phase 1: Design System and Shell
 
-- [ ] Extract shared Admin design tokens: color, typography, spacing, radius, border, shadow, and semantic status colors
+- [x] Extract shared Admin design tokens: color, typography, spacing, radius, border, shadow, and semantic status colors
 - [ ] Add Qt-specific theme, icon, and visual-effect modules (`qt_theme.py`, `qt_icons.py`, `qt_effects.py`)
-- [ ] Use one SVG icon set across Qt, Jupyter, and Web; remove text glyphs and operating-system-dependent icons
-- [ ] Rebuild the Qt Header, Sidebar, Content, and Footer against the Web visual baseline
+- [x] Use one SVG icon set across Qt, Jupyter, and Web; remove text glyphs and operating-system-dependent icons
+- [x] Rebuild the Qt Header, Sidebar, Content, and Footer against the Web visual baseline
 - [ ] Match Web navigation states: normal, hover, active, disabled, collapsed, and keyboard focus
-- [ ] Match Web controls: primary/secondary/icon buttons, inputs, status pills, cards, and table chrome
-- [ ] Keep the Sidebar draggable in wide mode and restore the last user-selected width
+- [x] Match Web controls: primary/secondary/icon buttons, inputs, status pills, cards, and table chrome
+- [x] Keep the Sidebar draggable in wide mode and restore the last user-selected width
 - [ ] Support wide Sidebar, medium icon rail, and compact drawer modes without recreating route pages
 - [ ] Verify light/dark switching updates existing widgets without losing route, selection, form, chart, or splitter state
 
 #### Phase 2: Native Dashboard Components
 
-- [ ] Add a backend-neutral `Gauge` / `RadialProgress` interface
-- [ ] Implement Qt Gauge using `QPainter` with antialiasing, semantic colors, units, and animated value transitions
-- [ ] Add line, area, and bar charts; prefer `pyqtgraph` for native real-time engineering data
+- [x] Add a backend-neutral `Gauge` / `RadialProgress` interface
+- [x] Implement Qt Gauge using `QPainter` with antialiasing, semantic colors, units, and animated value transitions
+- [x] Add line, area, and bar charts with lightweight `QPainter` / SVG real-time renderers; keep `pyqtgraph` as a future optional high-throughput renderer
 - [ ] Keep chart dependencies optional, e.g. `uniui[charts]`
 - [ ] Add chart theme switching, empty/loading/error states, and responsive resize handling
 - [ ] Replace `QTableWidget` with `QTableView + QAbstractTableModel` for production DataGrid performance
@@ -120,7 +120,7 @@ Chart(
 - [ ] Add Sidebar expand/collapse animation without changing route state
 - [ ] Add page fade/slide transitions with an option to disable motion
 - [ ] Add card hover/focus feedback without expensive full-widget repaints
-- [ ] Add an animated settings drawer using `QStackedLayout.StackAll` or an equivalent overlay
+- [x] Add an animated settings drawer using `QStackedLayout.StackAll` or an equivalent overlay
 - [ ] Add smooth Gauge and metric-value transitions
 - [ ] Add Toast, Dialog, loading overlay, and Skeleton feedback components
 - [ ] Use `QPropertyAnimation`, `QParallelAnimationGroup`, `QGraphicsOpacityEffect`, and `QEasingCurve` through reusable helpers
@@ -128,13 +128,13 @@ Chart(
 
 #### Phase 4: Responsive, DPI, and Production Quality
 
-- [ ] Verify Qt layouts at container widths of 1440, 1180, 900, and 640 logical pixels
-- [ ] Verify Windows scaling at 100%, 125%, 150%, and 200%
-- [ ] Ensure responsive reflow does not flicker or recreate gauges, charts, tables, or route pages
+- [x] Verify Qt layouts at container widths of 1440, 1180, 900, and 640 logical pixels
+- [x] Verify Windows scaling at 100%, 125%, 150%, and 200%
+- [x] Ensure responsive reflow does not flicker or recreate gauges, charts, tables, or route pages
 - [ ] Debounce chart and viewport resizing by 50–100 ms
 - [ ] Ensure real-time charts and data refresh do not block the Qt UI thread
 - [ ] Support keyboard navigation, visible focus rings, tooltips, and accessible names
-- [ ] Add offscreen geometry/state tests and reference screenshot checks for the Qt Admin example
+- [x] Add offscreen geometry/state and screenshot render checks for the Qt Admin example
 - [ ] Package SVG icons, fonts, and optional chart dependencies correctly for PyInstaller builds
 
 #### Qt Visual Parity Completion Criteria
@@ -377,18 +377,18 @@ Backend implementation:
 
 ### Chart Common API
 
-- [ ] Add `IChart` and a `Chart(...)` facade API
-- [ ] Use backend-agnostic declarative configuration; do not expose Qt/Jupyter native objects to business code
+- [x] Add `IChart` and a `Chart(...)` facade API
+- [x] Use backend-agnostic declarative configuration; do not expose Qt/Jupyter native objects to business code
 - [ ] First version supports:
-  - [ ] Line chart `line`
-  - [ ] Bar chart `bar`
+  - [x] Line chart `line`
+  - [x] Bar chart `bar`
   - [ ] Pie / donut chart `pie` / `donut`
   - [ ] Scatter chart `scatter`
-  - [ ] Area chart `area`
+  - [x] Area chart `area`
 - [ ] Support title, legend, axes, units, colors, stacking, and tooltip
 - [ ] Support empty data, loading, and render error states
-- [ ] Support dark/light theme and redraw on theme switch
-- [ ] Support responsive sizing and minimum height
+- [x] Support dark/light theme and redraw on theme switch
+- [x] Support responsive sizing and minimum height
 
 Proposed API draft:
 
@@ -412,11 +412,11 @@ chart.set_data(
 
 - [ ] Compare Plotly, ECharts, and Matplotlib for Qt/Jupyter consistency, package size, offline capability, and packaging complexity
 - [ ] Place chart dependencies in an optional extra, e.g. `uniui[charts]`
-- [ ] Implement Qt renderer
-- [ ] Implement Jupyter renderer
-- [ ] Provide `set_data()` to refresh data without replacing the component instance
-- [ ] Provide `append_data()` for real-time monitoring charts
-- [ ] Cap the number of real-time data points to prevent memory growth over long runs
+- [x] Implement Qt renderer
+- [x] Implement Jupyter renderer
+- [x] Provide `set_data()` to refresh data without replacing the component instance
+- [x] Provide `append_data()` for real-time monitoring charts
+- [x] Cap the number of real-time data points to prevent memory growth over long runs
 - [ ] Support PNG/SVG export (can move to P2)
 - [ ] Raise `NotSupportedError` with installation instructions when chart dependencies are missing
 
@@ -661,12 +661,12 @@ src/uniui/
 
 ## Testing and Acceptance
 
-- [ ] Every new component has public contract tests
-- [ ] Both Qt and Jupyter have minimal smoke tests
+- [x] Every new component has public contract tests
+- [x] Both Qt and Jupyter have minimal smoke tests
 - [ ] Layout size, flex, spacing, alignment, Grid span, and child order have pure model tests
-- [ ] Qt correctly switches layout mode at container widths of 640, 900, and 1440
+- [x] Qt correctly switches layout mode at container widths of 640, 900, and 1440
 - [ ] Jupyter Flex/Grid generates key layout attributes that conform to the public `LayoutSpec`
-- [ ] Breakpoint switches do not destroy components with stable keys
+- [x] Breakpoint switches do not destroy components with stable keys
 - [ ] Continuous resize does not trigger CSG recomputation or duplicate data requests
 - [ ] Jupyter resize bridging is debounced and does not generate high-frequency comm messages
 - [ ] Key Admin pages have visual snapshot regression tests at compact/medium/wide

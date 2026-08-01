@@ -57,7 +57,10 @@ from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
 from .routing import Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu, sync_breadcrumb
 
 # Admin component interfaces
-from .admin import ICard, IStatCard, ITable, ISidebar, IAppShell, IBreadcrumb
+from .admin import (
+    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    ISidebar, IStatCard, ITable,
+)
 
 # Value parsing helpers
 from .strategies import parse_float, parse_int, parse_flexible, normalize_text
@@ -98,6 +101,9 @@ TABLE = 'table'
 SIDEBAR = 'sidebar'
 APP_SHELL = 'app_shell'
 BREADCRUMB = 'breadcrumb'
+GAUGE = 'gauge'
+CHART = 'chart'
+DRAWER = 'drawer'
 
 
 # ============================================================================
@@ -440,6 +446,41 @@ def Breadcrumb(items=None) -> IBreadcrumb:
     return bc
 
 
+def Gauge(label: str = "", value: float = 0.0, unit: str = "",
+          minimum: float = 0.0, maximum: float = 100.0,
+          status: str = "ok") -> IGauge:
+    gauge = _get_factory().create_gauge()
+    gauge.set_range(minimum, maximum)
+    gauge.set_label(label)
+    gauge.set_unit(unit)
+    gauge.set_status(status)
+    gauge.set_value(value)
+    return gauge
+
+
+def Chart(chart_type: str = "line", title: str = "", x=None,
+          series=None, max_points: int = 120, **options) -> IChart:
+    if "type" in options:
+        chart_type = options.pop("type")
+    if options:
+        unknown = ", ".join(sorted(options))
+        raise TypeError(f"Unknown Chart option(s): {unknown}")
+    chart = _get_factory().create_chart()
+    chart.set_type(chart_type)
+    chart.set_title(title)
+    chart.set_max_points(max_points)
+    chart.set_data(list(x or []), list(series or []))
+    return chart
+
+
+def Drawer(title: str = "", content=None) -> IDrawer:
+    drawer = _get_factory().create_drawer()
+    drawer.set_title(title)
+    if content is not None:
+        drawer.set_content(content)
+    return drawer
+
+
 def TabWidget() -> ITabWidget:
     """Create a tab widget"""
     return _get_factory().create_tab_widget()
@@ -545,6 +586,9 @@ __all__ = [
     'ISidebar',
     'IAppShell',
     'IBreadcrumb',
+    'IGauge',
+    'IChart',
+    'IDrawer',
 
     # Widget creation functions
     'Label',
@@ -568,6 +612,9 @@ __all__ = [
     'Sidebar',
     'AppShell',
     'Breadcrumb',
+    'Gauge',
+    'Chart',
+    'Drawer',
     'TabWidget',
     'GroupBox',
     'Image',
@@ -585,6 +632,7 @@ __all__ = [
     'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
     'CARD', 'STAT_CARD', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
+    'GAUGE', 'CHART', 'DRAWER',
 
     # Framework selection
     'use',

@@ -12,50 +12,21 @@ import weakref
 
 import ipywidgets as widgets
 
-from .admin import IAppShell, IBreadcrumb, ICard, ISidebar, IStatCard, ITable
+from .admin import (
+    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    ISidebar, IStatCard, ITable,
+)
+from .admin_icons import ADMIN_ICON_NAMES, css_mask
+from .admin_theme import get_admin_metrics, get_admin_tokens
+from .admin_visuals import (
+    CHART_TYPES, append_chart_point, normalized_series,
+    render_chart_svg, render_gauge_svg,
+)
 
 
-_LIGHT = {
-    "bg": "#f4f7fb",
-    "surface": "#ffffff",
-    "surface_subtle": "#f8fafc",
-    "text": "#172033",
-    "text_muted": "#667085",
-    "border": "#e4e7ec",
-    "border_strong": "#d0d5dd",
-    "accent": "#4f46e5",
-    "accent_hover": "#4338ca",
-    "ok": "#16a34a",
-    "warn": "#d97706",
-    "error": "#dc2626",
-    "sidebar_bg": "#101828",
-    "sidebar_fg": "#d0d5dd",
-    "sidebar_active": "#344054",
-    "header_bg": "#ffffff",
-    "input_bg": "#ffffff",
-    "shadow": "0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04)",
-}
-
-_DARK = {
-    "bg": "#0b1220",
-    "surface": "#111827",
-    "surface_subtle": "#182235",
-    "text": "#f2f4f7",
-    "text_muted": "#98a2b3",
-    "border": "#263247",
-    "border_strong": "#344054",
-    "accent": "#818cf8",
-    "accent_hover": "#a5b4fc",
-    "ok": "#4ade80",
-    "warn": "#fbbf24",
-    "error": "#fb7185",
-    "sidebar_bg": "#080d18",
-    "sidebar_fg": "#cbd5e1",
-    "sidebar_active": "#263247",
-    "header_bg": "#111827",
-    "input_bg": "#182235",
-    "shadow": "0 1px 3px rgba(0,0,0,.35)",
-}
+_LIGHT = get_admin_tokens(False)
+_DARK = get_admin_tokens(True)
+_M = get_admin_metrics()
 
 _admin_dark = False
 _theme_targets: "weakref.WeakSet[object]" = weakref.WeakSet()
@@ -92,11 +63,23 @@ def _html(text: str, class_name: str = "") -> widgets.HTML:
     return widget
 
 
+def _shared_icon_css() -> str:
+    rules = []
+    for name in ADMIN_ICON_NAMES:
+        rules.append(
+            f".uniui-icon-{name} button::before{{content:'';display:inline-block;"
+            f"width:18px;height:18px;flex:0 0 18px;margin-right:8px;"
+            f"vertical-align:-4px;{css_mask(name)}}}"
+        )
+    return "".join(rules)
+
+
 def _css() -> str:
     p = get_admin_palette()
     variables = ";".join(f"--uniui-{key}:{value}" for key, value in p.items())
     return f"""
 <style>
+{_shared_icon_css()}
 .uniui-admin-shell {{{variables};
   container-type:inline-size; width:100%; min-width:0; min-height:680px;
   color:var(--uniui-text); background:var(--uniui-bg);
@@ -108,13 +91,13 @@ def _css() -> str:
 .uniui-admin-shell .widget-label {{color:var(--uniui-text)}}
 .uniui-admin-shell .widget-text input {{
   color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
-  border:1px solid var(--uniui-border_strong)!important; border-radius:8px!important;
+  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
   min-height:38px; padding:7px 10px;
 }}
 .uniui-admin-shell .widget-button,
 .uniui-admin-shell .widget-button button {{
   background:var(--uniui-accent)!important; color:white!important;
-  border:1px solid var(--uniui-accent)!important; border-radius:8px!important;
+  border:1px solid var(--uniui-accent)!important; border-radius:9px!important;
   min-height:36px; padding:6px 13px; font-weight:600;
 }}
 .uniui-admin-shell .widget-button:hover,
@@ -123,7 +106,7 @@ def _css() -> str:
   border-color:var(--uniui-accent_hover)!important;
 }}
 .uniui-shell-header {{
-  flex:0 0 64px; min-height:64px; padding:0 16px; gap:10px;
+  flex:0 0 {_M['header_height']}px; min-height:{_M['header_height']}px; padding:0 16px; gap:10px;
   align-items:center; background:var(--uniui-header_bg);
   border-bottom:1px solid var(--uniui-border);
 }}
@@ -133,13 +116,13 @@ def _css() -> str:
   overflow:auto; background:var(--uniui-bg);
 }}
 .uniui-shell-footer {{
-  flex:0 0 auto; min-height:38px; padding:8px 16px;
+  flex:0 0 auto; min-height:{_M['footer_height']}px; padding:8px 16px;
   background:var(--uniui-surface); border-top:1px solid var(--uniui-border);
 }}
 .uniui-admin-card {{
   width:100%; min-width:0; padding:18px 20px 20px; gap:12px;
   background:var(--uniui-surface); border:1px solid var(--uniui-border);
-  border-radius:12px; box-shadow:var(--uniui-shadow);
+  border-radius:14px; box-shadow:var(--uniui-shadow);
 }}
 .uniui-card-header {{display:flex; flex-flow:row; align-items:flex-start; gap:12px}}
 .uniui-card-copy {{min-width:0; flex:1 1 auto; gap:2px}}
@@ -152,7 +135,7 @@ def _css() -> str:
 .uniui-stat-card {{
   min-width:190px; min-height:136px; padding:15px 18px 14px;
   background:var(--uniui-surface); border:1px solid var(--uniui-border);
-  border-top:3px solid var(--uniui-ok); border-radius:12px;
+  border-top:3px solid var(--uniui-ok); border-radius:14px;
   box-shadow:var(--uniui-shadow); gap:2px; flex:1 1 190px;
 }}
 .uniui-stat-card.uniui-status-warn {{border-top-color:var(--uniui-warn)}}
@@ -174,13 +157,25 @@ def _css() -> str:
 .uniui-admin-table tbody tr {{cursor:pointer}}
 .uniui-admin-table tbody tr:hover {{background:var(--uniui-surface_subtle)}}
 .uniui-admin-table .uniui-number {{text-align:right}}
-.uniui-admin-table .uniui-status {{font-weight:700}}
-.uniui-admin-table .uniui-ok {{color:var(--uniui-ok)}}
-.uniui-admin-table .uniui-warn {{color:var(--uniui-warn)}}
-.uniui-admin-table .uniui-error {{color:var(--uniui-error)}}
+.uniui-status-pill {{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;
+  border-radius:999px;font-size:11px;font-weight:700}}
+.uniui-status-pill.uniui-status-ok {{color:var(--uniui-status_ok_fg);background:var(--uniui-status_ok_bg)}}
+.uniui-status-pill.uniui-status-warn {{color:var(--uniui-status_warn_fg);background:var(--uniui-status_warn_bg)}}
+.uniui-status-pill.uniui-status-error {{color:var(--uniui-status_error_fg);background:var(--uniui-status_error_bg)}}
+.uniui-status-pill.uniui-status-neutral {{color:var(--uniui-status_neutral_fg);background:var(--uniui-status_neutral_bg)}}
 .uniui-table-message, .uniui-table-message p {{margin:20px 0;text-align:center;color:var(--uniui-text_muted)}}
+.uniui-admin-gauge,.uniui-admin-chart {{width:100%;min-width:0}}
+.uniui-admin-gauge svg,.uniui-admin-chart svg {{display:block;width:100%;height:auto;max-height:250px}}
+.uniui-admin-drawer {{max-height:0;opacity:0;overflow:hidden;transform:translateX(24px);
+  pointer-events:none;padding:0 20px;background:var(--uniui-surface);border:1px solid transparent;
+  border-radius:14px;transition:max-height .2s ease,opacity .18s ease,transform .2s ease,padding .2s ease}}
+.uniui-admin-drawer.uniui-open {{max-height:520px;opacity:1;transform:none;pointer-events:auto;
+  padding:18px 20px;border-color:var(--uniui-border);box-shadow:var(--uniui-shadow)}}
+.uniui-drawer-header {{align-items:center}}
+.uniui-drawer-title,.uniui-drawer-title p {{margin:0;color:var(--uniui-text);font-size:18px;font-weight:700}}
 .uniui-admin-sidebar {{
-  width:236px; min-width:168px; max-width:360px; flex:0 0 236px;
+  width:{_M['sidebar_expanded']}px; min-width:{_M['sidebar_min']}px;
+  max-width:{_M['sidebar_max']}px; flex:0 0 {_M['sidebar_expanded']}px;
   padding:14px 10px; gap:5px; overflow:auto; background:var(--uniui-sidebar_bg);
 }}
 .uniui-admin-sidebar .widget-button {{width:100%}}
@@ -196,7 +191,7 @@ def _css() -> str:
 .uniui-admin-sidebar .uniui-active button {{
   color:white!important; background:var(--uniui-sidebar_active)!important;
 }}
-.uniui-sidebar-icon {{display:inline-block; width:24px; text-align:center; margin-right:8px}}
+.uniui-admin-sidebar .uniui-active button::before {{background:var(--uniui-accent)}}
 .uniui-splitter-widget {{
   width:6px; min-width:6px; flex:0 0 6px; align-self:stretch;
   background:var(--uniui-border); cursor:col-resize; touch-action:none;
@@ -219,9 +214,10 @@ def _css() -> str:
 .uniui-demo-stats {{display:flex;flex-flow:row wrap;gap:14px;align-items:stretch}}
 .uniui-demo-header-content {{width:100%;min-width:0;gap:8px;align-items:center;flex-wrap:nowrap!important}}
 @container (max-width:1019px) {{
-  .uniui-admin-sidebar {{width:72px!important;min-width:72px!important;max-width:72px!important;flex-basis:72px!important;padding:14px 8px}}
+  .uniui-admin-sidebar {{width:{_M['sidebar_collapsed']}px!important;min-width:{_M['sidebar_collapsed']}px!important;max-width:{_M['sidebar_collapsed']}px!important;flex-basis:{_M['sidebar_collapsed']}px!important;padding:14px 8px}}
   .uniui-admin-sidebar .widget-button,
   .uniui-admin-sidebar .widget-button button {{font-size:0;text-align:center;padding:8px 4px}}
+  .uniui-admin-sidebar .widget-button button::before {{margin-right:0}}
   .uniui-admin-sidebar .widget-button::first-letter,
   .uniui-admin-sidebar .widget-button button::first-letter {{font-size:16px}}
   .uniui-splitter-widget {{display:none!important}}
@@ -358,12 +354,16 @@ class JupyterTableAdapter(ITable):
                 key = col.get("key", "")
                 value = row.get(key, "")
                 classes = []
+                rendered_value = escape(str(value))
                 if key in {"amount", "price", "total"}:
                     classes.append("uniui-number")
                 if key == "status":
-                    classes.extend(("uniui-status", self._status_class(value)))
+                    rendered_value = (
+                        f'<span class="uniui-status-pill {self._status_class(value)}">'
+                        f"{rendered_value}</span>"
+                    )
                 class_attr = f' class="{" ".join(classes)}"' if classes else ""
-                cells.append(f"<td{class_attr}>{escape(str(value))}</td>")
+                cells.append(f"<td{class_attr}>{rendered_value}</td>")
             click = (
                 "const root=this.closest('.uniui-admin-table'),input=root.querySelector(" 
                 "'.uniui-table-bridge input');if(input){input.value='" + str(index) +
@@ -379,12 +379,12 @@ class JupyterTableAdapter(ITable):
     def _status_class(value) -> str:
         text = str(value).lower()
         if text in {"active", "delivered", "shipped"}:
-            return "uniui-ok"
+            return "uniui-status-ok"
         if text in {"processing", "pending", "warning"}:
-            return "uniui-warn"
-        if text in {"cancelled", "failed", "error"}:
-            return "uniui-error"
-        return ""
+            return "uniui-status-warn"
+        if text in {"inactive", "cancelled", "failed", "error"}:
+            return "uniui-status-error"
+        return "uniui-status-neutral"
 
     def set_loading(self, loading: bool) -> None:
         if loading:
@@ -415,7 +415,72 @@ class JupyterTableAdapter(ITable):
             self._bridge.value = -1
 
 
-_ICONS = {"dashboard": "▦", "users": "♟", "settings": "⚙"}
+class JupyterGaugeAdapter(IGauge):
+    def __init__(self):
+        self._label = ""; self._value = 0.0; self._unit = ""
+        self._minimum = 0.0; self._maximum = 100.0; self._status = "ok"
+        self._native = _html("", "uniui-admin-gauge")
+        _theme_targets.add(self)
+        self._render()
+    def get_native(self): return self._native
+    def set_label(self, label: str) -> None: self._label = str(label); self._render()
+    def set_value(self, value: float) -> None: self._value = float(value); self._render()
+    def set_range(self, minimum: float, maximum: float) -> None:
+        self._minimum = float(minimum); self._maximum = max(float(maximum), self._minimum + 1.0); self._render()
+    def set_unit(self, unit: str) -> None: self._unit = str(unit); self._render()
+    def set_status(self, status: str) -> None:
+        self._status = status if status in {"ok", "warn", "error"} else "ok"; self._render()
+    def _render(self) -> None:
+        self._native.value = render_gauge_svg(
+            self._label, self._value, self._unit, self._minimum,
+            self._maximum, self._status, get_admin_palette(),
+        )
+    def apply_theme(self) -> None: self._render()
+
+
+class JupyterChartAdapter(IChart):
+    def __init__(self):
+        self._chart_type = "line"; self._title = ""; self._x: List = []
+        self._series: List[Dict] = []; self._max_points = 120
+        self._native = _html("", "uniui-admin-chart")
+        _theme_targets.add(self); self._render()
+    def get_native(self): return self._native
+    def set_type(self, chart_type: str) -> None:
+        self._chart_type = chart_type if chart_type in CHART_TYPES else "line"; self._render()
+    def set_title(self, title: str) -> None: self._title = str(title); self._render()
+    def set_data(self, x: List, series: List[Dict]) -> None:
+        self._x = list(x)[-self._max_points:]; self._series = normalized_series(series)
+        for item in self._series: item["data"] = item["data"][-self._max_points:]
+        self._render()
+    def append_data(self, x, values) -> None:
+        append_chart_point(self._x, self._series, x, values, self._max_points); self._render()
+    def set_max_points(self, max_points: int) -> None:
+        self._max_points = max(2, int(max_points)); self._x = self._x[-self._max_points:]
+        for item in self._series: item["data"] = item["data"][-self._max_points:]
+        self._render()
+    def _render(self) -> None:
+        self._native.value = render_chart_svg(
+            self._chart_type, self._title, self._x, self._series, get_admin_palette()
+        )
+    def apply_theme(self) -> None: self._render()
+
+
+class JupyterDrawerAdapter(IDrawer):
+    def __init__(self):
+        self._title = _html("", "uniui-drawer-title")
+        close = widgets.Button(description="", tooltip="Close drawer", layout=widgets.Layout(width="36px"))
+        close.add_class("uniui-icon-close"); close.on_click(lambda _button: self.close())
+        header = widgets.HBox([self._title, close]); header.add_class("uniui-drawer-header")
+        self._content = widgets.Box()
+        self._native = widgets.VBox([header, self._content]); self._native.add_class("uniui-admin-drawer")
+        self._open = False
+    def get_native(self): return self._native
+    def set_title(self, title: str) -> None: self._title.value = f"<p>{escape(str(title))}</p>"
+    def set_content(self, widget) -> None: self._content.children = (_native(widget),)
+    def open(self) -> None: self._open = True; self._native.add_class("uniui-open")
+    def close(self) -> None: self._open = False; self._native.remove_class("uniui-open")
+    def toggle(self) -> None: self.close() if self._open else self.open()
+    def is_open(self) -> bool: return self._open
 
 
 class JupyterSidebarAdapter(ISidebar):
@@ -437,6 +502,8 @@ class JupyterSidebarAdapter(ISidebar):
         self._labels.append(label)
         self._icons.append(icon)
         button = widgets.Button(layout=widgets.Layout(width="100%"))
+        if icon in ADMIN_ICON_NAMES:
+            button.add_class(f"uniui-icon-{icon}")
         button.tooltip = label
         button.on_click(lambda _button, k=key: self._on_select(k))
         self._buttons.append(button)
@@ -458,20 +525,20 @@ class JupyterSidebarAdapter(ISidebar):
         self._collapsed = bool(collapsed)
         for index in range(len(self._buttons)):
             self._refresh_button(index)
-        width = 72 if self._collapsed else 236
+        width = _M["sidebar_collapsed"] if self._collapsed else _M["sidebar_expanded"]
         self.set_width(width, fixed=self._collapsed)
 
     def set_width(self, width: int, fixed: bool = False) -> None:
-        width = max(72 if fixed else 168, min(360, int(width)))
+        minimum = _M["sidebar_collapsed"] if fixed else _M["sidebar_min"]
+        width = max(minimum, min(_M["sidebar_max"], int(width)))
         px = f"{width}px"
         self._native.layout.width = px
         self._native.layout.flex = f"0 0 {px}"
-        self._native.layout.min_width = px if fixed else "168px"
-        self._native.layout.max_width = px if fixed else "360px"
+        self._native.layout.min_width = px if fixed else f"{_M['sidebar_min']}px"
+        self._native.layout.max_width = px if fixed else f"{_M['sidebar_max']}px"
 
     def _refresh_button(self, index: int) -> None:
-        icon = _ICONS.get(self._icons[index], self._icons[index] or self._labels[index][:1])
-        self._buttons[index].description = icon if self._collapsed else f"{icon}  {self._labels[index]}"
+        self._buttons[index].description = "" if self._collapsed else self._labels[index]
 
     def _on_select(self, key: str) -> None:
         if self._select_cb:
@@ -488,7 +555,11 @@ class JupyterAppShellAdapter(IAppShell):
         self._content.add_class("uniui-shell-content")
         self._handle = widgets.HTML(value=_SPLITTER_HTML)
         self._handle.add_class("uniui-splitter-widget")
-        self._width_bridge = widgets.BoundedIntText(value=236, min=168, max=360)
+        self._width_bridge = widgets.BoundedIntText(
+            value=_M["sidebar_expanded"],
+            min=_M["sidebar_min"],
+            max=_M["sidebar_max"],
+        )
         self._width_bridge.layout.display = "none"
         self._width_bridge.add_class("uniui-sidebar-width-bridge")
         self._width_bridge.observe(self._on_width, names="value")
@@ -501,7 +572,7 @@ class JupyterAppShellAdapter(IAppShell):
         self._native.add_class("uniui-admin-shell")
         self._native.layout.width = "100%"
         self._sidebar: Optional[JupyterSidebarAdapter] = None
-        self._saved_sidebar_width = 236
+        self._saved_sidebar_width = _M["sidebar_expanded"]
         _theme_targets.add(self)
 
     def get_native(self): return self._native
@@ -525,7 +596,7 @@ class JupyterAppShellAdapter(IAppShell):
         self._footer.layout.display = None
 
     def _on_width(self, change) -> None:
-        width = max(168, min(360, int(change["new"])))
+        width = max(_M["sidebar_min"], min(_M["sidebar_max"], int(change["new"])))
         self._saved_sidebar_width = width
         if self._sidebar:
             self._sidebar.set_width(width)
@@ -574,6 +645,9 @@ def _register(factory_class) -> None:
     factory_class.createSidebar = lambda self: JupyterSidebarAdapter()
     factory_class.createAppShell = lambda self: JupyterAppShellAdapter()
     factory_class.createBreadcrumb = lambda self: JupyterBreadcrumbAdapter()
+    factory_class.createGauge = lambda self: JupyterGaugeAdapter()
+    factory_class.createChart = lambda self: JupyterChartAdapter()
+    factory_class.createDrawer = lambda self: JupyterDrawerAdapter()
 
 
 from .jupyter import JupyterWidgetFactory
@@ -584,5 +658,6 @@ _register(JupyterWidgetFactory)
 __all__ = [
     "JupyterCardAdapter", "JupyterStatCardAdapter", "JupyterTableAdapter",
     "JupyterSidebarAdapter", "JupyterAppShellAdapter", "JupyterBreadcrumbAdapter",
+    "JupyterGaugeAdapter", "JupyterChartAdapter", "JupyterDrawerAdapter",
     "get_admin_palette", "is_admin_dark", "set_admin_theme",
 ]

@@ -63,32 +63,11 @@ class _NativeWrap:
 
 
 def _header_icon(name, color):
-    """Draw theme-aware toolbar icons without relying on OS icon colors."""
-    from PySide2 import QtCore, QtGui
+    """Render a toolbar icon from the cross-backend Admin SVG source."""
+    from uniui.qt_icons import admin_icon
 
-    pixmap = QtGui.QPixmap(20, 20)
-    pixmap.fill(QtCore.Qt.transparent)
-    painter = QtGui.QPainter(pixmap)
-    painter.setRenderHint(QtGui.QPainter.Antialiasing)
-    pen = QtGui.QPen(QtGui.QColor(color), 1.8)
-    pen.setCapStyle(QtCore.Qt.RoundCap)
-    pen.setJoinStyle(QtCore.Qt.RoundJoin)
-    painter.setPen(pen)
-    painter.setBrush(QtCore.Qt.NoBrush)
-    if name == "back":
-        painter.drawLine(12, 4, 6, 10)
-        painter.drawLine(6, 10, 12, 16)
-    elif name == "forward":
-        painter.drawLine(8, 4, 14, 10)
-        painter.drawLine(14, 10, 8, 16)
-    elif name == "notifications":
-        painter.drawArc(QtCore.QRectF(5, 4, 10, 11), 0, 180 * 16)
-        painter.drawLine(5, 9, 5, 14)
-        painter.drawLine(15, 9, 15, 14)
-        painter.drawLine(5, 14, 15, 14)
-        painter.drawPoint(10, 17)
-    painter.end()
-    return QtGui.QIcon(pixmap)
+    aliases = {"back": "arrow_back", "forward": "arrow_forward"}
+    return admin_icon(aliases.get(name, name), color, size=20)
 
 
 def _page_frame(title, subtitle, action_text=""):
@@ -179,7 +158,7 @@ def dashboard_page(ctx):
         def minimumSizeHint(self):
             # Report the compact one-column minimum so the parent window can
             # shrink far enough for resizeEvent() to trigger a reflow.
-            return QtCore.QSize(150, 136)
+            return QtCore.QSize(190, 136)
 
         def resizeEvent(self, event):
             super().resizeEvent(event)
@@ -207,6 +186,36 @@ def dashboard_page(ctx):
         sc_revenue.get_native(), sc_errors.get_native(),
     ])
 
+    gauge = f.create_gauge()
+    gauge.set_label("Service health")
+    gauge.set_range(0, 100)
+    gauge.set_unit("%")
+    gauge.set_status("ok")
+    gauge.set_value(82)
+    chart = f.create_chart()
+    chart.set_type("area")
+    chart.set_title("Live activity")
+    chart.set_max_points(24)
+    chart.set_data(
+        ["-4", "-3", "-2", "-1", "now"],
+        [{"name": "Requests", "data": [42, 58, 51, 67, 62]}],
+    )
+    gauge_card = f.create_card()
+    gauge_card.set_title("Health")
+    gauge_card.set_subtitle("Animated radial progress")
+    gauge_card.set_content(gauge)
+    chart_card = f.create_card()
+    chart_card.set_title("Realtime")
+    chart_card.set_subtitle("append_data() keeps the latest 24 points")
+    chart_card.set_content(chart)
+    visual_row = QtWidgets.QWidget()
+    visual_layout = QtWidgets.QHBoxLayout(visual_row)
+    visual_layout.setContentsMargins(0, 0, 0, 0)
+    visual_layout.setSpacing(14)
+    visual_layout.addWidget(gauge_card.get_native(), stretch=1)
+    visual_layout.addWidget(chart_card.get_native(), stretch=2)
+    visual_row.setFixedHeight(250)
+
     runner = TaskRunner()
 
     def _fetch(_cancelled: threading.Event):
@@ -223,6 +232,10 @@ def dashboard_page(ctx):
         sc_orders.set_value(str(data["orders"]));    sc_orders.set_trend(-1.4)
         sc_revenue.set_value(f"${data['revenue']:,.0f}"); sc_revenue.set_trend(12.0)
         sc_errors.set_value(str(data["errors"]));    sc_errors.set_status("error"); sc_errors.set_trend(0)
+        health = max(0, 100 - data["errors"] * 7)
+        gauge.set_value(health)
+        gauge.set_status("ok" if health >= 80 else "warn")
+        chart.append_data(time.strftime("%H:%M:%S"), [data["users"] * 14 + data["orders"]])
         refresh_btn.setEnabled(True)
         refresh_btn.setText("Refresh data")
 
@@ -263,6 +276,7 @@ def dashboard_page(ctx):
     card.set_content(inner)
 
     layout.addWidget(stat_row)
+    layout.addWidget(visual_row)
     layout.addWidget(card.get_native(), stretch=1)
     return root
 
@@ -317,30 +331,44 @@ def users_page(ctx):
 
 def settings_page(_ctx):
     f = uniui._get_factory()
-    root, layout, _action = _page_frame(
+    root, layout, open_drawer = _page_frame(
         "Settings",
         "Choose how the workspace looks and behaves.",
+        "Open drawer",
     )
 
     info = f.create_label()
     bind_text(info, Computed(
         lambda: f"Current theme: {_ADMIN_THEME.value}", _ADMIN_THEME
     ))
-    btn = f.create_button()
-    bind_text(btn, Computed(
+    drawer_theme = f.create_button()
+    bind_text(drawer_theme, Computed(
         lambda: (
             "Switch to Light" if _ADMIN_THEME.value == "Dark" else "Switch to Dark"
         ),
         _ADMIN_THEME,
     ))
-    btn.connect(_toggle_admin_theme)
+    drawer_theme.connect(_toggle_admin_theme)
+
+    drawer = f.create_drawer()
+    drawer.set_title("Workspace settings")
+    drawer_content = f.create_vbox()
+    drawer_hint = f.create_label()
+    drawer_hint.set_text("Changes apply immediately without rebuilding the current route.")
+    drawer_content.add_item(drawer_hint)
+    drawer_content.add_item(drawer_theme)
+    drawer.set_content(drawer_content)
+    open_drawer.clicked.connect(drawer.open)
 
     card = f.create_card()
     card.set_title("Appearance")
     card.set_subtitle("Theme changes preserve routes, table state, and loaded data")
     inner = f.create_vbox()
     inner.add_item(info)
-    inner.add_item(btn)
+    open_button = f.create_button()
+    open_button.set_text("Open settings drawer")
+    open_button.connect(drawer.open)
+    inner.add_item(open_button)
     card.set_content(inner)
     layout.addWidget(card.get_native())
     layout.addStretch()
@@ -373,6 +401,21 @@ def _set_props(widget, props):
     native = widget.get_native() if hasattr(widget, "get_native") else widget
     if hasattr(native, "props"):
         native.props(props)
+    return widget
+
+
+def _set_icon_class(widget, icon_name):
+    """Switch a shared SVG icon class on a browser-backed control."""
+    from uniui.admin_icons import ADMIN_ICON_NAMES
+
+    native = widget.get_native() if hasattr(widget, "get_native") else widget
+    for name in ADMIN_ICON_NAMES:
+        class_name = f"uniui-icon-{name}"
+        if hasattr(native, "remove_class"):
+            native.remove_class(class_name)
+        elif hasattr(native, "classes"):
+            native.classes(remove=class_name)
+    _add_class(widget, f"uniui-icon-{icon_name}")
     return widget
 
 
@@ -435,6 +478,22 @@ def _browser_dashboard_page(_ctx):
     for card in cards:
         stats.add_item(card)
 
+    gauge = f.create_gauge()
+    gauge.set_label("Service health"); gauge.set_range(0, 100)
+    gauge.set_unit("%"); gauge.set_status("ok"); gauge.set_value(82)
+    chart = f.create_chart()
+    chart.set_type("area"); chart.set_title("Live activity"); chart.set_max_points(24)
+    chart.set_data(
+        ["-4", "-3", "-2", "-1", "now"],
+        [{"name": "Requests", "data": [42, 58, 51, 67, 62]}],
+    )
+    gauge_card = f.create_card(); gauge_card.set_title("Health")
+    gauge_card.set_subtitle("Animated radial progress"); gauge_card.set_content(gauge)
+    chart_card = f.create_card(); chart_card.set_title("Realtime")
+    chart_card.set_subtitle("Keeps the latest 24 points"); chart_card.set_content(chart)
+    visuals = f.create_wrap(); visuals.set_spec(LayoutSpec(gap=14))
+    visuals.add_item(gauge_card); visuals.add_item(chart_card)
+
     def refresh():
         refresh_btn.set_enabled(False)
         refresh_btn.set_text("Refreshing…")
@@ -449,6 +508,9 @@ def _browser_dashboard_page(_ctx):
             card.set_value(value)
             card.set_trend(trend)
         cards[-1].set_status("error")
+        health = max(0, 100 - 2 * 7)
+        gauge.set_value(health)
+        chart.append_data(time.strftime("%H:%M:%S"), [active * 14 + len(_ORDERS)])
         refresh_btn.set_text("Refresh data")
         refresh_btn.set_enabled(True)
 
@@ -480,6 +542,7 @@ def _browser_dashboard_page(_ctx):
     table_card.set_content(table_content)
 
     page.add_item(stats)
+    page.add_item(visuals)
     page.add_item_with_spec(table_card, LayoutItem(table_card, grow=1))
     return page
 
@@ -533,26 +596,34 @@ def _browser_users_page(_ctx):
 
 def _browser_settings_page(_ctx):
     f = uniui._get_factory()
-    page, _action = _browser_page_frame(
-        "Settings", "Choose how the workspace looks and behaves."
+    page, open_drawer = _browser_page_frame(
+        "Settings", "Choose how the workspace looks and behaves.", "Open drawer"
     )
     info = f.create_label()
     bind_text(info, Computed(lambda: f"Current theme: {_ADMIN_THEME.value}", _ADMIN_THEME))
-    button = f.create_button()
-    bind_text(button, Computed(
+    drawer_button = f.create_button()
+    bind_text(drawer_button, Computed(
         lambda: "Switch to Light" if _ADMIN_THEME.value == "Dark" else "Switch to Dark",
         _ADMIN_THEME,
     ))
-    button.connect(_toggle_admin_theme)
+    drawer_button.connect(_toggle_admin_theme)
+    drawer = f.create_drawer(); drawer.set_title("Workspace settings")
+    drawer_content = f.create_vbox(); drawer_hint = f.create_label()
+    drawer_hint.set_text("Changes apply immediately without rebuilding the current route.")
+    drawer_content.add_item(drawer_hint); drawer_content.add_item(drawer_button)
+    drawer.set_content(drawer_content)
+    open_drawer.connect(drawer.open)
     content = f.create_vbox()
     content.set_spec(LayoutSpec(gap=12))
     content.add_item(info)
-    content.add_item(button)
+    open_button = f.create_button(); open_button.set_text("Open settings drawer")
+    open_button.connect(drawer.open); content.add_item(open_button)
     card = f.create_card()
     card.set_title("Appearance")
     card.set_subtitle("Theme changes preserve routes, table state, and loaded data")
     card.set_content(content)
     page.add_item(card)
+    page.add_item(drawer)
     return page
 
 
@@ -589,12 +660,11 @@ def _main_browser(framework):
     product = f.create_label(); product.set_text("UniUI Admin"); _add_class(product, "uniui-demo-product")
     back = f.create_button()
     forward = f.create_button()
-    if hasattr(back.get_native(), "props"):
-        back.set_text(""); forward.set_text("")
-        _set_props(back, "icon=arrow_back flat round dense")
-        _set_props(forward, "icon=arrow_forward flat round dense")
-    else:
-        back.set_text("‹"); forward.set_text("›")
+    back.set_text(""); forward.set_text("")
+    _set_props(back, "flat round dense")
+    _set_props(forward, "flat round dense")
+    _set_icon_class(back, "arrow_back")
+    _set_icon_class(forward, "arrow_forward")
     _add_class(back, "uniui-demo-icon-button")
     _add_class(forward, "uniui-demo-icon-button")
     back.connect(router.back)
@@ -609,7 +679,8 @@ def _main_browser(framework):
     theme_button = f.create_button()
     theme_button.set_text("Dark mode")
     _add_class(theme_button, "uniui-demo-theme-button")
-    _set_props(theme_button, "icon=dark_mode flat no-caps")
+    _set_props(theme_button, "flat no-caps")
+    _set_icon_class(theme_button, "dark_mode")
     header.add_item(logo)
     header.add_item(product)
     header.add_item(back)
@@ -645,7 +716,7 @@ def _main_browser(framework):
         admin_backend.set_admin_theme(dark)
         _ADMIN_THEME.set("Dark" if dark else "Light")
         theme_button.set_text("Light mode" if dark else "Dark mode")
-        _set_props(theme_button, "icon=light_mode" if dark else "icon=dark_mode")
+        _set_icon_class(theme_button, "light_mode" if dark else "dark_mode")
 
     def toggle():
         apply_theme(_ADMIN_THEME.value != "Dark")
@@ -708,28 +779,39 @@ QToolButton[headerButton="1"]:hover { background: %(surface_subtle)s; color: %(t
 QLineEdit {
     background: %(input_bg)s;
     border: 1px solid %(border_strong)s;
-    border-radius: 8px;
+    border-radius: 9px;
     padding: 8px 11px;
     color: %(text)s;
     font-size: 13px;
     min-height: 20px;
 }
-QLineEdit:focus { border: 1px solid %(accent)s; }
+QLineEdit:focus { border: 2px solid %(accent)s; padding: 7px 10px; }
 QLineEdit:hover { border-color: %(text_muted)s; }
+QLineEdit:disabled {
+    color: %(text_muted)s;
+    background: %(surface_subtle)s;
+    border-color: %(border)s;
+}
 
 QPushButton {
     background: %(accent)s;
     color: #ffffff;
     border: 1px solid %(accent)s;
-    border-radius: 8px;
+    border-radius: 9px;
     padding: 7px 14px;
     font-size: 13px;
     font-weight: 600;
     min-height: 20px;
+    qproperty-iconSize: 18px 18px;
 }
 QPushButton:hover { background: %(accent_hover)s; border-color: %(accent_hover)s; }
 QPushButton:pressed { background: %(accent_press)s; }
-QPushButton:disabled { background: %(disabled)s; border-color: %(disabled)s; }
+QPushButton:focus { border: 2px solid %(accent_hover)s; padding: 6px 13px; }
+QPushButton:disabled {
+    color: %(text_muted)s;
+    background: %(disabled)s;
+    border-color: %(disabled)s;
+}
 QPushButton[buttonRole="secondary"] {
     background: %(surface)s;
     color: %(text)s;
@@ -857,7 +939,10 @@ def main():
     global_search = QtWidgets.QLineEdit()
     global_search.setPlaceholderText("Search…")
     global_search.setMaximumWidth(210)
-    global_search.setClearButtonEnabled(True)
+    search_action = global_search.addAction(
+        _header_icon("search", get_admin_palette()["text_muted"]),
+        QtWidgets.QLineEdit.LeadingPosition,
+    )
     hl.addWidget(global_search)
 
     theme_btn = QtWidgets.QPushButton("Dark mode")
@@ -914,9 +999,10 @@ def main():
         label.setSizePolicy(
             QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
         )
-    footer_layout.addWidget(ready)
-    footer_layout.addStretch()
-    footer_layout.addWidget(version)
+    ready.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+    version.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+    footer_layout.addWidget(ready, stretch=1)
+    footer_layout.addWidget(version, stretch=1)
     shell.set_footer(_NativeWrap(footer))
 
     def _apply_theme(dark: bool):
@@ -926,6 +1012,10 @@ def main():
         back_btn.setIcon(_header_icon("back", icon_color))
         fwd_btn.setIcon(_header_icon("forward", icon_color))
         bell.setIcon(_header_icon("notifications", icon_color))
+        search_action.setIcon(_header_icon("search", icon_color))
+        theme_btn.setIcon(_header_icon(
+            "light_mode" if dark else "dark_mode", icon_color
+        ))
         shell.get_native().setStyleSheet(_admin_stylesheet())
         name = "Dark" if dark else "Light"
         _ADMIN_THEME.set(name)

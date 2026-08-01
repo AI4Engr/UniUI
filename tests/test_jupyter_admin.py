@@ -24,7 +24,7 @@ def test_jupyter_admin_theme_updates_live_shell_without_rebuilding_children():
     set_admin_theme(True)
     try:
         assert is_admin_dark()
-        assert "--uniui-bg:#0b1220" in shell._style.value
+        assert "--uniui-bg:#0b0f19" in shell._style.value
         assert shell.get_native().children == children
     finally:
         set_admin_theme(False)
@@ -43,6 +43,40 @@ def test_jupyter_table_row_bridge_calls_python_once_and_resets():
     assert selected == [{"id": 7}]
     assert table._bridge.value == -1
     assert "dispatchEvent(new Event('change'" in table._table.value
+
+
+def test_jupyter_admin_uses_shared_svg_icons_and_status_pills():
+    factory = create_factory("jupyter")
+    sidebar = factory.create_sidebar()
+    sidebar.add_item("dashboard", "Dashboard", "dashboard")
+    button = sidebar._buttons[0]
+    table = factory.create_table()
+    table.set_columns([{"key": "status", "label": "Status"}])
+    table.set_rows([{"status": "Active"}])
+
+    assert "uniui-icon-dashboard" in button._dom_classes
+    assert button.description == "Dashboard"
+    assert "uniui-status-pill uniui-status-ok" in table._table.value
+    assert "▦" not in button.description
+
+
+def test_jupyter_gauge_chart_and_drawer_update_in_place():
+    factory = create_factory("jupyter")
+    gauge = factory.create_gauge(); native_gauge = gauge.get_native()
+    gauge.set_label("Load"); gauge.set_unit("%"); gauge.set_value(72)
+    chart = factory.create_chart(); native_chart = chart.get_native()
+    chart.set_max_points(3)
+    chart.set_data([1, 2], [{"name": "Load", "data": [20, 30]}])
+    chart.append_data(3, [40]); chart.append_data(4, [50])
+    drawer = factory.create_drawer(); drawer.set_title("Details")
+    drawer.set_content(factory.create_label()); drawer.open()
+
+    assert gauge.get_native() is native_gauge
+    assert chart.get_native() is native_chart
+    assert "uniui-gauge-svg" in native_gauge.value
+    assert len(chart._x) == 3
+    assert drawer.is_open()
+    drawer.close(); assert not drawer.is_open()
 
 
 def test_jupyter_sidebar_and_shell_keep_drag_width_state():
@@ -75,4 +109,3 @@ def test_jupyter_split_pane_has_local_pointer_drag_bridge():
     assert len(native.children) == 4
     assert "onpointerdown" in native._handle.value
     assert native.children[0].layout.flex == "0 0 30.0000%"
-

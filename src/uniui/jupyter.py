@@ -515,6 +515,14 @@ class JupyterVBoxLayout(widgets.VBox):
         # Jupyter doesn't have explicit alignment control
         pass
 
+    def setSpec(self, spec):
+        self.layout.gap = f"{spec.gap}px" if spec.gap else None
+        p = f"{spec.padding}px" if spec.padding else None
+        self.layout.padding = p
+
+    def clear(self):
+        self.children = ()
+
 
 class JupyterHBoxLayout(widgets.HBox):
     """Jupyter Horizontal Box Layout - native implementation"""
@@ -527,11 +535,15 @@ class JupyterHBoxLayout(widgets.HBox):
             )
         )
 
-    def addItem(self, item):
-        # Set flex=1 so children share equal width inside HBox
+    def addItem(self, item, grow=0):
         if hasattr(item, 'layout'):
-            item.layout.flex = '1'
-            item.layout.width = 'auto'
+            if grow > 0:
+                item.layout.flex = f"{grow} 1 auto"
+            else:
+                # Don't force flex=1; let items size to content by default
+                item.layout.flex = None
+                if not item.layout.width:
+                    item.layout.width = 'auto'
         old_content = list(self.children)
         old_content.append(item)
         self.children = tuple(old_content)
@@ -543,8 +555,15 @@ class JupyterHBoxLayout(widgets.HBox):
         self.children = tuple(old_content)
 
     def setAlignmentTop(self):
-        # Jupyter doesn't have explicit alignment control
-        pass
+        self.layout.align_items = 'flex-start'
+
+    def setSpec(self, spec):
+        self.layout.gap = f"{spec.gap}px" if spec.gap else None
+        p = f"{spec.padding}px" if spec.padding else None
+        self.layout.padding = p
+
+    def clear(self):
+        self.children = ()
 
 
 class JupyterGroupBox(widgets.VBox):
@@ -625,6 +644,172 @@ class JupyterImage(widgets.Image):
             "Image URL loading is not supported in the Jupyter backend. "
             "Use setImage with a local file path."
         )
+
+
+# ============================================================================
+# Jupyter Advanced Layout Native Classes
+# ============================================================================
+
+class JupyterGrid(widgets.GridBox):
+    """Jupyter Grid layout using CSS Grid via GridBox."""
+    def __init__(self, columns: int = 12):
+        super().__init__()
+        self._columns = columns
+        self.layout.grid_template_columns = f"repeat({columns}, 1fr)"
+        self.layout.width = "100%"
+
+    def setColumns(self, count: int):
+        self._columns = count
+        self.layout.grid_template_columns = f"repeat({count}, 1fr)"
+
+    def addItem(self, item, col_span: int = 1):
+        if hasattr(item, 'layout') and col_span > 1:
+            item.layout.grid_column = f"span {col_span}"
+        old = list(self.children)
+        old.append(item)
+        self.children = tuple(old)
+
+    def setSpec(self, spec):
+        if spec.gap:
+            self.layout.gap = f"{spec.gap}px"
+        if spec.padding:
+            p = f"{spec.padding}px"
+            self.layout.padding = p
+
+    def clear(self):
+        self.children = ()
+
+
+class JupyterWrap(widgets.Box):
+    """Jupyter Wrap layout — flex-flow: row wrap."""
+    def __init__(self):
+        super().__init__(layout=widgets.Layout(
+            display='flex',
+            flex_flow='row wrap',
+            width='100%',
+        ))
+
+    def addItem(self, item):
+        old = list(self.children)
+        old.append(item)
+        self.children = tuple(old)
+
+    def setSpec(self, spec):
+        if spec.gap:
+            self.layout.gap = f"{spec.gap}px"
+        if spec.padding:
+            self.layout.padding = f"{spec.padding}px"
+
+    def clear(self):
+        self.children = ()
+
+
+class JupyterScrollView(widgets.Box):
+    """Jupyter ScrollView — overflow-y: auto."""
+    def __init__(self):
+        super().__init__(layout=widgets.Layout(
+            overflow_y='auto',
+            width='100%',
+        ))
+
+    def setContent(self, item):
+        self.children = (item,)
+
+    def setMaxHeight(self, height: int):
+        self.layout.max_height = f"{height}px"
+        self.layout.overflow_y = 'auto'
+
+    def setMaxWidth(self, width: int):
+        self.layout.max_width = f"{width}px"
+
+
+class JupyterSplitPane(widgets.Box):
+    """Jupyter SplitPane — two panels side by side (no drag handle).
+
+    Uses flexbox with fixed percentage widths to simulate a split pane.
+    True drag-to-resize is not supported in Jupyter.
+    """
+    def __init__(self, orientation: str = "horizontal"):
+        self._orientation = orientation
+        flex_flow = 'row' if orientation == 'horizontal' else 'column'
+        super().__init__(layout=widgets.Layout(
+            display='flex',
+            flex_flow=flex_flow,
+            width='100%',
+        ))
+        self._first: Optional[widgets.Widget] = None
+        self._second: Optional[widgets.Widget] = None
+        self._ratio = 0.5
+
+    def setFirst(self, item):
+        self._first = item
+        if hasattr(item, 'layout'):
+            item.layout.flex = f"{self._ratio} 0 auto"
+        self._sync()
+
+    def setSecond(self, item):
+        self._second = item
+        if hasattr(item, 'layout'):
+            item.layout.flex = f"{1 - self._ratio} 0 auto"
+        self._sync()
+
+    def setOrientation(self, orientation: str):
+        self._orientation = orientation
+        self.layout.flex_flow = 'row' if orientation == 'horizontal' else 'column'
+
+    def setSizes(self, ratio: float):
+        self._ratio = max(0.0, min(1.0, ratio))
+        if self._first and hasattr(self._first, 'layout'):
+            self._first.layout.flex = f"{self._ratio} 0 auto"
+        if self._second and hasattr(self._second, 'layout'):
+            self._second.layout.flex = f"{1 - self._ratio} 0 auto"
+
+    def _sync(self):
+        children = []
+        if self._first is not None:
+            children.append(self._first)
+        if self._second is not None:
+            children.append(self._second)
+        self.children = tuple(children)
+
+
+class JupyterOverlay(widgets.Stack):
+    """Jupyter Overlay using ipywidgets Stack (ipywidgets >= 8.0).
+
+    Falls back to VBox with manual show/hide for older versions.
+    """
+    def __init__(self):
+        try:
+            super().__init__()
+            self._use_stack = True
+        except Exception:
+            # ipywidgets < 8 has no Stack
+            widgets.VBox.__init__(self)
+            self._use_stack = False
+            self._layers: List = []
+            self._active = 0
+
+    def addLayer(self, item):
+        if self._use_stack:
+            old = list(self.children)
+            old.append(item)
+            self.children = tuple(old)
+        else:
+            self._layers.append(item)
+            self._apply_visibility()
+
+    def setActiveIndex(self, index: int):
+        if self._use_stack:
+            self.selected_index = index
+        else:
+            self._active = index
+            self._apply_visibility()
+
+    def _apply_visibility(self):
+        for i, layer in enumerate(self._layers):
+            if hasattr(layer, 'layout'):
+                layer.layout.display = None if i == self._active else 'none'
+        self.children = tuple(self._layers)
 
 
 # ============================================================================
@@ -959,6 +1144,15 @@ class JupyterVBoxAdapter(IVBoxLayout):
     def set_alignment_top(self):
         self._native.setAlignmentTop()
 
+    def add_item_with_spec(self, widget: IWidget, item):
+        self._native.addItem(widget.get_native())
+
+    def set_spec(self, spec):
+        self._native.setSpec(spec)
+
+    def clear(self):
+        self._native.clear()
+
 
 class JupyterHBoxAdapter(IHBoxLayout):
     """Jupyter HBox adapter - implements snake_case interface convention"""
@@ -978,6 +1172,15 @@ class JupyterHBoxAdapter(IHBoxLayout):
 
     def set_alignment_top(self):
         self._native.setAlignmentTop()
+
+    def add_item_with_spec(self, widget: IWidget, item):
+        self._native.addItem(widget.get_native(), grow=item.grow)
+
+    def set_spec(self, spec):
+        self._native.setSpec(spec)
+
+    def clear(self):
+        self._native.clear()
 
 
 class JupyterGroupBoxAdapter(IGroupBox):
@@ -1061,6 +1264,109 @@ class JupyterImageAdapter(IImage):
         self._native.setMinimumHeight(height)
 
 
+# ============================================================================
+# Jupyter Advanced Layout Adapter Classes
+# ============================================================================
+
+class JupyterGridAdapter(IGrid):
+    """Jupyter Grid adapter."""
+
+    def __init__(self, columns: int = 12):
+        self._native = JupyterGrid(columns)
+
+    def get_native(self):
+        return self._native
+
+    def add_item(self, widget: IWidget, row: int = -1, col: int = -1,
+                 row_span: int = 1, col_span: int = 1) -> None:
+        self._native.addItem(widget.get_native(), col_span=col_span)
+
+    def set_columns(self, count: int) -> None:
+        self._native.setColumns(count)
+
+    def set_spec(self, spec) -> None:
+        self._native.setSpec(spec)
+
+    def clear(self) -> None:
+        self._native.clear()
+
+
+class JupyterWrapAdapter(IWrap):
+    """Jupyter Wrap adapter."""
+
+    def __init__(self):
+        self._native = JupyterWrap()
+
+    def get_native(self):
+        return self._native
+
+    def add_item(self, widget: IWidget) -> None:
+        self._native.addItem(widget.get_native())
+
+    def set_spec(self, spec) -> None:
+        self._native.setSpec(spec)
+
+    def clear(self) -> None:
+        self._native.clear()
+
+
+class JupyterScrollViewAdapter(IScrollView):
+    """Jupyter ScrollView adapter."""
+
+    def __init__(self):
+        self._native = JupyterScrollView()
+
+    def get_native(self):
+        return self._native
+
+    def set_content(self, widget: IWidget) -> None:
+        self._native.setContent(widget.get_native())
+
+    def set_max_height(self, height: int) -> None:
+        self._native.setMaxHeight(height)
+
+    def set_max_width(self, width: int) -> None:
+        self._native.setMaxWidth(width)
+
+
+class JupyterSplitPaneAdapter(ISplitPane):
+    """Jupyter SplitPane adapter."""
+
+    def __init__(self, orientation: str = "horizontal"):
+        self._native = JupyterSplitPane(orientation)
+
+    def get_native(self):
+        return self._native
+
+    def set_first(self, widget: IWidget) -> None:
+        self._native.setFirst(widget.get_native())
+
+    def set_second(self, widget: IWidget) -> None:
+        self._native.setSecond(widget.get_native())
+
+    def set_orientation(self, orientation: str) -> None:
+        self._native.setOrientation(orientation)
+
+    def set_sizes(self, ratio: float) -> None:
+        self._native.setSizes(ratio)
+
+
+class JupyterOverlayAdapter(IOverlay):
+    """Jupyter Overlay adapter."""
+
+    def __init__(self):
+        self._native = JupyterOverlay()
+
+    def get_native(self):
+        return self._native
+
+    def add_layer(self, widget: IWidget) -> None:
+        self._native.addLayer(widget.get_native())
+
+    def set_active_index(self, index: int) -> None:
+        self._native.setActiveIndex(index)
+
+
 
 # ============================================================================
 # Jupyter Widget Factory
@@ -1116,3 +1422,18 @@ class JupyterWidgetFactory(IWidgetFactory):
     def createGroupBox(self) -> IGroupBox:
         native = JupyterGroupBox()
         return JupyterGroupBoxAdapter(native)
+
+    def createGrid(self, columns: int = 12) -> IGrid:
+        return JupyterGridAdapter(columns)
+
+    def createWrap(self) -> IWrap:
+        return JupyterWrapAdapter()
+
+    def createScrollView(self) -> IScrollView:
+        return JupyterScrollViewAdapter()
+
+    def createSplitPane(self, orientation: str = "horizontal") -> ISplitPane:
+        return JupyterSplitPaneAdapter(orientation)
+
+    def createOverlay(self) -> IOverlay:
+        return JupyterOverlayAdapter()

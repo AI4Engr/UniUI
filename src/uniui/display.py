@@ -480,24 +480,6 @@ class UniversalDisplay:
                 # Set modern stylesheet for better appearance
                 widget.setStyleSheet(_generate_qt_stylesheet())
 
-                # Set layout spacing for consistent appearance
-                def apply_layout_spacing(layout):
-                    """Recursively set spacing on all layouts"""
-                    if layout is not None:
-                        layout.setSpacing(T["spacing"])
-                        pi = T["padding_inner"]
-                        layout.setContentsMargins(pi, pi, pi, pi)
-                        for i in range(layout.count()):
-                            item = layout.itemAt(i)
-                            if item.layout():
-                                apply_layout_spacing(item.layout())
-                            elif item.widget():
-                                child_layout = item.widget().layout()
-                                if child_layout:
-                                    apply_layout_spacing(child_layout)
-
-                apply_layout_spacing(native)
-
                 # Store root widget reference for theme refresh
                 if _set_refresh_root:
                     _set_refresh_root(widget)

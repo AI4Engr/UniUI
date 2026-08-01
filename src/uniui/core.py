@@ -3,6 +3,8 @@ Core types and interfaces - Simplified.
 
 Defines:
 - Widget interfaces: ILabel, IButton, ILineEdit, etc.
+- Layout interfaces: IVBoxLayout, IHBoxLayout with sizing/flex support
+- Layout data models: SizeSpec, LayoutSpec, LayoutItem
 - IWidgetFactory: abstract factory that each supported platform implements
 - Exception classes: NotSupportedError, WidgetCreationError, etc.
 
@@ -10,6 +12,7 @@ This is the only module that platform implementations depend on.
 """
 from abc import ABC, abstractmethod
 from typing import Callable, Any, Optional
+from dataclasses import dataclass, field
 
 
 # ============================================================================
@@ -41,6 +44,81 @@ class ConfigurationError(UniUIException):
     pass
 
 
+
+
+# ============================================================================
+# Layout Data Models
+# ============================================================================
+
+@dataclass
+class SizeSpec:
+    """Describes how a widget sizes itself along one axis.
+
+    value meanings:
+      - None / "auto"  : size to content
+      - "fill"         : expand to fill available space (grow=1, shrink=1)
+      - int / float    : fixed pixel size
+      - str "50%"      : percentage of parent (renderer may interpret)
+    min / max are pixel bounds applied after the main value is resolved.
+    """
+    value: Any = None          # None = "auto"
+    min: Optional[int] = None
+    max: Optional[int] = None
+
+    # Flexbox-style coefficients
+    grow: float = 0.0
+    shrink: float = 1.0
+    basis: Any = None          # None = auto
+
+    @classmethod
+    def auto(cls) -> "SizeSpec":
+        return cls(value=None)
+
+    @classmethod
+    def fill(cls) -> "SizeSpec":
+        return cls(value="fill", grow=1.0, shrink=1.0)
+
+    @classmethod
+    def fixed(cls, px: int) -> "SizeSpec":
+        return cls(value=px, grow=0.0, shrink=0.0)
+
+    @classmethod
+    def pct(cls, percent: float) -> "SizeSpec":
+        return cls(value=f"{percent}%")
+
+
+@dataclass
+class LayoutSpec:
+    """Layout parameters for a container (Row, Column, etc.).
+
+    gap     : spacing between children in pixels
+    padding : inner padding of the container in pixels
+    wrap    : allow children to wrap to next row/column
+    align   : main-axis alignment ("start", "center", "end", "space-between", "space-around")
+    cross_align : cross-axis alignment ("start", "center", "end", "stretch")
+    """
+    gap: int = 0
+    padding: int = 0
+    wrap: bool = False
+    align: str = "start"
+    cross_align: str = "start"
+
+
+@dataclass
+class LayoutItem:
+    """Wraps a widget with per-child layout overrides.
+
+    grow / shrink override the parent SizeSpec for this child only.
+    align_self overrides cross-axis alignment for this child.
+    span is used by Grid layouts (column span).
+    """
+    widget: Any                # IWidget — forward reference avoids circular import
+    grow: float = 0.0
+    shrink: float = 1.0
+    basis: Any = None
+    align_self: Optional[str] = None
+    span: int = 1
+    key: Optional[str] = None  # stable identity across reflows
 
 
 # ============================================================================
@@ -288,6 +366,18 @@ class IVBoxLayout(IWidget):
     def set_alignment_top(self) -> None:
         pass
 
+    def add_item_with_spec(self, widget: IWidget, item: "LayoutItem") -> None:
+        """Add a widget with per-child layout overrides. Default: delegates to add_item."""
+        self.add_item(widget)
+
+    def set_spec(self, spec: "LayoutSpec") -> None:
+        """Apply container-level layout spec (gap, padding, etc.). Default: no-op."""
+        pass
+
+    def clear(self) -> None:
+        """Remove all children. Default: not supported."""
+        raise NotSupportedError("clear() not supported on this layout")
+
 
 class IHBoxLayout(IWidget):
     """Horizontal box layout interface"""
@@ -303,6 +393,18 @@ class IHBoxLayout(IWidget):
     @abstractmethod
     def set_alignment_top(self) -> None:
         pass
+
+    def add_item_with_spec(self, widget: IWidget, item: "LayoutItem") -> None:
+        """Add a widget with per-child layout overrides. Default: delegates to add_item."""
+        self.add_item(widget)
+
+    def set_spec(self, spec: "LayoutSpec") -> None:
+        """Apply container-level layout spec (gap, padding, etc.). Default: no-op."""
+        pass
+
+    def clear(self) -> None:
+        """Remove all children. Default: not supported."""
+        raise NotSupportedError("clear() not supported on this layout")
 
 
 class ITabWidget(IWidget):
@@ -364,6 +466,123 @@ class IImage(IWidget):
 
 
 # ============================================================================
+# Responsive Breakpoints
+# ============================================================================
+
+@dataclass
+class Breakpoints:
+    """Container-width breakpoints for responsive layout mode switching.
+
+    mode_for(width) returns "compact", "medium", or "wide".
+    Default thresholds match todo.md: compact < 720, medium < 1200, wide >= 1200.
+    """
+    compact: int = 720
+    medium: int = 1200
+
+    def mode_for(self, width: int) -> str:
+        if width < self.compact:
+            return "compact"
+        if width < self.medium:
+            return "medium"
+        return "wide"
+
+
+DEFAULT_BREAKPOINTS = Breakpoints()
+
+
+# ============================================================================
+# Advanced Layout Interfaces
+# ============================================================================
+
+class IGrid(IWidget):
+    """Grid layout interface — maps to QGridLayout / CSS Grid / ui.grid."""
+
+    @abstractmethod
+    def add_item(self, widget: "IWidget", row: int = -1, col: int = -1,
+                 row_span: int = 1, col_span: int = 1) -> None:
+        pass
+
+    @abstractmethod
+    def set_columns(self, count: int) -> None:
+        pass
+
+    def set_spec(self, spec: "LayoutSpec") -> None:
+        pass
+
+    def clear(self) -> None:
+        raise NotSupportedError("clear() not supported on this Grid")
+
+    def on_resize(self, callback: Callable[[str], None],
+                  breakpoints: "Breakpoints" = None) -> None:
+        """Register a callback fired when the container crosses a breakpoint.
+        callback receives "compact" | "medium" | "wide".
+        Default: no-op (backends that support it override this).
+        """
+        pass
+
+
+class IWrap(IWidget):
+    """Wrapping flow layout — children wrap to next row when they overflow."""
+
+    @abstractmethod
+    def add_item(self, widget: "IWidget") -> None:
+        pass
+
+    def set_spec(self, spec: "LayoutSpec") -> None:
+        pass
+
+    def clear(self) -> None:
+        raise NotSupportedError("clear() not supported on this Wrap")
+
+
+class IScrollView(IWidget):
+    """Scrollable container — wraps a single child with overflow scrolling."""
+
+    @abstractmethod
+    def set_content(self, widget: "IWidget") -> None:
+        pass
+
+    def set_max_height(self, height: int) -> None:
+        pass
+
+    def set_max_width(self, width: int) -> None:
+        pass
+
+
+class ISplitPane(IWidget):
+    """Two-pane resizable container — maps to QSplitter / flexbox ratio."""
+
+    @abstractmethod
+    def set_first(self, widget: "IWidget") -> None:
+        pass
+
+    @abstractmethod
+    def set_second(self, widget: "IWidget") -> None:
+        pass
+
+    @abstractmethod
+    def set_orientation(self, orientation: str) -> None:
+        """orientation: "horizontal" (side by side) | "vertical" (stacked)."""
+        pass
+
+    def set_sizes(self, ratio: float) -> None:
+        """Set first-pane fraction (0.0–1.0). Default: 0.5."""
+        pass
+
+
+class IOverlay(IWidget):
+    """Stacked layer container — only one layer visible at a time."""
+
+    @abstractmethod
+    def add_layer(self, widget: "IWidget") -> None:
+        pass
+
+    @abstractmethod
+    def set_active_index(self, index: int) -> None:
+        pass
+
+
+# ============================================================================
 # Factory Interface
 # ============================================================================
 
@@ -414,6 +633,26 @@ class IWidgetFactory(ABC):
         """Create group box widget (optional, not all platforms support this)"""
         raise NotSupportedError("GroupBox not supported on this platform")
 
+    def createGrid(self, columns: int = 12) -> "IGrid":
+        """Create grid layout (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Grid not supported on this platform")
+
+    def createWrap(self) -> "IWrap":
+        """Create wrap flow layout (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Wrap not supported on this platform")
+
+    def createScrollView(self) -> "IScrollView":
+        """Create scroll view container (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("ScrollView not supported on this platform")
+
+    def createSplitPane(self, orientation: str = "horizontal") -> "ISplitPane":
+        """Create split pane container (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("SplitPane not supported on this platform")
+
+    def createOverlay(self) -> "IOverlay":
+        """Create overlay/stack container (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Overlay not supported on this platform")
+
     # snake_case aliases
     def create_label(self) -> ILabel:
         return self.createLabel()
@@ -448,3 +687,17 @@ class IWidgetFactory(ABC):
     def create_group_box(self) -> IGroupBox:
         return self.createGroupBox()
 
+    def create_grid(self, columns: int = 12) -> "IGrid":
+        return self.createGrid(columns)
+
+    def create_wrap(self) -> "IWrap":
+        return self.createWrap()
+
+    def create_scroll_view(self) -> "IScrollView":
+        return self.createScrollView()
+
+    def create_split_pane(self, orientation: str = "horizontal") -> "ISplitPane":
+        return self.createSplitPane(orientation)
+
+    def create_overlay(self) -> "IOverlay":
+        return self.createOverlay()

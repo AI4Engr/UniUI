@@ -31,6 +31,20 @@ from .core import (
     IGroupBox,
     IImage,
 
+    # Advanced layout interfaces
+    IGrid,
+    IWrap,
+    IScrollView,
+    ISplitPane,
+    IOverlay,
+
+    # Layout data models
+    SizeSpec,
+    LayoutSpec,
+    LayoutItem,
+    Breakpoints,
+    DEFAULT_BREAKPOINTS,
+
     # Factory interface
     IWidgetFactory,
 )
@@ -63,6 +77,11 @@ HBOX = 'hbox'
 TAB_WIDGET = 'tab_widget'
 GROUP_BOX = 'group_box'
 IMAGE = 'image'
+GRID = 'grid'
+WRAP = 'wrap'
+SCROLL_VIEW = 'scroll_view'
+SPLIT_PANE = 'split_pane'
+OVERLAY = 'overlay'
 
 
 # ============================================================================
@@ -269,6 +288,75 @@ def HBox(*children) -> IHBoxLayout:
     return hbox
 
 
+def Column(*children, spec: LayoutSpec = None) -> IVBoxLayout:
+    """Create a vertical column layout (alias for VBox with optional LayoutSpec)"""
+    col = _get_factory().create_vbox()
+    if spec is not None:
+        col.set_spec(spec)
+    for child in children:
+        if child is not None:
+            col.add_item(child)
+    return col
+
+
+def Row(*children, spec: LayoutSpec = None) -> IHBoxLayout:
+    """Create a horizontal row layout (alias for HBox with optional LayoutSpec)"""
+    row = _get_factory().create_hbox()
+    if spec is not None:
+        row.set_spec(spec)
+    for child in children:
+        if child is not None:
+            row.add_item(child)
+    return row
+
+
+def Grid(columns: int = 12, spec: LayoutSpec = None) -> IGrid:
+    """Create a grid layout with the given number of columns."""
+    grid = _get_factory().create_grid(columns)
+    if spec is not None:
+        grid.set_spec(spec)
+    return grid
+
+
+def Wrap(spec: LayoutSpec = None) -> IWrap:
+    """Create a wrapping flow layout."""
+    wrap = _get_factory().create_wrap()
+    if spec is not None:
+        wrap.set_spec(spec)
+    return wrap
+
+
+def ScrollView(content=None, max_height: int = None) -> IScrollView:
+    """Create a scrollable container. Optionally set initial content and max height."""
+    sv = _get_factory().create_scroll_view()
+    if max_height is not None:
+        sv.set_max_height(max_height)
+    if content is not None:
+        sv.set_content(content)
+    return sv
+
+
+def SplitPane(first=None, second=None, orientation: str = "horizontal",
+              ratio: float = 0.5) -> ISplitPane:
+    """Create a two-pane split container."""
+    sp = _get_factory().create_split_pane(orientation)
+    if first is not None:
+        sp.set_first(first)
+    if second is not None:
+        sp.set_second(second)
+    sp.set_sizes(ratio)
+    return sp
+
+
+def Overlay(*layers) -> IOverlay:
+    """Create a stacked overlay container. First layer is active by default."""
+    ov = _get_factory().create_overlay()
+    for layer in layers:
+        if layer is not None:
+            ov.add_layer(layer)
+    return ov
+
+
 def TabWidget() -> ITabWidget:
     """Create a tab widget"""
     return _get_factory().create_tab_widget()
@@ -300,17 +388,22 @@ class UniUI:
     """Backward compatible UniUI facade class"""
 
     _KIND_MAP = {
-        'label':      'create_label',
-        'button':     'create_button',
-        'line_edit':  'create_line_edit',
-        'text_area':  'create_text_area',
-        'combo_box':  'create_combo_box',
-        'dropdown':   'create_dropdown',
-        'vbox':       'create_vbox',
-        'hbox':       'create_hbox',
-        'tab_widget': 'create_tab_widget',
-        'group_box':  'create_group_box',
-        'image':      'create_image',
+        'label':       'create_label',
+        'button':      'create_button',
+        'line_edit':   'create_line_edit',
+        'text_area':   'create_text_area',
+        'combo_box':   'create_combo_box',
+        'dropdown':    'create_dropdown',
+        'vbox':        'create_vbox',
+        'hbox':        'create_hbox',
+        'tab_widget':  'create_tab_widget',
+        'group_box':   'create_group_box',
+        'image':       'create_image',
+        'grid':        'create_grid',
+        'wrap':        'create_wrap',
+        'scroll_view': 'create_scroll_view',
+        'split_pane':  'create_split_pane',
+        'overlay':     'create_overlay',
     }
 
     def __init__(self, framework: str = 'auto'):
@@ -351,14 +444,29 @@ __all__ = [
     'Dropdown',
     'VBox',
     'HBox',
+    'Column',
+    'Row',
+    'Grid',
+    'Wrap',
+    'ScrollView',
+    'SplitPane',
+    'Overlay',
     'TabWidget',
     'GroupBox',
     'Image',
+
+    # Layout data models
+    'SizeSpec',
+    'LayoutSpec',
+    'LayoutItem',
+    'Breakpoints',
+    'DEFAULT_BREAKPOINTS',
 
     # Backward compatibility
     'UniUI',
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
+    'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
 
     # Framework selection
     'use',
@@ -383,6 +491,11 @@ __all__ = [
     'IDropdown',
     'IVBoxLayout',
     'IHBoxLayout',
+    'IGrid',
+    'IWrap',
+    'IScrollView',
+    'ISplitPane',
+    'IOverlay',
     'ITabWidget',
     'IGroupBox',
     'IImage',

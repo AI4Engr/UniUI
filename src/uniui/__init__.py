@@ -158,10 +158,12 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
         return QtWidgetFactory()
     elif framework == 'jupyter':
         from .jupyter import JupyterWidgetFactory
+        from . import jupyter_admin  # noqa: F401 — registers Admin methods
         return JupyterWidgetFactory()
     elif framework == 'web':
         try:
             from .web import NiceGUIWidgetFactory
+            from . import web_admin  # noqa: F401 — registers Admin methods
         except ImportError as exc:
             raise ImportError(
                 "The Web backend requires NiceGUI. Install it with "

@@ -724,10 +724,10 @@ class JupyterScrollView(widgets.Box):
 
 
 class JupyterSplitPane(widgets.Box):
-    """Jupyter SplitPane — two panels side by side (no drag handle).
+    """Jupyter SplitPane with a browser-side draggable divider.
 
-    Uses flexbox with fixed percentage widths to simulate a split pane.
-    True drag-to-resize is not supported in Jupyter.
+    Pointer movement stays in the browser.  Only the final ratio is synced to
+    Python on pointer-up, so dragging does not flood the notebook kernel.
     """
     def __init__(self, orientation: str = "horizontal"):
         self._orientation = orientation
@@ -737,39 +737,99 @@ class JupyterSplitPane(widgets.Box):
             flex_flow=flex_flow,
             width='100%',
         ))
+        self.add_class('uniui-split-pane')
         self._first: Optional[widgets.Widget] = None
         self._second: Optional[widgets.Widget] = None
         self._ratio = 0.5
+        self._syncing_ratio = False
+        self._handle = widgets.HTML()
+        self._handle.add_class('uniui-split-handle-widget')
+        self._ratio_bridge = widgets.FloatText(value=self._ratio)
+        self._ratio_bridge.layout.display = 'none'
+        self._ratio_bridge.add_class('uniui-split-ratio-bridge')
+        self._ratio_bridge.observe(self._on_ratio_bridge, names='value')
+        self._configure_handle()
 
     def setFirst(self, item):
         self._first = item
+        if hasattr(item, 'add_class'):
+            item.add_class('uniui-split-first')
         if hasattr(item, 'layout'):
-            item.layout.flex = f"{self._ratio} 0 auto"
+            item.layout.min_width = '0'
         self._sync()
+        self._apply_ratio()
 
     def setSecond(self, item):
         self._second = item
+        if hasattr(item, 'add_class'):
+            item.add_class('uniui-split-second')
         if hasattr(item, 'layout'):
-            item.layout.flex = f"{1 - self._ratio} 0 auto"
+            item.layout.min_width = '0'
         self._sync()
+        self._apply_ratio()
 
     def setOrientation(self, orientation: str):
         self._orientation = orientation
         self.layout.flex_flow = 'row' if orientation == 'horizontal' else 'column'
+        self._configure_handle()
+        self._apply_ratio()
 
     def setSizes(self, ratio: float):
         self._ratio = max(0.0, min(1.0, ratio))
+        self._apply_ratio()
+        if abs(self._ratio_bridge.value - self._ratio) > 1e-9:
+            self._syncing_ratio = True
+            self._ratio_bridge.value = self._ratio
+            self._syncing_ratio = False
+
+    def _apply_ratio(self):
+        percent = self._ratio * 100
         if self._first and hasattr(self._first, 'layout'):
-            self._first.layout.flex = f"{self._ratio} 0 auto"
+            self._first.layout.flex = f"0 0 {percent:.4f}%"
+            if self._orientation == 'horizontal':
+                self._first.layout.width = f"{percent:.4f}%"
+                self._first.layout.height = None
+            else:
+                self._first.layout.height = f"{percent:.4f}%"
+                self._first.layout.width = '100%'
         if self._second and hasattr(self._second, 'layout'):
-            self._second.layout.flex = f"{1 - self._ratio} 0 auto"
+            self._second.layout.flex = '1 1 0'
+            if self._orientation == 'horizontal':
+                self._second.layout.width = 'auto'
+                self._second.layout.height = None
+            else:
+                self._second.layout.height = 'auto'
+                self._second.layout.width = '100%'
+
+    def _configure_handle(self):
+        horizontal = self._orientation == 'horizontal'
+        axis = 'clientX' if horizontal else 'clientY'
+        origin = 'left' if horizontal else 'top'
+        size = 'width' if horizontal else 'height'
+        cursor = 'col-resize' if horizontal else 'row-resize'
+        self._handle.layout.width = '6px' if horizontal else '100%'
+        self._handle.layout.min_width = '6px' if horizontal else None
+        self._handle.layout.height = '100%' if horizontal else '6px'
+        self._handle.layout.min_height = None if horizontal else '6px'
+        self._handle.layout.flex = '0 0 6px'
+        self._handle.value = f"""
+<div title="Drag to resize" style="width:100%;height:100%;min-height:6px;
+ background:#98a2b3;cursor:{cursor};touch-action:none;border-radius:3px"
+ onpointerdown="const h=this,root=h.closest('.uniui-split-pane'),first=root.querySelector('.uniui-split-first'),bridge=root.querySelector('.uniui-split-ratio-bridge input'),rect=root.getBoundingClientRect(),start=rect.{origin},total=rect.{size},pid=event.pointerId;h.setPointerCapture(pid);const move=e=>{{const ratio=Math.max(.05,Math.min(.95,(e.{axis}-start)/total));first.style.flex='0 0 '+(ratio*100)+'%';first.style.{size}=(ratio*100)+'%';return ratio;}};const up=e=>{{const ratio=move(e);if(bridge){{bridge.value=String(ratio);bridge.dispatchEvent(new Event('change',{{bubbles:true}}));}}h.removeEventListener('pointermove',move);}};h.addEventListener('pointermove',move);h.addEventListener('pointerup',up,{{once:true}});h.addEventListener('pointercancel',up,{{once:true}});">
+</div>"""
+
+    def _on_ratio_bridge(self, change):
+        if not self._syncing_ratio:
+            self.setSizes(float(change['new']))
 
     def _sync(self):
         children = []
         if self._first is not None:
             children.append(self._first)
+        children.append(self._handle)
         if self._second is not None:
             children.append(self._second)
+        children.append(self._ratio_bridge)
         self.children = tuple(children)
 
 

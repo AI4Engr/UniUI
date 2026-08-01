@@ -157,7 +157,7 @@ class WebButtonAdapter(_WebAdapter, IButton):
         self._callbacks: List[Callable[[], None]] = []
         self._enabled = True
         self._button_type = None
-        native = ui.button("").classes("uniui-button")
+        native = ui.button("", color=None).classes("uniui-button").props("no-caps unelevated")
         super().__init__(native)
         native._callback = self._emit_click
         native.set_btntype = self.set_btntype
@@ -605,7 +605,7 @@ class WebOverlayAdapter(_WebAdapter, IOverlay):
     """Web Overlay adapter — stacked divs, only active one is visible."""
 
     def __init__(self):
-        with ui.element("div").classes("uniui-overlay relative w-full") as container:
+        with ui.element("div").classes("uniui-overlay relative w-full h-full") as container:
             pass
         super().__init__(container)
         self._layers: list = []
@@ -704,11 +704,20 @@ def refresh_theme_web(root_widget=None) -> None:
 
     if root_widget is not None:
         root_widget.classes(add="uniui-root")
-        root_widget.style(
-            f"background: {T['bg']}; color: {T['fg']}; "
-            f"padding: {T['padding']}px; gap: {T['spacing']}px; "
-            f"--uniui-spacing: {T['spacing']}px; --uniui-radius: {T['border_radius']}px"
-        )
+        is_admin = "uniui-web-admin" in getattr(root_widget, "_classes", [])
+        if is_admin:
+            root_widget.style(
+                f"background: {T['bg']}; color: {T['fg']}; padding: 0; gap: 0; "
+                "width: 100%; max-width: none; height: 100dvh; min-height: 0; "
+                "margin: 0; overflow: hidden; "
+                f"--uniui-spacing: {T['spacing']}px; --uniui-radius: {T['border_radius']}px"
+            )
+        else:
+            root_widget.style(
+                f"background: {T['bg']}; color: {T['fg']}; "
+                f"padding: {T['padding']}px; gap: {T['spacing']}px; "
+                f"--uniui-spacing: {T['spacing']}px; --uniui-radius: {T['border_radius']}px"
+            )
 
 
 def schedule_after_web(ms: int, callback: Callable[[], None]) -> bool:

@@ -1140,6 +1140,10 @@ class QtOverlayAdapter(IOverlay):
 
     def __init__(self):
         self._native = QtWidgets.QStackedWidget()
+        self._native.setMinimumWidth(0)
+        self._native.setSizePolicy(
+            QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Expanding
+        )
 
     def get_native(self):
         return self._native

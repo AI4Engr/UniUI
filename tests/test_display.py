@@ -1,6 +1,8 @@
 """
 Focused tests for display dispatch and theme toggle behavior.
 """
+import pytest
+
 from uniui import create_factory
 from uniui import display
 
@@ -38,3 +40,24 @@ def test_refresh_theme_dispatches_tk_widgets(monkeypatch):
         assert refreshed == [root]
     finally:
         root.destroy()
+
+
+@pytest.mark.qt
+def test_qt_dimensions_are_initial_size_not_minimum_size():
+    """A requested launch size must not prevent users from shrinking a window."""
+    pytest.importorskip("PySide2")
+    from PySide2.QtWidgets import QApplication, QWidget
+
+    app = QApplication.instance() or QApplication([])
+    widget = QWidget()
+    try:
+        assert display.UniversalDisplay._show_qt(
+            widget, "Resizable", 900, 640, stylesheet=""
+        )
+        app.processEvents()
+        assert widget.width() == 900
+        assert widget.height() == 640
+        assert widget.minimumWidth() < 900
+        assert widget.minimumHeight() < 640
+    finally:
+        widget.close()

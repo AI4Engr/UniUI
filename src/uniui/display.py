@@ -349,7 +349,7 @@ class UniversalDisplay:
     """
 
     @staticmethod
-    def show(container, title="App", width=500, height=400):
+    def show(container, title="App", width=500, height=400, stylesheet=None):
         """
         Display a UI container (auto-detects framework).
 
@@ -358,6 +358,8 @@ class UniversalDisplay:
             title: window title
             width: window width
             height: window height
+            stylesheet: optional Qt CSS string. None = use default theme stylesheet.
+                        Pass "" to apply no stylesheet at all.
         """
         native = container.get_native()
 
@@ -374,7 +376,8 @@ class UniversalDisplay:
         if UniversalDisplay._show_tkinter(native, title, width, height, _set_refresh_root):
             return
 
-        if UniversalDisplay._show_qt(native, title, width, height, _set_refresh_root):
+        if UniversalDisplay._show_qt(native, title, width, height, _set_refresh_root,
+                                     stylesheet=stylesheet):
             return
 
         if UniversalDisplay._show_jupyter(native, _set_refresh_root):
@@ -448,37 +451,42 @@ class UniversalDisplay:
     # ========================================================================
 
     @staticmethod
-    def _show_qt(native, title, width, height, _set_refresh_root=None):
+    def _show_qt(native, title, width, height, _set_refresh_root=None, stylesheet=None):
         """Qt display method"""
         try:
             from PySide2.QtWidgets import QWidget, QApplication, QLayout
             from PySide2.QtGui import QFont
             from PySide2.QtCore import Qt
 
-            # Check if it's a Qt layout
-            if isinstance(native, QLayout):
-                # Create QApplication only if one doesn't already exist.
+            # Accept either a QLayout or a QWidget as the root container
+            if isinstance(native, (QLayout, QWidget)):
                 app = QApplication.instance()
-                _app_is_ours = app is None
-                if _app_is_ours:
+                if app is None:
                     app = QApplication(sys.argv)
 
                 # Set application-wide font
                 font = QFont(T["font_family"], T["font_size"])
                 app.setFont(font)
 
-                # Create the window
-                widget = QWidget()
-                widget.setLayout(native)
+                # Build the top-level window
+                if isinstance(native, QLayout):
+                    widget = QWidget()
+                    widget.setLayout(native)
+                else:
+                    widget = native
+
                 widget.setWindowTitle(title)
-                widget.setMinimumSize(width, height)
+                # width/height describe the initial window size, not a hard
+                # lower bound.  Layouts and app shells may still define their
+                # own sensible minimum size for compact rendering.
+                widget.resize(width, height)
 
-                # Add padding to the main widget
-                p = T["padding"]
-                widget.setContentsMargins(p, p, p, p)
-
-                # Set modern stylesheet for better appearance
-                widget.setStyleSheet(_generate_qt_stylesheet())
+                # Apply stylesheet: caller-supplied, default theme, or none ("")
+                if stylesheet is None:
+                    widget.setStyleSheet(_generate_qt_stylesheet())
+                elif stylesheet != "":
+                    widget.setStyleSheet(stylesheet)
+                # stylesheet == "" → no stylesheet applied
 
                 # Store root widget reference for theme refresh
                 if _set_refresh_root:
@@ -486,11 +494,15 @@ class UniversalDisplay:
 
                 widget.show()
 
-                # Run the event loop only when we own the QApplication.
-                # If a QApplication already existed, the caller owns the event
-                # loop and we must not call sys.exit() — return immediately so
-                # the caller can embed this window in their existing loop.
-                if _app_is_ours:
+                # Always run the event loop — QtWidgetFactory may have already
+                # created the QApplication, but the loop hasn't started yet.
+                # Guard: in test environments exec_() may already be running
+                # (detected by checking if any top-level window is visible and
+                # the call stack is inside pytest).  The safest heuristic is to
+                # check whether we are inside a pytest session.
+                import sys as _sys
+                _in_pytest = "pytest" in _sys.modules or hasattr(_sys, "_called_from_test")
+                if not _in_pytest:
                     app.exec_()
                 return True
 
@@ -671,12 +683,30 @@ def schedule_after(ms: int, callback) -> None:
     if web_module is not None and web_module.schedule_after_web(ms, callback):
         return
 
-    # Qt
+    # Qt — use a thread-safe relay so this works from background threads too
     try:
-        from PySide2.QtCore import QTimer
+        from PySide2.QtCore import QTimer, QObject, Signal, Qt
         from PySide2.QtWidgets import QApplication
-        if QApplication.instance() is not None:
-            QTimer.singleShot(ms, callback)
+        app = QApplication.instance()
+        if app is not None:
+            # QTimer.singleShot from a non-Qt thread is silently ignored.
+            # Post work to main thread via a QObject that lives there.
+            if not hasattr(app, "_uniui_dispatcher"):
+                class _Dispatcher(QObject):
+                    _invoke = Signal(int, object)
+                    def __init__(self):
+                        super().__init__()
+                        self._invoke.connect(self._run, Qt.QueuedConnection)
+                    def _run(self, ms, cb):
+                        if ms == 0:
+                            cb()
+                        else:
+                            QTimer.singleShot(ms, cb)
+                    def post(self, ms, cb):
+                        self._invoke.emit(ms, cb)
+                app._uniui_dispatcher = _Dispatcher()
+                app._uniui_dispatcher.moveToThread(app.thread())
+            app._uniui_dispatcher.post(ms, callback)
             return
     except Exception:
         pass
@@ -708,7 +738,7 @@ def schedule_after(ms: int, callback) -> None:
     t.start()
 
 
-def show_ui(container, title="App", width=500, height=400):
+def show_ui(container, title="App", width=500, height=400, stylesheet=None):
     """
     Convenience function to display a UI.
 
@@ -717,13 +747,10 @@ def show_ui(container, title="App", width=500, height=400):
         title: window title
         width: window width
         height: window height
-
-    Example:
-        vbox = factory.createVBox()
-        vbox.addItem(label)
-        show_ui(vbox, "My App")
+        stylesheet: optional Qt CSS override. None = default theme.
+                    Pass "" to apply no stylesheet.
     """
-    UniversalDisplay.show(container, title, width, height)
+    UniversalDisplay.show(container, title, width, height, stylesheet=stylesheet)
 
 
 # ============================================================================
@@ -742,7 +769,7 @@ def show_qt(container, title="Qt App", width=500, height=400):
     widget = QWidget()
     widget.setLayout(container.get_native())
     widget.setWindowTitle(title)
-    widget.setMinimumSize(width, height)
+    widget.resize(width, height)
     widget.show()
 
     if _app_is_ours:

@@ -14,6 +14,8 @@ pytest.importorskip("nicegui")
 
 from uniui import Button, Label, VBox, create_factory, toggle_theme, use
 from uniui.display import UniversalDisplay, refresh_theme
+from uniui.web_admin import is_admin_dark as is_web_admin_dark
+from uniui.web_admin import set_admin_theme as set_web_admin_theme
 
 
 def _free_port() -> int:
@@ -79,6 +81,48 @@ def test_web_theme_refresh_updates_root():
     finally:
         toggle_theme()
         refresh_theme(native)
+
+
+@pytest.mark.web
+def test_web_factory_admin_surface_and_theme():
+    factory = create_factory("web")
+    shell = factory.create_app_shell()
+    assert type(factory.create_card()).__name__ == "WebCardAdapter"
+    assert type(factory.create_stat_card()).__name__ == "WebStatCardAdapter"
+    assert type(factory.create_table()).__name__ == "WebTableAdapter"
+    assert type(factory.create_sidebar()).__name__ == "WebSidebarAdapter"
+    assert type(factory.create_breadcrumb()).__name__ == "WebBreadcrumbAdapter"
+
+    set_web_admin_theme(True)
+    try:
+        assert is_web_admin_dark()
+        assert shell.get_native()._style["--uniui-bg"] == "#0b0f19"
+        assert "uniui-web-body" in shell._splitter._classes
+    finally:
+        set_web_admin_theme(False)
+
+
+@pytest.mark.web
+def test_web_admin_sidebar_and_table_events():
+    factory = create_factory("web")
+    sidebar = factory.create_sidebar()
+    sidebar.add_item("users", "Users", "users")
+    selected = []
+    sidebar.on_select(selected.append)
+    sidebar._emit("users")
+    assert selected == ["users"]
+
+    table = factory.create_table()
+    table.set_columns([{"key": "id", "label": "ID"}])
+    table.set_rows([{"id": 3}])
+    rows = []
+    table.on_row_click(rows.append)
+
+    class Event:
+        args = {"row": {"id": 3}}
+
+    table._on_row_event(Event())
+    assert rows == [{"id": 3}]
 
 
 @pytest.mark.web

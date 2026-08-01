@@ -53,6 +53,12 @@ from .core import (
 from .state import State, Computed, Handle, TaskRunner
 from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
 
+# Routing
+from .routing import Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu
+
+# Admin component interfaces
+from .admin import ICard, IStatCard, ITable, ISidebar, IAppShell
+
 # Value parsing helpers
 from .strategies import parse_float, parse_int, parse_flexible, normalize_text
 
@@ -86,6 +92,11 @@ WRAP = 'wrap'
 SCROLL_VIEW = 'scroll_view'
 SPLIT_PANE = 'split_pane'
 OVERLAY = 'overlay'
+CARD = 'card'
+STAT_CARD = 'stat_card'
+TABLE = 'table'
+SIDEBAR = 'sidebar'
+APP_SHELL = 'app_shell'
 
 
 # ============================================================================
@@ -142,6 +153,7 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
 
     if framework == 'qt':
         from .qt import QtWidgetFactory
+        from . import qt_admin  # noqa: F401 — registers admin methods on QtWidgetFactory
         return QtWidgetFactory()
     elif framework == 'jupyter':
         from .jupyter import JupyterWidgetFactory
@@ -361,6 +373,62 @@ def Overlay(*layers) -> IOverlay:
     return ov
 
 
+def Card(title: str = "", subtitle: str = "", content=None) -> ICard:
+    """Create a titled card container."""
+    card = _get_factory().create_card()
+    if title:
+        card.set_title(title)
+    if subtitle:
+        card.set_subtitle(subtitle)
+    if content is not None:
+        card.set_content(content)
+    return card
+
+
+def StatCard(label: str = "", value: str = "", unit: str = "",
+             trend: float = 0.0, status: str = "ok") -> IStatCard:
+    """Create a metric stat card."""
+    sc = _get_factory().create_stat_card()
+    if label:
+        sc.set_label(label)
+    if value:
+        sc.set_value(value)
+    if unit:
+        sc.set_unit(unit)
+    sc.set_trend(trend)
+    sc.set_status(status)
+    return sc
+
+
+def Table(columns=None, rows=None) -> ITable:
+    """Create a data table."""
+    tbl = _get_factory().create_table()
+    if columns is not None:
+        tbl.set_columns(columns)
+    if rows is not None:
+        tbl.set_rows(rows)
+    return tbl
+
+
+def Sidebar() -> ISidebar:
+    """Create a navigation sidebar."""
+    return _get_factory().create_sidebar()
+
+
+def AppShell(header=None, sidebar=None, content=None, footer=None) -> IAppShell:
+    """Create an application shell."""
+    shell = _get_factory().create_app_shell()
+    if header is not None:
+        shell.set_header(header)
+    if sidebar is not None:
+        shell.set_sidebar(sidebar)
+    if content is not None:
+        shell.set_content(content)
+    if footer is not None:
+        shell.set_footer(footer)
+    return shell
+
+
 def TabWidget() -> ITabWidget:
     """Create a tab widget"""
     return _get_factory().create_tab_widget()
@@ -450,6 +518,21 @@ __all__ = [
     'bind_enabled',
     'bind_visible',
 
+    # Routing
+    'Router',
+    'Route',
+    'RouteContext',
+    'RouterView',
+    'RouteNotFoundError',
+    'NavMenu',
+
+    # Admin interfaces
+    'ICard',
+    'IStatCard',
+    'ITable',
+    'ISidebar',
+    'IAppShell',
+
     # Widget creation functions
     'Label',
     'Button',
@@ -466,6 +549,11 @@ __all__ = [
     'ScrollView',
     'SplitPane',
     'Overlay',
+    'Card',
+    'StatCard',
+    'Table',
+    'Sidebar',
+    'AppShell',
     'TabWidget',
     'GroupBox',
     'Image',
@@ -482,6 +570,7 @@ __all__ = [
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
+    'CARD', 'STAT_CARD', 'TABLE', 'SIDEBAR', 'APP_SHELL',
 
     # Framework selection
     'use',

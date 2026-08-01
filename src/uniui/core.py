@@ -653,6 +653,26 @@ class IWidgetFactory(ABC):
         """Create overlay/stack container (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Overlay not supported on this platform")
 
+    def createCard(self) -> "ICard":
+        """Create a titled card container (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Card not supported on this platform")
+
+    def createStatCard(self) -> "IStatCard":
+        """Create a metric stat card (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("StatCard not supported on this platform")
+
+    def createTable(self) -> "ITable":
+        """Create a tabular data table (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Table not supported on this platform")
+
+    def createSidebar(self) -> "ISidebar":
+        """Create a navigation sidebar (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Sidebar not supported on this platform")
+
+    def createAppShell(self) -> "IAppShell":
+        """Create an application shell (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("AppShell not supported on this platform")
+
     # snake_case aliases
     def create_label(self) -> ILabel:
         return self.createLabel()
@@ -701,3 +721,18 @@ class IWidgetFactory(ABC):
 
     def create_overlay(self) -> "IOverlay":
         return self.createOverlay()
+
+    def create_card(self) -> "ICard":
+        return self.createCard()
+
+    def create_stat_card(self) -> "IStatCard":
+        return self.createStatCard()
+
+    def create_table(self) -> "ITable":
+        return self.createTable()
+
+    def create_sidebar(self) -> "ISidebar":
+        return self.createSidebar()
+
+    def create_app_shell(self) -> "IAppShell":
+        return self.createAppShell()

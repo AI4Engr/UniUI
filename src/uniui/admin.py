@@ -1,0 +1,122 @@
+"""
+Admin component interfaces for UniUI.
+
+Pure Python — no backend dependencies.
+"""
+from __future__ import annotations
+
+from abc import abstractmethod
+from typing import Callable, Dict, List, Optional
+
+from uniui.core import IWidget
+
+
+class ICard(IWidget):
+    """Titled card container with optional subtitle, content area, and action area."""
+
+    @abstractmethod
+    def set_title(self, title: str) -> None: ...
+
+    @abstractmethod
+    def set_subtitle(self, subtitle: str) -> None: ...
+
+    @abstractmethod
+    def set_content(self, widget: IWidget) -> None: ...
+
+    @abstractmethod
+    def set_action(self, widget: IWidget) -> None: ...
+
+
+class IStatCard(IWidget):
+    """Metric display card: label, value, unit, trend, and status."""
+
+    @abstractmethod
+    def set_label(self, label: str) -> None: ...
+
+    @abstractmethod
+    def set_value(self, value: str) -> None: ...
+
+    @abstractmethod
+    def set_unit(self, unit: str) -> None: ...
+
+    @abstractmethod
+    def set_trend(self, trend: float) -> None:
+        """Set trend as a signed percentage (e.g. +5.2 or -3.1)."""
+        ...
+
+    @abstractmethod
+    def set_status(self, status: str) -> None:
+        """Set status: 'ok', 'warn', or 'error'."""
+        ...
+
+
+class ITable(IWidget):
+    """Tabular data display with columns, rows, loading and error states."""
+
+    @abstractmethod
+    def set_columns(self, columns: List[Dict]) -> None:
+        """Set column definitions.
+
+        Each dict: {"key": str, "label": str, "width": int (optional)}
+        """
+        ...
+
+    @abstractmethod
+    def set_rows(self, rows: List[Dict]) -> None:
+        """Set row data. Each dict maps column keys to cell values."""
+        ...
+
+    @abstractmethod
+    def set_loading(self, loading: bool) -> None:
+        """Show or hide a loading indicator."""
+        ...
+
+    @abstractmethod
+    def set_error(self, message: str) -> None:
+        """Show an error message (empty string clears the error state)."""
+        ...
+
+    @abstractmethod
+    def on_row_click(self, fn: Callable[[Dict], None]) -> None:
+        """Register a callback fired when the user clicks a row."""
+        ...
+
+
+class ISidebar(IWidget):
+    """Navigation sidebar with selectable items and collapse support."""
+
+    @abstractmethod
+    def add_item(self, key: str, label: str, icon: str = "") -> None:
+        """Append a navigation item."""
+        ...
+
+    @abstractmethod
+    def set_active(self, key: str) -> None:
+        """Highlight the item with the given key as selected."""
+        ...
+
+    @abstractmethod
+    def on_select(self, fn: Callable[[str], None]) -> None:
+        """Register a callback fired when the user selects an item (passes key)."""
+        ...
+
+    @abstractmethod
+    def set_collapsed(self, collapsed: bool) -> None:
+        """Collapse (icon-only, width 64) or expand (width 240) the sidebar."""
+        ...
+
+
+class IAppShell(IWidget):
+    """Top-level application shell: header, sidebar, content, footer."""
+
+    @abstractmethod
+    def set_header(self, widget: IWidget) -> None: ...
+
+    @abstractmethod
+    def set_sidebar(self, sidebar: ISidebar) -> None: ...
+
+    @abstractmethod
+    def set_content(self, widget: IWidget) -> None: ...
+
+    @abstractmethod
+    def set_footer(self, widget: IWidget) -> None: ...

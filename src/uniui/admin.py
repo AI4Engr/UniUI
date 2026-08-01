@@ -120,3 +120,21 @@ class IAppShell(IWidget):
 
     @abstractmethod
     def set_footer(self, widget: IWidget) -> None: ...
+
+
+class IBreadcrumb(IWidget):
+    """Breadcrumb navigation trail."""
+
+    @abstractmethod
+    def set_items(self, items: List[Dict]) -> None:
+        """Set breadcrumb items.
+
+        Each dict: {"label": str, "path": str (optional)}
+        The last item is the current page (no link).
+        """
+        ...
+
+    @abstractmethod
+    def on_click(self, fn: Callable[[str], None]) -> None:
+        """Register callback fired when the user clicks a crumb (passes path)."""
+        ...

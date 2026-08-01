@@ -1,11 +1,11 @@
 """
-Contract tests for Admin components: Card, StatCard, Table, Sidebar, AppShell.
+Contract tests for Admin components: Card, StatCard, Table, Sidebar, AppShell, Breadcrumb.
 """
 import pytest
 
 from tests.contract_framework import WidgetContractTest
-from uniui import CARD, STAT_CARD, TABLE, SIDEBAR, APP_SHELL
-from uniui.admin import ICard, IStatCard, ITable, ISidebar, IAppShell
+from uniui import CARD, STAT_CARD, TABLE, SIDEBAR, APP_SHELL, BREADCRUMB
+from uniui.admin import ICard, IStatCard, ITable, ISidebar, IAppShell, IBreadcrumb
 
 
 class TestCardContract(WidgetContractTest):
@@ -261,3 +261,41 @@ class TestAppShellContract(WidgetContractTest):
         footer = factory.create_label()
         footer.set_text("v1.0.0")
         shell.set_footer(footer)
+
+
+class TestBreadcrumbContract(WidgetContractTest):
+    widget_kind = BREADCRUMB
+
+    def create_widget(self, factory):
+        return factory.create_breadcrumb()
+
+    @pytest.mark.contract
+    def test_set_items_empty(self, factory):
+        bc = self.create_widget(factory)
+        bc.set_items([])
+
+    @pytest.mark.contract
+    def test_set_items_single(self, factory):
+        bc = self.create_widget(factory)
+        bc.set_items([{"label": "Home"}])
+
+    @pytest.mark.contract
+    def test_set_items_trail(self, factory):
+        bc = self.create_widget(factory)
+        bc.set_items([
+            {"label": "Home", "path": "/"},
+            {"label": "Users", "path": "/users"},
+            {"label": "Alice"},
+        ])
+
+    @pytest.mark.contract
+    def test_set_items_replaces(self, factory):
+        """Calling set_items twice replaces the previous trail."""
+        bc = self.create_widget(factory)
+        bc.set_items([{"label": "Home", "path": "/"}, {"label": "Old"}])
+        bc.set_items([{"label": "Home", "path": "/"}, {"label": "New"}])
+
+    @pytest.mark.contract
+    def test_on_click_registers(self, factory):
+        bc = self.create_widget(factory)
+        bc.on_click(lambda path: None)

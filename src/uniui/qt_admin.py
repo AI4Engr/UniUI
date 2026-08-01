@@ -341,12 +341,76 @@ def _clear_layout(layout: QtWidgets.QLayout) -> None:
 
 
 # ---------------------------------------------------------------------------
+# IBreadcrumb — horizontal row of labels/buttons separated by "›"
+# ---------------------------------------------------------------------------
+
+class QtBreadcrumbAdapter:
+    """Breadcrumb rendered as a horizontal row of QPushButton / QLabel items."""
+
+    def __init__(self):
+        self._widget = QtWidgets.QWidget()
+        self._layout = QtWidgets.QHBoxLayout(self._widget)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(4)
+        self._layout.addStretch()
+        self._click_cb = None
+        self._items = []
+
+    def get_native(self):
+        return self._widget
+
+    def set_items(self, items):
+        self._items = list(items)
+        # Remove all existing widgets
+        while self._layout.count():
+            item = self._layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.setParent(None)
+
+        for i, crumb in enumerate(items):
+            label = crumb.get("label", "")
+            path = crumb.get("path", "")
+            is_last = (i == len(items) - 1)
+
+            if i > 0:
+                sep = QtWidgets.QLabel("›")
+                sep.setStyleSheet("color: #9ca3af;")
+                self._layout.addWidget(sep)
+
+            if is_last or not path:
+                lbl = QtWidgets.QLabel(label)
+                lbl.setStyleSheet("color: #111827; font-weight: 500;")
+                self._layout.addWidget(lbl)
+            else:
+                btn = QtWidgets.QPushButton(label)
+                btn.setFlat(True)
+                btn.setStyleSheet(
+                    "QPushButton { color: #3b82f6; text-decoration: underline; "
+                    "border: none; padding: 0; } "
+                    "QPushButton:hover { color: #2563eb; }"
+                )
+                captured_path = path
+                btn.clicked.connect(lambda checked=False, p=captured_path: self._on_click(p))
+                self._layout.addWidget(btn)
+
+        self._layout.addStretch()
+
+    def on_click(self, fn):
+        self._click_cb = fn
+
+    def _on_click(self, path: str) -> None:
+        if self._click_cb:
+            self._click_cb(path)
+
+
+# ---------------------------------------------------------------------------
 # Patch QtWidgetFactory
 # ---------------------------------------------------------------------------
 
 def _register(factory_class):
     """Monkey-patch admin factory methods onto QtWidgetFactory."""
-    from uniui.admin import ICard, IStatCard, ITable, ISidebar, IAppShell
+    from uniui.admin import ICard, IStatCard, ITable, ISidebar, IAppShell, IBreadcrumb
 
     def createCard(self) -> ICard:
         return QtCardAdapter()
@@ -363,11 +427,15 @@ def _register(factory_class):
     def createAppShell(self) -> IAppShell:
         return QtAppShellAdapter()
 
+    def createBreadcrumb(self) -> IBreadcrumb:
+        return QtBreadcrumbAdapter()
+
     factory_class.createCard = createCard
     factory_class.createStatCard = createStatCard
     factory_class.createTable = createTable
     factory_class.createSidebar = createSidebar
     factory_class.createAppShell = createAppShell
+    factory_class.createBreadcrumb = createBreadcrumb
 
 
 # Auto-register when this module is imported

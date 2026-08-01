@@ -311,3 +311,22 @@ class NavMenu:
 
         router.on_navigate(on_navigate)
         return sidebar
+
+
+def sync_breadcrumb(breadcrumb, router: Router,
+                    trail_fn: Optional[Callable[[RouteContext], List[Dict]]] = None) -> Handle:
+    """Wire a Breadcrumb to a Router so it updates on every navigation.
+
+    trail_fn(ctx) -> list of {"label": str, "path": str (optional)} dicts.
+    Defaults to a single-item trail showing the current route name.
+    """
+    def _default_trail(ctx: RouteContext) -> List[Dict]:
+        label = ctx.name.replace("-", " ").title() if ctx.name else ctx.path
+        return [{"label": label}]
+
+    fn = trail_fn or _default_trail
+
+    def on_navigate(ctx: RouteContext) -> None:
+        breadcrumb.set_items(fn(ctx))
+
+    return router.on_navigate(on_navigate)

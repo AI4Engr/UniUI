@@ -54,10 +54,10 @@ from .state import State, Computed, Handle, TaskRunner
 from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
 
 # Routing
-from .routing import Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu
+from .routing import Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu, sync_breadcrumb
 
 # Admin component interfaces
-from .admin import ICard, IStatCard, ITable, ISidebar, IAppShell
+from .admin import ICard, IStatCard, ITable, ISidebar, IAppShell, IBreadcrumb
 
 # Value parsing helpers
 from .strategies import parse_float, parse_int, parse_flexible, normalize_text
@@ -97,6 +97,7 @@ STAT_CARD = 'stat_card'
 TABLE = 'table'
 SIDEBAR = 'sidebar'
 APP_SHELL = 'app_shell'
+BREADCRUMB = 'breadcrumb'
 
 
 # ============================================================================
@@ -429,6 +430,14 @@ def AppShell(header=None, sidebar=None, content=None, footer=None) -> IAppShell:
     return shell
 
 
+def Breadcrumb(items=None) -> IBreadcrumb:
+    """Create a breadcrumb navigation widget."""
+    bc = _get_factory().create_breadcrumb()
+    if items is not None:
+        bc.set_items(items)
+    return bc
+
+
 def TabWidget() -> ITabWidget:
     """Create a tab widget"""
     return _get_factory().create_tab_widget()
@@ -525,6 +534,7 @@ __all__ = [
     'RouterView',
     'RouteNotFoundError',
     'NavMenu',
+    'sync_breadcrumb',
 
     # Admin interfaces
     'ICard',
@@ -532,6 +542,7 @@ __all__ = [
     'ITable',
     'ISidebar',
     'IAppShell',
+    'IBreadcrumb',
 
     # Widget creation functions
     'Label',
@@ -554,6 +565,7 @@ __all__ = [
     'Table',
     'Sidebar',
     'AppShell',
+    'Breadcrumb',
     'TabWidget',
     'GroupBox',
     'Image',
@@ -570,7 +582,7 @@ __all__ = [
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
-    'CARD', 'STAT_CARD', 'TABLE', 'SIDEBAR', 'APP_SHELL',
+    'CARD', 'STAT_CARD', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
 
     # Framework selection
     'use',

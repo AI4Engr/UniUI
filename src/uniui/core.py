@@ -673,6 +673,10 @@ class IWidgetFactory(ABC):
         """Create an application shell (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("AppShell not supported on this platform")
 
+    def createBreadcrumb(self) -> "IBreadcrumb":
+        """Create a breadcrumb navigation widget (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Breadcrumb not supported on this platform")
+
     # snake_case aliases
     def create_label(self) -> ILabel:
         return self.createLabel()
@@ -736,3 +740,6 @@ class IWidgetFactory(ABC):
 
     def create_app_shell(self) -> "IAppShell":
         return self.createAppShell()
+
+    def create_breadcrumb(self) -> "IBreadcrumb":
+        return self.createBreadcrumb()

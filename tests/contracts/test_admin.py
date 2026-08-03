@@ -6,7 +6,7 @@ import pytest
 from tests.contract_framework import WidgetContractTest
 from uniui import (
     APP_SHELL, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
-    SIDEBAR, STAT_CARD, TABLE,
+    METRIC_LIST, SIDEBAR, STAT_CARD, TABLE,
 )
 
 
@@ -107,6 +107,32 @@ class TestStatCardContract(WidgetContractTest):
     def test_set_status_error(self, factory):
         sc = self.create_widget(factory)
         sc.set_status("error")
+
+
+class TestMetricListContract(WidgetContractTest):
+    widget_kind = METRIC_LIST
+
+    def create_widget(self, factory):
+        return factory.create_metric_list()
+
+    @pytest.mark.contract
+    def test_set_items(self, factory):
+        ml = self.create_widget(factory)
+        ml.set_items([
+            {"label": "Active handles", "value": "4"},
+            {"label": "Heap size", "value": "13.5 MiB"},
+        ])
+
+    @pytest.mark.contract
+    def test_set_items_empty(self, factory):
+        ml = self.create_widget(factory)
+        ml.set_items([])
+
+    @pytest.mark.contract
+    def test_set_items_replaces_previous(self, factory):
+        ml = self.create_widget(factory)
+        ml.set_items([{"label": "A", "value": "1"}])
+        ml.set_items([{"label": "B", "value": "2"}])
 
 
 class TestTableContract(WidgetContractTest):

@@ -744,6 +744,9 @@ class IWidgetFactory(ABC):
     def create_table(self) -> "ITable":
         return self.createTable()
 
+    def create_metric_list(self) -> "IMetricList":
+        return self.createMetricList()
+
     def create_sidebar(self) -> "ISidebar":
         return self.createSidebar()
 

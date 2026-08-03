@@ -59,7 +59,7 @@ from .routing import Router, Route, RouteContext, RouterView, RouteNotFoundError
 # Admin component interfaces
 from .admin import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    ISidebar, IStatCard, ITable,
+    IMetricList, ISidebar, IStatCard, ITable,
 )
 
 # Value parsing helpers
@@ -97,6 +97,7 @@ SPLIT_PANE = 'split_pane'
 OVERLAY = 'overlay'
 CARD = 'card'
 STAT_CARD = 'stat_card'
+METRIC_LIST = 'metric_list'
 TABLE = 'table'
 SIDEBAR = 'sidebar'
 APP_SHELL = 'app_shell'
@@ -409,6 +410,14 @@ def StatCard(label: str = "", value: str = "", unit: str = "",
     return sc
 
 
+def MetricList(items=None) -> IMetricList:
+    """Create a compact key/value metric list."""
+    ml = _get_factory().create_metric_list()
+    if items is not None:
+        ml.set_items(items)
+    return ml
+
+
 def Table(columns=None, rows=None) -> ITable:
     """Create a data table."""
     tbl = _get_factory().create_table()
@@ -582,6 +591,7 @@ __all__ = [
     # Admin interfaces
     'ICard',
     'IStatCard',
+    'IMetricList',
     'ITable',
     'ISidebar',
     'IAppShell',
@@ -608,6 +618,7 @@ __all__ = [
     'Overlay',
     'Card',
     'StatCard',
+    'MetricList',
     'Table',
     'Sidebar',
     'AppShell',
@@ -631,7 +642,7 @@ __all__ = [
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
-    'CARD', 'STAT_CARD', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
+    'CARD', 'STAT_CARD', 'METRIC_LIST', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
 
     # Framework selection

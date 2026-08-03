@@ -47,6 +47,14 @@ _ORDERS = [
     {"id": "#1039", "customer": "Eve Martinez",  "amount": "$55.00",  "status": "Cancelled"},
 ]
 
+_DETAIL_METRICS = [
+    {"label": "Active handles",   "value": "4"},
+    {"label": "Event loop latency", "value": "0.3 ms"},
+    {"label": "Heap size",        "value": "13.5 MiB"},
+    {"label": "Used heap",        "value": "12.3 MiB"},
+    {"label": "HTTP p95 latency", "value": "7.3 ms"},
+]
+
 
 # ---------------------------------------------------------------------------
 # Small Qt composition helpers used by this desktop showcase
@@ -76,6 +84,7 @@ def _page_frame(title, subtitle, action_text=""):
 
     page = QtWidgets.QWidget()
     page.setProperty("adminPage", "1")
+    page.setAccessibleName(title)
     page.setMinimumWidth(0)
     page.setSizePolicy(
         QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Expanding
@@ -94,17 +103,15 @@ def _page_frame(title, subtitle, action_text=""):
     copy_layout = QtWidgets.QVBoxLayout(copy)
     copy_layout.setContentsMargins(0, 0, 0, 0)
     copy_layout.setSpacing(4)
-    title_label = QtWidgets.QLabel(title)
-    title_label.setProperty("pageTitle", "1")
+    # The breadcrumb in the header bar already names the page; the H1 here
+    # would just repeat it, so only the descriptive subtitle is shown.
     subtitle_label = QtWidgets.QLabel(subtitle)
     subtitle_label.setProperty("pageSubtitle", "1")
     subtitle_label.setWordWrap(True)
-    for label in (title_label, subtitle_label):
-        label.setMinimumWidth(0)
-        label.setSizePolicy(
-            QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
-        )
-    copy_layout.addWidget(title_label)
+    subtitle_label.setMinimumWidth(0)
+    subtitle_label.setSizePolicy(
+        QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
+    )
     copy_layout.addWidget(subtitle_label)
     heading_layout.addWidget(copy, stretch=1)
 
@@ -208,12 +215,21 @@ def dashboard_page(ctx):
     chart_card.set_title("Realtime")
     chart_card.set_subtitle("append_data() keeps the latest 24 points")
     chart_card.set_content(chart)
+
+    metrics = f.create_metric_list()
+    metrics.set_items(_DETAIL_METRICS)
+    metrics_card = f.create_card()
+    metrics_card.set_title("Process")
+    metrics_card.set_subtitle("Runtime signals at a glance")
+    metrics_card.set_content(metrics)
+
     visual_row = QtWidgets.QWidget()
     visual_layout = QtWidgets.QHBoxLayout(visual_row)
     visual_layout.setContentsMargins(0, 0, 0, 0)
     visual_layout.setSpacing(14)
     visual_layout.addWidget(gauge_card.get_native(), stretch=1)
     visual_layout.addWidget(chart_card.get_native(), stretch=2)
+    visual_layout.addWidget(metrics_card.get_native(), stretch=1)
     visual_row.setFixedHeight(250)
 
     runner = TaskRunner()
@@ -424,19 +440,20 @@ def _browser_page_frame(title, subtitle, action_text=""):
     page = f.create_vbox()
     page.set_spec(LayoutSpec(gap=18))
     _add_class(page, "uniui-demo-page")
+    page_native = page.get_native() if hasattr(page, "get_native") else page
+    if hasattr(page_native, "tooltip"):
+        page_native.tooltip(title)
 
     heading = f.create_hbox()
     heading.set_spec(LayoutSpec(gap=16))
     _add_class(heading, "uniui-demo-heading")
     copy = f.create_vbox()
     copy.set_spec(LayoutSpec(gap=4))
-    title_label = f.create_label()
-    title_label.set_text(title)
-    _add_class(title_label, "uniui-demo-title")
+    # The breadcrumb in the header bar already names the page; the H1 here
+    # would just repeat it, so only the descriptive subtitle is shown.
     subtitle_label = f.create_label()
     subtitle_label.set_text(subtitle)
     _add_class(subtitle_label, "uniui-demo-subtitle")
-    copy.add_item(title_label)
     copy.add_item(subtitle_label)
     heading.add_item_with_spec(copy, LayoutItem(copy, grow=1))
 
@@ -491,8 +508,13 @@ def _browser_dashboard_page(_ctx):
     gauge_card.set_subtitle("Animated radial progress"); gauge_card.set_content(gauge)
     chart_card = f.create_card(); chart_card.set_title("Realtime")
     chart_card.set_subtitle("Keeps the latest 24 points"); chart_card.set_content(chart)
+
+    metrics = f.create_metric_list(); metrics.set_items(_DETAIL_METRICS)
+    metrics_card = f.create_card(); metrics_card.set_title("Process")
+    metrics_card.set_subtitle("Runtime signals at a glance"); metrics_card.set_content(metrics)
+
     visuals = f.create_wrap(); visuals.set_spec(LayoutSpec(gap=14))
-    visuals.add_item(gauge_card); visuals.add_item(chart_card)
+    visuals.add_item(gauge_card); visuals.add_item(chart_card); visuals.add_item(metrics_card)
 
     def refresh():
         refresh_btn.set_enabled(False)
@@ -744,12 +766,11 @@ QWidget {
 }
 QWidget[adminPage="1"], QWidget[pageHeading="1"] { background: transparent; }
 QLabel { background: transparent; color: %(text)s; }
-QLabel[pageTitle="1"] {
+QLabel[pageSubtitle="1"] {
     color: %(text)s;
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 650;
 }
-QLabel[pageSubtitle="1"] { color: %(text_muted)s; font-size: 13px; }
 QLabel[tableHint="1"] {
     color: %(text_muted)s;
     background: %(surface_subtle)s;

@@ -8,7 +8,7 @@ from nicegui import ui
 
 from .admin import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    ISidebar, IStatCard, ITable,
+    IMetricList, ISidebar, IStatCard, ITable,
 )
 from .admin_icons import ADMIN_ICON_NAMES, css_mask
 from .admin_theme import get_admin_metrics, get_admin_tokens
@@ -91,7 +91,7 @@ def _install_admin_css() -> None:
         .uniui-web-body {width:100%;height:calc(100dvh - var(--uniui-shell-bars));min-height:0;background:var(--uniui-bg)}
         .uniui-web-body .q-splitter__separator {width:5px!important;background:var(--uniui-border);transition:.15s}
         .uniui-web-body .q-splitter__separator:hover {background:var(--uniui-accent)}
-        .uniui-web-content {width:100%;min-width:0;height:100%;padding:28px 32px 32px;overflow:auto;background:var(--uniui-bg);
+        .uniui-web-content {width:100%;min-width:0;height:100%;padding:var(--uniui-content-padding);overflow:auto;background:var(--uniui-bg);
           scrollbar-width:thin;scrollbar-color:var(--uniui-border_strong) transparent}
         .uniui-web-footer {height:var(--uniui-footer-height);min-height:var(--uniui-footer-height);width:100%;padding:7px 20px;background:var(--uniui-surface);
           border-top:1px solid var(--uniui-border)}
@@ -100,25 +100,28 @@ def _install_admin_css() -> None:
           color:var(--uniui-sidebar_fg)!important;background:transparent!important;border-radius:8px;font-size:13px;font-weight:500}
         .uniui-web-sidebar .q-btn .q-icon {width:22px;margin-right:10px;color:#94a3b8;font-size:19px}
         .uniui-web-sidebar .q-btn:hover {color:#fff!important;background:rgba(255,255,255,.055)!important}
-        .uniui-web-sidebar .uniui-active {color:#fff!important;background:var(--uniui-sidebar_active)!important;box-shadow:inset 3px 0 0 var(--uniui-accent)}
+        .uniui-web-sidebar .uniui-active {color:#fff!important;background:var(--uniui-sidebar_active)!important;box-shadow:inset var(--uniui-sidebar-edge-width) 0 0 var(--uniui-accent)}
         .uniui-web-sidebar .uniui-active .uniui-svg-icon {color:var(--uniui-accent)}
         .uniui-web-sidebar .uniui-collapsed .uniui-nav-label {display:none}
         .uniui-web-sidebar .uniui-collapsed .uniui-svg-icon {margin-right:0}
-        .uniui-web-card {width:100%;min-width:0;padding:20px 22px;border:1px solid var(--uniui-border)!important;
-          border-radius:14px!important;background:var(--uniui-surface)!important;color:var(--uniui-text);box-shadow:var(--uniui-shadow)!important}
+        .uniui-web-card {width:100%;min-width:0;padding:var(--uniui-card-padding);border:1px solid var(--uniui-border)!important;
+          border-radius:14px!important;background:var(--uniui-surface)!important;color:var(--uniui-text);box-shadow:none!important}
         .uniui-web-card-title {color:var(--uniui-text);font-size:16px;font-weight:700;line-height:1.3}
         .uniui-web-card-subtitle {margin-top:2px;color:var(--uniui-text_muted);font-size:12px}
-        .uniui-web-card .uniui-vbox {gap:14px!important}
-        .uniui-web-stat {min-width:190px;min-height:136px;flex:1 1 190px;padding:15px 18px!important;gap:2px!important;
-          border:1px solid var(--uniui-border)!important;border-top:3px solid var(--uniui-ok)!important;
-          border-radius:14px!important;background:var(--uniui-surface)!important;box-shadow:var(--uniui-shadow)!important}
-        .uniui-web-stat.uniui-warn {border-top-color:var(--uniui-warn)!important}
-        .uniui-web-stat.uniui-error {border-top-color:var(--uniui-error)!important}
-        .uniui-web-stat-label {color:var(--uniui-text_muted);font-size:12px;font-weight:600}
-        .uniui-web-stat-value {color:var(--uniui-text);font-size:29px;line-height:1.15;font-weight:750}
+        .uniui-web-card .uniui-vbox {gap:var(--uniui-card-gap)!important}
+        .uniui-web-stat {min-width:190px;min-height:136px;flex:1 1 190px;padding:15px 18px!important;gap:1px!important;
+          border:1px solid var(--uniui-border)!important;
+          border-radius:14px!important;background:var(--uniui-surface)!important;box-shadow:none!important}
+        .uniui-web-stat-label {color:var(--uniui-text_muted);font-size:var(--uniui-stat-label-size);font-weight:600}
+        .uniui-web-stat-value {color:var(--uniui-text);font-size:var(--uniui-stat-value-size);line-height:1.15;font-weight:750}
         .uniui-web-stat-unit {color:var(--uniui-text_muted);font-size:11px}
         .uniui-web-stat-trend {margin-top:auto;color:var(--uniui-text_muted);font-size:11px;font-weight:650}
         .uniui-web-stat-trend.uniui-up {color:var(--uniui-ok)} .uniui-web-stat-trend.uniui-down {color:var(--uniui-error)}
+        .uniui-web-stat-trend.uniui-warn {color:var(--uniui-warn)} .uniui-web-stat-trend.uniui-error {color:var(--uniui-error)}
+        .uniui-web-metric-row {padding:8px 0!important;justify-content:space-between!important;align-items:center!important}
+        .uniui-web-metric-row.uniui-metric-divider {border-top:1px solid var(--uniui-border)}
+        .uniui-web-metric-label {color:var(--uniui-text_muted)!important;font-size:var(--uniui-stat-label-size)}
+        .uniui-web-metric-value {color:var(--uniui-text)!important;font-size:13px;font-weight:600}
         .uniui-web-admin .uniui-input {font-size:13px}
         .uniui-web-admin .uniui-input .q-field__control {height:40px;min-height:40px;background:var(--uniui-input_bg)!important;
           color:var(--uniui-text)!important;border-radius:9px!important}
@@ -129,14 +132,15 @@ def _install_admin_css() -> None:
         .uniui-web-table {width:100%;color:var(--uniui-text);background:var(--uniui-surface);border:1px solid var(--uniui-border);
           border-radius:10px;box-shadow:none!important;overflow:hidden;font-family:inherit}
         .uniui-web-table .q-table__container,.uniui-web-table .q-table__card {box-shadow:none!important;background:transparent}
-        .uniui-web-table thead tr {height:44px;background:var(--uniui-surface_subtle);color:var(--uniui-text_muted)}
-        .uniui-web-table thead th {font-size:11px;font-weight:700;letter-spacing:.035em;text-transform:uppercase}
+        .uniui-web-table thead tr {height:44px;background:var(--uniui-surface);color:var(--uniui-text_muted);
+          border-bottom:1px solid var(--uniui-border)}
+        .uniui-web-table thead th {font-size:var(--uniui-stat-label-size);font-weight:600}
         .uniui-web-table tbody td {height:52px;font-size:13px;border-color:var(--uniui-border)}
         .uniui-web-table tbody tr:hover {background:var(--uniui-surface_subtle)}
         .uniui-web-table .q-table__bottom {min-height:42px;border-top:1px solid var(--uniui-border);color:var(--uniui-text_muted);font-size:12px}
         .uniui-web-breadcrumb {gap:4px!important;flex:1 1 auto;flex-wrap:nowrap!important;align-items:center!important;min-width:0}
         .uniui-web-breadcrumb .q-btn {min-height:28px;padding:2px 4px;color:var(--uniui-text_muted)!important;background:transparent!important;font-weight:500}
-        .uniui-demo-page {width:100%;max-width:1180px;margin:0 auto;gap:20px!important}
+        .uniui-demo-page {width:100%;max-width:1180px;margin:0 auto;gap:var(--uniui-section-gap)!important}
         .uniui-demo-heading {gap:18px!important;flex-wrap:nowrap!important;align-items:center!important}
         .uniui-demo-header-content {width:100%;min-width:0;gap:8px!important;flex-wrap:nowrap!important;align-items:center!important}
         .uniui-demo-logo-mark {width:32px!important;height:32px;min-width:32px;display:grid;place-items:center;border-radius:9px;
@@ -170,9 +174,9 @@ def _install_admin_css() -> None:
         .uniui-status-pill.uniui-status-warn {color:var(--uniui-status_warn_fg);background:var(--uniui-status_warn_bg)}
         .uniui-status-pill.uniui-status-error {color:var(--uniui-status_error_fg);background:var(--uniui-status_error_bg)}
         .uniui-status-pill.uniui-status-neutral {color:var(--uniui-status_neutral_fg);background:var(--uniui-status_neutral_bg)}
-        .uniui-demo-title {color:var(--uniui-text)!important;font-size:26px!important;line-height:1.2;font-weight:750!important}
-        .uniui-demo-subtitle,.uniui-demo-hint {color:var(--uniui-text_muted)!important;font-size:13px}
-        .uniui-demo-stats {gap:16px!important;align-items:stretch!important}
+        .uniui-demo-subtitle {color:var(--uniui-text)!important;font-size:18px!important;line-height:1.3;font-weight:650!important}
+        .uniui-demo-hint {color:var(--uniui-text_muted)!important;font-size:13px}
+        .uniui-demo-stats {gap:var(--uniui-card-gap)!important;align-items:stretch!important}
         @media(max-width:1019px) {
           .uniui-web-body .q-splitter__before {width:var(--uniui-sidebar-collapsed)!important}
           .uniui-web-body .q-splitter__after {width:calc(100% - var(--uniui-sidebar-collapsed))!important}
@@ -185,7 +189,7 @@ def _install_admin_css() -> None:
         @media(max-width:719px) {
           .uniui-web-body {height:calc(100dvh - 60px)}.uniui-web-content{padding:20px 14px}.uniui-web-footer{display:none}
           .uniui-web-header{padding:0 12px!important}.uniui-demo-theme-button{font-size:0;min-width:34px!important;padding:0!important}
-          .uniui-demo-heading{align-items:flex-start!important}.uniui-demo-title{font-size:23px!important}
+          .uniui-demo-heading{align-items:flex-start!important}.uniui-demo-subtitle{font-size:16px!important}
         }
         """,
         shared=True,
@@ -233,14 +237,21 @@ class WebStatCardAdapter(_WebAdapter, IStatCard):
             self._trend_label = ui.label("—  No change").classes("uniui-web-stat-trend")
         super().__init__(card)
         self._status = "ok"
+        self._trend = 0.0
 
     def set_label(self, label: str) -> None: self._label.set_text(str(label))
     def set_value(self, value: str) -> None: self._value.set_text(str(value))
     def set_unit(self, unit: str) -> None: self._unit.set_text(str(unit))
     def set_trend(self, trend: float) -> None:
-        trend = float(trend)
-        self._trend_label.classes(remove="uniui-up uniui-down")
-        if trend > 0:
+        self._trend = float(trend)
+        self._apply_trend()
+    def _apply_trend(self) -> None:
+        trend = self._trend
+        self._trend_label.classes(remove="uniui-up uniui-down uniui-warn uniui-error")
+        if self._status != "ok" and trend == 0:
+            text = "Needs attention" if self._status == "warn" else "Error"
+            self._trend_label.set_text(text); self._trend_label.classes(add=f"uniui-{self._status}")
+        elif trend > 0:
             self._trend_label.set_text(f"↗  {trend:.1f}%  vs last period"); self._trend_label.classes(add="uniui-up")
         elif trend < 0:
             self._trend_label.set_text(f"↘  {abs(trend):.1f}%  vs last period"); self._trend_label.classes(add="uniui-down")
@@ -248,8 +259,27 @@ class WebStatCardAdapter(_WebAdapter, IStatCard):
             self._trend_label.set_text("—  No change")
     def set_status(self, status: str) -> None:
         self._status = status if status in {"ok", "warn", "error"} else "ok"
-        self._native.classes(remove="uniui-warn uniui-error")
-        if self._status != "ok": self._native.classes(add=f"uniui-{self._status}")
+        self._apply_trend()
+
+
+class WebMetricListAdapter(_WebAdapter, IMetricList):
+    """Dense two-column key/value list for secondary metrics."""
+
+    def __init__(self):
+        _install_admin_css()
+        root = ui.column().classes("w-full items-stretch gap-0")
+        super().__init__(root)
+
+    def set_items(self, items: List[Dict]) -> None:
+        _clear(self._native)
+        with self._native:
+            for index, item in enumerate(items):
+                classes = "w-full uniui-web-metric-row"
+                if index > 0:
+                    classes += " uniui-metric-divider"
+                with ui.row().classes(classes):
+                    ui.label(str(item.get("label", ""))).classes("uniui-web-metric-label")
+                    ui.label(str(item.get("value", ""))).classes("uniui-web-metric-value")
 
 
 class WebTableAdapter(_WebAdapter, ITable):
@@ -444,6 +474,13 @@ class WebAppShellAdapter(_WebAdapter, IAppShell):
             "--uniui-shell-bars": f"{_M['header_height'] + _M['footer_height']}px",
             "--uniui-sidebar-collapsed": f"{_M['sidebar_collapsed']}px",
             "--uniui-control-height": f"{_M['control_height']}px",
+            "--uniui-stat-value-size": f"{_M['stat_value_size']}px",
+            "--uniui-stat-label-size": f"{_M['stat_label_size']}px",
+            "--uniui-sidebar-edge-width": f"{_M['sidebar_edge_width']}px",
+            "--uniui-content-padding": f"{_M['content_padding']}px {_M['content_padding'] + 4}px {_M['content_padding'] + 4}px",
+            "--uniui-card-padding": f"{_M['card_padding']}px {_M['card_padding'] + 2}px",
+            "--uniui-card-gap": f"{_M['card_gap']}px",
+            "--uniui-section-gap": f"{_M['section_gap']}px",
         })
         self._native.style(";".join(f"{key}:{value}" for key, value in variables.items()))
 
@@ -469,6 +506,7 @@ class WebBreadcrumbAdapter(_WebAdapter, IBreadcrumb):
 def _register(factory_class) -> None:
     factory_class.createCard = lambda self: WebCardAdapter()
     factory_class.createStatCard = lambda self: WebStatCardAdapter()
+    factory_class.createMetricList = lambda self: WebMetricListAdapter()
     factory_class.createTable = lambda self: WebTableAdapter()
     factory_class.createSidebar = lambda self: WebSidebarAdapter()
     factory_class.createAppShell = lambda self: WebAppShellAdapter()

@@ -50,6 +50,18 @@ class IStatCard(IWidget):
         ...
 
 
+class IMetricList(IWidget):
+    """Compact two-column key/value list for dense secondary metrics."""
+
+    @abstractmethod
+    def set_items(self, items: List[Dict]) -> None:
+        """Set displayed rows.
+
+        Each dict: {"label": str, "value": str}
+        """
+        ...
+
+
 class ITable(IWidget):
     """Tabular data display with columns, rows, loading and error states."""
 

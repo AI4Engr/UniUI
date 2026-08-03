@@ -14,7 +14,7 @@ import ipywidgets as widgets
 
 from .admin import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    ISidebar, IStatCard, ITable,
+    IMetricList, ISidebar, IStatCard, ITable,
 )
 from .admin_icons import ADMIN_ICON_NAMES, css_mask
 from .admin_theme import get_admin_metrics, get_admin_tokens
@@ -112,7 +112,7 @@ def _css() -> str:
 }}
 .uniui-shell-body {{display:flex; width:100%; min-width:0; flex:1 1 auto}}
 .uniui-shell-content {{
-  min-width:0; flex:1 1 0; padding:24px 28px 28px;
+  min-width:0; flex:1 1 0; padding:{_M['content_padding']}px {_M['content_padding'] + 4}px {_M['content_padding'] + 4}px;
   overflow:auto; background:var(--uniui-bg);
 }}
 .uniui-shell-footer {{
@@ -120,9 +120,9 @@ def _css() -> str:
   background:var(--uniui-surface); border-top:1px solid var(--uniui-border);
 }}
 .uniui-admin-card {{
-  width:100%; min-width:0; padding:18px 20px 20px; gap:12px;
+  width:100%; min-width:0; padding:{_M['card_padding']}px {_M['card_padding'] + 2}px; gap:{_M['card_gap']}px;
   background:var(--uniui-surface); border:1px solid var(--uniui-border);
-  border-radius:14px; box-shadow:var(--uniui-shadow);
+  border-radius:14px; box-shadow:none;
 }}
 .uniui-card-header {{display:flex; flex-flow:row; align-items:flex-start; gap:12px}}
 .uniui-card-copy {{min-width:0; flex:1 1 auto; gap:2px}}
@@ -135,23 +135,28 @@ def _css() -> str:
 .uniui-stat-card {{
   min-width:190px; min-height:136px; padding:15px 18px 14px;
   background:var(--uniui-surface); border:1px solid var(--uniui-border);
-  border-top:3px solid var(--uniui-ok); border-radius:14px;
-  box-shadow:var(--uniui-shadow); gap:2px; flex:1 1 190px;
+  border-radius:14px;
+  box-shadow:none; gap:1px; flex:1 1 190px;
 }}
-.uniui-stat-card.uniui-status-warn {{border-top-color:var(--uniui-warn)}}
-.uniui-stat-card.uniui-status-error {{border-top-color:var(--uniui-error)}}
-.uniui-stat-label, .uniui-stat-label p {{margin:0;color:var(--uniui-text_muted);font-size:12px;font-weight:600}}
-.uniui-stat-value, .uniui-stat-value p {{margin:2px 0 0;color:var(--uniui-text);font-size:29px;line-height:1.15;font-weight:750}}
+.uniui-stat-label, .uniui-stat-label p {{margin:0;color:var(--uniui-text_muted);font-size:{_M['stat_label_size']}px;font-weight:600}}
+.uniui-stat-value, .uniui-stat-value p {{margin:2px 0 0;color:var(--uniui-text);font-size:{_M['stat_value_size']}px;line-height:1.15;font-weight:750}}
 .uniui-stat-unit, .uniui-stat-unit p {{margin:0;color:var(--uniui-text_muted);font-size:11px}}
 .uniui-stat-trend, .uniui-stat-trend p {{margin:9px 0 0;color:var(--uniui-text_muted);font-size:11px;font-weight:650}}
 .uniui-stat-trend.uniui-up, .uniui-stat-trend.uniui-up p {{color:var(--uniui-ok)}}
 .uniui-stat-trend.uniui-down, .uniui-stat-trend.uniui-down p {{color:var(--uniui-error)}}
+.uniui-stat-trend.uniui-status-warn, .uniui-stat-trend.uniui-status-warn p {{color:var(--uniui-warn)}}
+.uniui-stat-trend.uniui-status-error, .uniui-stat-trend.uniui-status-error p {{color:var(--uniui-error)}}
+.uniui-metric-list-wrap {{width:100%; min-width:0}}
+.uniui-metric-row {{display:flex; justify-content:space-between; align-items:center; padding:8px 0}}
+.uniui-metric-row.uniui-metric-divider {{border-top:1px solid var(--uniui-border)}}
+.uniui-metric-label {{color:var(--uniui-text_muted); font-size:{_M['stat_label_size']}px}}
+.uniui-metric-value {{color:var(--uniui-text); font-size:13px; font-weight:600}}
 .uniui-admin-table {{width:100%; min-width:0}}
 .uniui-admin-table table {{width:100%; border-collapse:separate; border-spacing:0; color:var(--uniui-text); font-size:13px}}
 .uniui-admin-table th {{
   padding:10px 12px; text-align:left; color:var(--uniui-text_muted);
-  background:var(--uniui-surface_subtle); border-bottom:1px solid var(--uniui-border);
-  font-size:11px; letter-spacing:.035em; text-transform:uppercase;
+  background:var(--uniui-surface); border-bottom:1px solid var(--uniui-border);
+  font-size:{_M['stat_label_size']}px; font-weight:600;
 }}
 .uniui-admin-table td {{padding:11px 12px;border-bottom:1px solid var(--uniui-border)}}
 .uniui-admin-table tbody tr {{cursor:pointer}}
@@ -191,6 +196,7 @@ def _css() -> str:
 .uniui-admin-sidebar .uniui-active button {{
   color:white!important; background:var(--uniui-sidebar_active)!important;
 }}
+.uniui-admin-sidebar .uniui-active {{box-shadow:inset {_M['sidebar_edge_width']}px 0 0 var(--uniui-sidebar_edge)}}
 .uniui-admin-sidebar .uniui-active button::before {{background:var(--uniui-accent)}}
 .uniui-splitter-widget {{
   width:6px; min-width:6px; flex:0 0 6px; align-self:stretch;
@@ -206,12 +212,11 @@ def _css() -> str:
 }}
 .uniui-breadcrumb-current, .uniui-breadcrumb-current p {{margin:0;color:var(--uniui-text);font-weight:650}}
 .uniui-breadcrumb-separator, .uniui-breadcrumb-separator p {{margin:0;color:var(--uniui-text_muted)}}
-.uniui-demo-page {{gap:18px}}
+.uniui-demo-page {{gap:{_M['section_gap']}px}}
 .uniui-demo-heading {{gap:16px;align-items:center;flex-wrap:nowrap!important}}
-.uniui-demo-title .widget-label, .uniui-demo-title {{color:var(--uniui-text)!important;font-size:24px;font-weight:750}}
-.uniui-demo-subtitle .widget-label, .uniui-demo-subtitle,
+.uniui-demo-subtitle .widget-label, .uniui-demo-subtitle {{color:var(--uniui-text)!important;font-size:17px;font-weight:650}}
 .uniui-demo-hint .widget-label, .uniui-demo-hint {{color:var(--uniui-text_muted)!important}}
-.uniui-demo-stats {{display:flex;flex-flow:row wrap;gap:14px;align-items:stretch}}
+.uniui-demo-stats {{display:flex;flex-flow:row wrap;gap:{_M['card_gap']}px;align-items:stretch}}
 .uniui-demo-header-content {{width:100%;min-width:0;gap:8px;align-items:center;flex-wrap:nowrap!important}}
 @container (max-width:1019px) {{
   .uniui-admin-sidebar {{width:{_M['sidebar_collapsed']}px!important;min-width:{_M['sidebar_collapsed']}px!important;max-width:{_M['sidebar_collapsed']}px!important;flex-basis:{_M['sidebar_collapsed']}px!important;padding:14px 8px}}
@@ -297,9 +302,15 @@ class JupyterStatCardAdapter(IStatCard):
 
     def set_trend(self, trend: float) -> None:
         self._trend = float(trend)
-        for name in ("uniui-up", "uniui-down"):
+        self._apply_trend()
+
+    def _apply_trend(self) -> None:
+        for name in ("uniui-up", "uniui-down", "uniui-status-warn", "uniui-status-error"):
             self._trend_widget.remove_class(name)
-        if self._trend > 0:
+        if self._status != "ok" and self._trend == 0:
+            text = "Needs attention" if self._status == "warn" else "Error"
+            self._trend_widget.add_class(f"uniui-status-{self._status}")
+        elif self._trend > 0:
             text = f"↗ &nbsp;{self._trend:.1f}% &nbsp;vs last period"
             self._trend_widget.add_class("uniui-up")
         elif self._trend < 0:
@@ -310,11 +321,31 @@ class JupyterStatCardAdapter(IStatCard):
         self._trend_widget.value = f"<p>{text}</p>"
 
     def set_status(self, status: str) -> None:
-        for name in ("uniui-status-warn", "uniui-status-error"):
-            self._native.remove_class(name)
         self._status = status if status in {"ok", "warn", "error"} else "ok"
-        if self._status != "ok":
-            self._native.add_class(f"uniui-status-{self._status}")
+        self._apply_trend()
+
+
+class JupyterMetricListAdapter(IMetricList):
+    """Dense two-column key/value list for secondary metrics."""
+
+    def __init__(self):
+        self._html = _html("", "uniui-metric-list")
+        self._native = widgets.VBox([self._html])
+        self._native.add_class("uniui-metric-list-wrap")
+
+    def get_native(self): return self._native
+
+    def set_items(self, items: List[Dict]) -> None:
+        rows = []
+        for index, item in enumerate(items):
+            classes = "uniui-metric-row" + (" uniui-metric-divider" if index > 0 else "")
+            label = escape(str(item.get("label", "")))
+            value = escape(str(item.get("value", "")))
+            rows.append(
+                f'<div class="{classes}"><span class="uniui-metric-label">{label}</span>'
+                f'<span class="uniui-metric-value">{value}</span></div>'
+            )
+        self._html.value = "".join(rows)
 
 
 class JupyterTableAdapter(ITable):
@@ -641,6 +672,7 @@ class JupyterBreadcrumbAdapter(IBreadcrumb):
 def _register(factory_class) -> None:
     factory_class.createCard = lambda self: JupyterCardAdapter()
     factory_class.createStatCard = lambda self: JupyterStatCardAdapter()
+    factory_class.createMetricList = lambda self: JupyterMetricListAdapter()
     factory_class.createTable = lambda self: JupyterTableAdapter()
     factory_class.createSidebar = lambda self: JupyterSidebarAdapter()
     factory_class.createAppShell = lambda self: JupyterAppShellAdapter()

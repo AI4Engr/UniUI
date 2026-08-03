@@ -13,7 +13,7 @@ from PySide2 import QtWidgets, QtCore, QtGui
 
 from uniui.admin import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    ISidebar, IStatCard, ITable,
+    IMetricList, ISidebar, IStatCard, ITable,
 )
 from uniui.admin_theme import get_admin_metrics, get_admin_tokens
 from uniui.admin_visuals import CHART_TYPES, append_chart_point, normalized_series
@@ -82,10 +82,10 @@ def _table_style() -> str:
         color: {_C['row_sel_fg']};
     }}
     QHeaderView::section {{
-        background: {_C['surface_subtle']};
+        background: {_C['surface']};
         color: {_C['text_muted']};
         font-weight: 600;
-        font-size: 12px;
+        font-size: {_M['stat_label_size']}px;
         padding: 0 14px;
         border: none;
         border-bottom: 1px solid {_C['border']};
@@ -115,7 +115,7 @@ def _sidebar_style() -> str:
     QListWidget::item:selected {{
         background: {_C['sidebar_act']};
         color: {_C['sidebar_act_fg']};
-        border-left: 3px solid {_C['sidebar_edge']};
+        border-left: {_M['sidebar_edge_width']}px solid {_C['sidebar_edge']};
     }}
     QListWidget::item:disabled {{
         color: {_C['text_muted']};
@@ -124,7 +124,7 @@ def _sidebar_style() -> str:
     QListWidget::item:selected:active {{
         background: {_C['sidebar_act']};
         color: {_C['sidebar_act_fg']};
-        border-left: 3px solid {_C['sidebar_edge']};
+        border-left: {_M['sidebar_edge_width']}px solid {_C['sidebar_edge']};
     }}
     QScrollBar:vertical {{
         background: transparent;
@@ -350,13 +350,13 @@ class QtStatCardAdapter(IStatCard):
 
         self._label_lbl = QtWidgets.QLabel("")
         self._label_lbl.setStyleSheet(
-            f"color: {_C['text_muted']}; font-size: 12px; font-weight: 600; "
+            f"color: {_C['text_muted']}; font-size: {_M['stat_label_size']}px; font-weight: 600; "
             "background: transparent;"
         )
 
         self._value_lbl = QtWidgets.QLabel("—")
         self._value_lbl.setStyleSheet(
-            f"color: {_C['text']}; font-size: 29px; font-weight: 700; background: transparent;"
+            f"color: {_C['text']}; font-size: {_M['stat_value_size']}px; font-weight: 700; background: transparent;"
         )
 
         self._unit_lbl = QtWidgets.QLabel("")
@@ -375,20 +375,15 @@ class QtStatCardAdapter(IStatCard):
         )
 
         layout.addWidget(self._label_lbl)
-        layout.addSpacing(3)
+        layout.addSpacing(1)
         layout.addWidget(self._value_lbl)
         layout.addWidget(self._unit_lbl)
         layout.addStretch()
         layout.addWidget(self._trend_lbl)
 
+        self._frame.setStyleSheet(_card_style())
         _track_themed(self, self._frame)
         self.apply_theme()
-
-    def _set_border_color(self, color: str) -> None:
-        self._frame.setStyleSheet(
-            _card_style() +
-            f"QFrame[card='1'] {{ border-top: 3px solid {color}; }}"
-        )
 
     def get_native(self): return self._frame
 
@@ -407,7 +402,9 @@ class QtStatCardAdapter(IStatCard):
 
     def _apply_trend(self) -> None:
         trend = self._trend
-        if trend > 0:
+        if self._status != "ok" and trend == 0:
+            text, color = ("Needs attention" if self._status == "warn" else "Error"), _C[self._status]
+        elif trend > 0:
             text, color = f"↗  {trend:.1f}%  vs last period", _C["ok"]
         elif trend < 0:
             text, color = f"↘  {abs(trend):.1f}%  vs last period", _C["error"]
@@ -420,20 +417,69 @@ class QtStatCardAdapter(IStatCard):
 
     def set_status(self, status: str) -> None:
         self._status = status if status in {"ok", "warn", "error"} else "ok"
-        self._set_border_color(_C[self._status])
+        self._apply_trend()
 
     def apply_theme(self) -> None:
         self._label_lbl.setStyleSheet(
-            f"color: {_C['text_muted']}; font-size: 12px; font-weight: 600; background: transparent;"
+            f"color: {_C['text_muted']}; font-size: {_M['stat_label_size']}px; font-weight: 600; background: transparent;"
         )
         self._value_lbl.setStyleSheet(
-            f"color: {_C['text']}; font-size: 29px; font-weight: 700; background: transparent;"
+            f"color: {_C['text']}; font-size: {_M['stat_value_size']}px; font-weight: 700; background: transparent;"
         )
         self._unit_lbl.setStyleSheet(
             f"color: {_C['text_muted']}; font-size: 11px; background: transparent;"
         )
-        self._set_border_color(_C[self._status])
+        self._frame.setStyleSheet(_card_style())
         self._apply_trend()
+
+
+# ---------------------------------------------------------------------------
+# IMetricList
+# ---------------------------------------------------------------------------
+
+class QtMetricListAdapter(IMetricList):
+    """Dense two-column key/value list for secondary metrics."""
+
+    def __init__(self):
+        self._frame = QtWidgets.QWidget()
+        self._frame.setMinimumWidth(0)
+        self._layout = QtWidgets.QVBoxLayout(self._frame)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+        self._rows: List[Tuple[QtWidgets.QWidget, QtWidgets.QLabel, QtWidgets.QLabel]] = []
+        _track_themed(self, self._frame)
+        self.apply_theme()
+
+    def get_native(self): return self._frame
+
+    def set_items(self, items: List[Dict]) -> None:
+        _clear_layout(self._layout)
+        self._rows = []
+        for index, item in enumerate(items):
+            row = QtWidgets.QWidget()
+            row_layout = QtWidgets.QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 8, 0, 8)
+            label = QtWidgets.QLabel(str(item.get("label", "")))
+            value = QtWidgets.QLabel(str(item.get("value", "")))
+            value.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+            row_layout.addWidget(label, stretch=1)
+            row_layout.addWidget(value)
+            if index > 0:
+                row.setProperty("metricDivider", "1")
+            self._layout.addWidget(row)
+            self._rows.append((row, label, value))
+        self.apply_theme()
+
+    def apply_theme(self) -> None:
+        for row, label, value in self._rows:
+            label.setStyleSheet(
+                f"color: {_C['text_muted']}; font-size: {_M['stat_label_size']}px; background: transparent;"
+            )
+            value.setStyleSheet(
+                f"color: {_C['text']}; font-size: 13px; font-weight: 600; background: transparent;"
+            )
+            if row.property("metricDivider"):
+                row.setStyleSheet(f"border-top: 1px solid {_C['border']};")
 
 
 # ---------------------------------------------------------------------------
@@ -1260,6 +1306,7 @@ class QtBreadcrumbAdapter(IBreadcrumb):
 def _register(factory_class):
     def createCard(self)       -> ICard:       return QtCardAdapter()
     def createStatCard(self)   -> IStatCard:   return QtStatCardAdapter()
+    def createMetricList(self) -> IMetricList: return QtMetricListAdapter()
     def createTable(self)      -> ITable:      return QtTableAdapter()
     def createSidebar(self)    -> ISidebar:    return QtSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return QtAppShellAdapter()
@@ -1270,6 +1317,7 @@ def _register(factory_class):
 
     factory_class.createCard       = createCard
     factory_class.createStatCard   = createStatCard
+    factory_class.createMetricList = createMetricList
     factory_class.createTable      = createTable
     factory_class.createSidebar    = createSidebar
     factory_class.createAppShell   = createAppShell

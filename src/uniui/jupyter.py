@@ -79,10 +79,18 @@ def refresh_theme_jupyter(root_widget):
 
     Uses CSS injection for background/dropdown + inline style for text colors.
 
+    Admin shells are skipped: they ship a complete light/dark palette of
+    their own (see admin_theme.py) and this pass would fight it — the
+    injected rules are !important and _refresh_widget_tree writes colors
+    as inline widget styles, which no CSS can override.
+
     Args:
         root_widget: The root ipywidgets container (VBox/HBox)
     """
     global _jupyter_css_widget
+
+    if 'uniui-admin-shell' in getattr(root_widget, '_dom_classes', ()):
+        return
 
     # CSS injection for background and elements that don't support inline style
     root_widget.add_class('uniui-themed')
@@ -833,43 +841,50 @@ class JupyterSplitPane(widgets.Box):
         self.children = tuple(children)
 
 
-class JupyterOverlay(widgets.Stack):
-    """Jupyter Overlay using ipywidgets Stack (ipywidgets >= 8.0).
+class JupyterOverlay(widgets.VBox):
+    """Jupyter Overlay: shows one layer at a time.
 
-    Falls back to VBox with manual show/hide for older versions.
+    Deliberately built on VBox with manual show/hide rather than
+    ipywidgets' Stack. Stack needs @jupyter-widgets/controls 2.x on the
+    frontend, and renderers that don't implement StackView (notably the
+    VS Code notebook renderer) draw nothing at all — the layers are in
+    the model but never painted. VBox + layout.display works on every
+    frontend.
     """
     def __init__(self):
-        try:
-            super().__init__()
-            self._use_stack = True
-        except Exception:
-            # ipywidgets < 8 has no Stack
-            widgets.VBox.__init__(self)
-            self._use_stack = False
-            self._layers: List = []
-            self._active = 0
+        super().__init__()
+        # Fill whatever container holds us; ipywidgets' DOM wrappers mean a
+        # stylesheet rule cannot reliably reach this element.
+        self.layout.width = '100%'
+        self.layout.flex = '1 1 auto'
+        self._layers: List = []
+        self._active = 0
 
     def addLayer(self, item):
-        if self._use_stack:
-            old = list(self.children)
-            old.append(item)
-            self.children = tuple(old)
-        else:
-            self._layers.append(item)
-            self._apply_visibility()
+        if hasattr(item, 'layout') and item.layout.width is None:
+            item.layout.width = '100%'
+        self._layers.append(item)
+        self._apply_visibility()
 
     def setActiveIndex(self, index: int):
-        if self._use_stack:
-            self.selected_index = index
-        else:
-            self._active = index
-            self._apply_visibility()
+        self._active = index
+        self._apply_visibility()
 
     def _apply_visibility(self):
-        for i, layer in enumerate(self._layers):
-            if hasattr(layer, 'layout'):
-                layer.layout.display = None if i == self._active else 'none'
-        self.children = tuple(self._layers)
+        if not self._layers:
+            self.children = ()
+            return
+
+        # Keep every page object in _layers so RouterView can preserve page
+        # state, but only mount the active page in the widget tree.  Updating
+        # layout.display on an already-rendered nested widget is not reliably
+        # repainted by every notebook frontend (notably VS Code), which can
+        # leave the content area blank after navigation.
+        self._active = max(0, min(self._active, len(self._layers) - 1))
+        active = self._layers[self._active]
+        if hasattr(active, 'layout'):
+            active.layout.display = None
+        self.children = (active,)
 
 
 # ============================================================================
@@ -1188,7 +1203,7 @@ class JupyterDropdownAdapter(IDropdown):
 class JupyterVBoxAdapter(IVBoxLayout):
     """Jupyter VBox adapter - implements snake_case interface convention"""
 
-    def __init__(self, native_widget: JupyterVBoxLayout):
+    def __init__(self, native_widget: widgets.VBox):
         self._native = native_widget
 
     def get_native(self):
@@ -1196,28 +1211,32 @@ class JupyterVBoxAdapter(IVBoxLayout):
 
     # ILayoutCapable
     def add_item(self, widget: IWidget):
-        self._native.addItem(widget.get_native())
+        self._native.children = self._native.children + (widget.get_native(),)
 
     def add_stretch(self):
-        self._native.addStretch()
+        pass
 
     def set_alignment_top(self):
-        self._native.setAlignmentTop()
+        self._native.layout.justify_content = "flex-start"
 
     def add_item_with_spec(self, widget: IWidget, item):
-        self._native.addItem(widget.get_native())
+        native = widget.get_native()
+        if item.grow > 0 and hasattr(native, "layout"):
+            native.layout.flex = f"{item.grow} 1 auto"
+        self._native.children = self._native.children + (native,)
 
     def set_spec(self, spec):
-        self._native.setSpec(spec)
+        self._native.layout.gap = f"{spec.gap}px" if spec.gap else None
+        self._native.layout.padding = f"{spec.padding}px" if spec.padding else None
 
     def clear(self):
-        self._native.clear()
+        self._native.children = ()
 
 
 class JupyterHBoxAdapter(IHBoxLayout):
     """Jupyter HBox adapter - implements snake_case interface convention"""
 
-    def __init__(self, native_widget: JupyterHBoxLayout):
+    def __init__(self, native_widget: widgets.HBox):
         self._native = native_widget
 
     def get_native(self):
@@ -1225,22 +1244,37 @@ class JupyterHBoxAdapter(IHBoxLayout):
 
     # ILayoutCapable
     def add_item(self, widget: IWidget):
-        self._native.addItem(widget.get_native())
+        native = widget.get_native()
+        if hasattr(native, "layout"):
+            native.layout.flex = None
+            if not native.layout.width:
+                native.layout.width = "auto"
+        self._native.children = self._native.children + (native,)
 
     def add_stretch(self):
-        self._native.addStretch()
+        spacer = widgets.Box(layout=widgets.Layout(flex="1 1 auto"))
+        self._native.children = self._native.children + (spacer,)
 
     def set_alignment_top(self):
-        self._native.setAlignmentTop()
+        self._native.layout.align_items = "flex-start"
 
     def add_item_with_spec(self, widget: IWidget, item):
-        self._native.addItem(widget.get_native(), grow=item.grow)
+        native = widget.get_native()
+        if hasattr(native, "layout"):
+            if item.grow > 0:
+                native.layout.flex = f"{item.grow} 1 auto"
+            else:
+                native.layout.flex = None
+                if not native.layout.width:
+                    native.layout.width = "auto"
+        self._native.children = self._native.children + (native,)
 
     def set_spec(self, spec):
-        self._native.setSpec(spec)
+        self._native.layout.gap = f"{spec.gap}px" if spec.gap else None
+        self._native.layout.padding = f"{spec.padding}px" if spec.padding else None
 
     def clear(self):
-        self._native.clear()
+        self._native.children = ()
 
 
 class JupyterGroupBoxAdapter(IGroupBox):
@@ -1352,22 +1386,25 @@ class JupyterGridAdapter(IGrid):
 
 
 class JupyterWrapAdapter(IWrap):
-    """Jupyter Wrap adapter."""
+    """Jupyter Wrap adapter backed by a stock ipywidgets Box."""
 
     def __init__(self):
-        self._native = JupyterWrap()
+        self._native = widgets.Box(layout=widgets.Layout(
+            display="flex", flex_flow="row wrap", width="100%",
+        ))
 
     def get_native(self):
         return self._native
 
     def add_item(self, widget: IWidget) -> None:
-        self._native.addItem(widget.get_native())
+        self._native.children = self._native.children + (widget.get_native(),)
 
     def set_spec(self, spec) -> None:
-        self._native.setSpec(spec)
+        self._native.layout.gap = f"{spec.gap}px" if spec.gap else None
+        self._native.layout.padding = f"{spec.padding}px" if spec.padding else None
 
     def clear(self) -> None:
-        self._native.clear()
+        self._native.children = ()
 
 
 class JupyterScrollViewAdapter(IScrollView):
@@ -1412,19 +1449,79 @@ class JupyterSplitPaneAdapter(ISplitPane):
 
 
 class JupyterOverlayAdapter(IOverlay):
-    """Jupyter Overlay adapter."""
+    """Jupyter Overlay adapter backed by a stock ipywidgets VBox.
+
+    Keeping the routing state in the adapter avoids asking notebook
+    frontends to construct a view for a custom Python widget subclass.  Some
+    renderers accept the model but leave that view completely blank.
+    """
 
     def __init__(self):
-        self._native = JupyterOverlay()
+        self._native = widgets.VBox(
+            layout=widgets.Layout(width="100%", flex="1 1 auto")
+        )
+        self._layers: List = []
+        self._render_layers: List = []
+        self._active = 0
+        # Expose diagnostics on the native object for RouterView tests and
+        # notebook troubleshooting without making it a custom widget class.
+        self._native._layers = self._layers
+        self._native._render_layers = self._render_layers
+        self._native._active = self._active
 
     def get_native(self):
         return self._native
 
     def add_layer(self, widget: IWidget) -> None:
-        self._native.addLayer(widget.get_native())
+        native = widget.get_native()
+        layout = getattr(native, "layout", None)
+        if layout is not None and not layout.width:
+            layout.width = "100%"
+        self._layers.append(native)
+        self._render_layers.append(self._make_render_layer(native))
+        self._apply_active()
 
     def set_active_index(self, index: int) -> None:
-        self._native.setActiveIndex(index)
+        self._active = int(index)
+        self._apply_active()
+
+    def _apply_active(self) -> None:
+        if not self._layers:
+            self._native.children = ()
+            return
+        self._active = max(0, min(self._active, len(self._layers) - 1))
+        self._native._active = self._active
+        self._native.children = (self._render_layers[self._active],)
+
+    @staticmethod
+    def _make_render_layer(native):
+        """Create a clean frontend container for composite route pages.
+
+        Some notebook renderers can display every child of a route page but
+        fail to construct a view for the original parent widget model.  A new
+        stock VBox around the exact same child models renders correctly while
+        preserving every input, callback, and cached page state.
+        """
+        children = getattr(native, "children", None)
+        if children is None:
+            return native
+
+        source_layout = getattr(native, "layout", None)
+        wrapper_layout = widgets.Layout(width="100%", min_width="0")
+        gap = getattr(source_layout, "gap", None)
+        padding = getattr(source_layout, "padding", None)
+        if gap:
+            wrapper_layout.grid_gap = gap
+        if padding:
+            wrapper_layout.padding = padding
+        wrapper = widgets.VBox(children=tuple(children), layout=wrapper_layout)
+
+        if hasattr(native, "observe"):
+            def sync_children(change, target=wrapper):
+                target.children = tuple(change["new"])
+            native.observe(sync_children, names="children")
+            wrapper._uniui_source_children_observer = sync_children
+        return wrapper
 
 
 
@@ -1464,11 +1561,13 @@ class JupyterWidgetFactory(IWidgetFactory):
         return JupyterDropdownAdapter(native)
 
     def createVBox(self) -> IVBoxLayout:
-        native = JupyterVBoxLayout()
+        native = widgets.VBox()
         return JupyterVBoxAdapter(native)
 
     def createHBox(self) -> IHBoxLayout:
-        native = JupyterHBoxLayout()
+        native = widgets.HBox(layout=widgets.Layout(
+            display="flex", flex_flow="row", width="100%",
+        ))
         return JupyterHBoxAdapter(native)
 
     def createTabWidget(self) -> ITabWidget:

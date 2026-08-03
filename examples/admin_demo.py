@@ -407,6 +407,13 @@ def _add_class(widget, class_name):
     native = widget.get_native() if hasattr(widget, "get_native") else widget
     if hasattr(native, "add_class"):
         native.add_class(class_name)
+        # ipywidgets Buttons carry the generic theme's accent colour as an
+        # inline style, which outranks any stylesheet. Clear it so the admin
+        # palette can style this button through its semantic class.
+        style = getattr(native, "style", None)
+        if style is not None and hasattr(style, "button_color"):
+            style.button_color = None
+            style.text_color = None
     elif hasattr(native, "classes"):
         native.classes(add=class_name)
     return widget
@@ -657,7 +664,7 @@ def _browser_not_found_page(ctx):
     return label
 
 
-def create_admin_ui(framework="auto"):
+def create_admin_ui(framework="auto", debug=False):
     """Build the Admin dashboard shell and return it (Jupyter and Web only).
 
     Mirrors the create_*_ui(framework) -> show_ui(layout, ...) pattern used
@@ -736,6 +743,8 @@ def create_admin_ui(framework="auto"):
     shell.set_header(header)
     shell.set_sidebar(sidebar)
     shell.set_content(content)
+    if debug and hasattr(shell, "set_debug"):
+        shell.set_debug(True)
     footer = f.create_hbox()
     ready = f.create_label(); ready.set_text("●  All systems operational"); _add_class(ready, "uniui-web-status-ok")
     version = f.create_label(); version.set_text("UniUI admin preview · v0.1"); _add_class(version, "uniui-web-footer-meta")

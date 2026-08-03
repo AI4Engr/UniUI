@@ -212,12 +212,54 @@ def _css() -> str:
 }}
 .uniui-breadcrumb-current, .uniui-breadcrumb-current p {{margin:0;color:var(--uniui-text);font-weight:650}}
 .uniui-breadcrumb-separator, .uniui-breadcrumb-separator p {{margin:0;color:var(--uniui-text_muted)}}
-.uniui-demo-page {{gap:{_M['section_gap']}px}}
+.uniui-demo-page {{gap:{_M['section_gap']}px;width:100%;min-width:0}}
 .uniui-demo-heading {{gap:16px;align-items:center;flex-wrap:nowrap!important}}
 .uniui-demo-subtitle .widget-label, .uniui-demo-subtitle {{color:var(--uniui-text)!important;font-size:17px;font-weight:650}}
 .uniui-demo-hint .widget-label, .uniui-demo-hint {{color:var(--uniui-text_muted)!important}}
 .uniui-demo-stats {{display:flex;flex-flow:row wrap;gap:{_M['card_gap']}px;align-items:stretch}}
 .uniui-demo-header-content {{width:100%;min-width:0;gap:8px;align-items:center;flex-wrap:nowrap!important}}
+.uniui-demo-logo-mark, .uniui-demo-logo-mark .widget-label {{
+  width:32px!important;min-width:32px;height:32px;display:grid;place-items:center;
+  border-radius:9px;background:var(--uniui-accent);color:#fff!important;
+  font-size:14px;font-weight:800;
+}}
+.uniui-demo-product, .uniui-demo-product .widget-label {{
+  color:var(--uniui-text)!important;font-size:14px;font-weight:700;white-space:nowrap;
+}}
+.uniui-demo-avatar, .uniui-demo-avatar .widget-label {{
+  width:32px!important;min-width:32px;height:32px;display:grid;place-items:center;
+  border-radius:50%;background:var(--uniui-avatar_bg);color:var(--uniui-avatar_fg)!important;
+  font-size:11px;font-weight:750;
+}}
+.uniui-admin-shell .uniui-demo-icon-button,
+.uniui-admin-shell .uniui-demo-icon-button button {{
+  width:32px!important;min-width:32px!important;height:32px;min-height:32px!important;
+  padding:0!important;background:transparent!important;
+  color:var(--uniui-text_muted)!important;border:1px solid transparent!important;
+}}
+.uniui-admin-shell .uniui-demo-icon-button button:hover {{
+  background:var(--uniui-surface_subtle)!important;
+  border-color:var(--uniui-border)!important;color:var(--uniui-text)!important;
+}}
+.uniui-admin-shell .uniui-demo-theme-button,
+.uniui-admin-shell .uniui-demo-theme-button button {{
+  min-height:34px!important;padding:0 12px!important;background:var(--uniui-surface)!important;
+  color:var(--uniui-text)!important;border:1px solid var(--uniui-border_strong)!important;
+}}
+.uniui-admin-shell .uniui-demo-theme-button button:hover {{
+  background:var(--uniui-surface_subtle)!important;
+}}
+.uniui-admin-shell .uniui-demo-primary-action,
+.uniui-admin-shell .uniui-demo-primary-action button {{
+  white-space:nowrap;background:var(--uniui-accent)!important;color:#fff!important;
+  border-color:var(--uniui-accent)!important;
+}}
+.uniui-web-status-ok, .uniui-web-status-ok .widget-label {{
+  color:var(--uniui-ok)!important;font-size:12px;font-weight:600;
+}}
+.uniui-web-footer-meta, .uniui-web-footer-meta .widget-label {{
+  color:var(--uniui-text_muted)!important;font-size:12px;
+}}
 @container (max-width:1019px) {{
   .uniui-admin-sidebar {{width:{_M['sidebar_collapsed']}px!important;min-width:{_M['sidebar_collapsed']}px!important;max-width:{_M['sidebar_collapsed']}px!important;flex-basis:{_M['sidebar_collapsed']}px!important;padding:14px 8px}}
   .uniui-admin-sidebar .widget-button,
@@ -241,6 +283,88 @@ _SPLITTER_HTML = """
 <div class="uniui-splitter-handle" title="Drag to resize navigation"
  onpointerdown="const h=this,root=h.closest('.uniui-shell-body'),side=root.querySelector('.uniui-admin-sidebar'),bridge=root.querySelector('.uniui-sidebar-width-bridge input'),sx=event.clientX,sw=side.getBoundingClientRect().width,pid=event.pointerId;h.setPointerCapture(pid);const move=e=>{const w=Math.max(168,Math.min(360,sw+e.clientX-sx));side.style.width=w+'px';side.style.minWidth=w+'px';side.style.maxWidth=w+'px';side.style.flex='0 0 '+w+'px';};const up=e=>{move(e);const w=Math.round(side.getBoundingClientRect().width);if(bridge){bridge.value=String(w);bridge.dispatchEvent(new Event('change',{bubbles:true}));}h.removeEventListener('pointermove',move);};h.addEventListener('pointermove',move);h.addEventListener('pointerup',up,{once:true});h.addEventListener('pointercancel',up,{once:true});">
 </div>
+"""
+
+
+def _debug_html(python_summary: str) -> str:
+    """Build an in-UI layout probe that also measures the browser DOM."""
+    return f"""
+<div class="uniui-debug-panel" style="padding:10px 12px;background:#fff7ed;color:#7c2d12;
+ border-bottom:1px solid #fdba74;font:12px/1.45 Consolas,monospace;white-space:normal">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+    <b>UniUI Jupyter layout debug</b>
+    <button type="button" style="padding:3px 9px;border:1px solid #c2410c;border-radius:6px;
+     background:#ffedd5;color:#7c2d12;cursor:pointer" onclick="
+      const roots=document.querySelectorAll('.uniui-admin-shell');
+      const root=this.closest('.uniui-admin-shell')||roots[roots.length-1];
+      const out=this.parentElement.parentElement.querySelector('.uniui-debug-dom');
+      const targets=[
+        ['root',root],
+        ['header',root&&root.querySelector('.uniui-shell-header')],
+        ['body',root&&root.querySelector('.uniui-shell-body')],
+        ['sidebar',root&&root.querySelector('.uniui-admin-sidebar')],
+        ['content',root&&root.querySelector('.uniui-shell-content')],
+        ['page',root&&root.querySelector('.uniui-demo-page')]
+      ];
+      out.textContent=targets.map(([name,el])=>{{
+        if(!el)return name+': MISSING';
+        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+        el.style.outline='2px solid '+({{root:'#7c3aed',body:'#2563eb',content:'#dc2626',page:'#16a34a'}}[name]||'#f59e0b');
+        return name+': rect='+Math.round(r.width)+'x'+Math.round(r.height)+
+          ' @ '+Math.round(r.x)+','+Math.round(r.y)+
+          ' display='+s.display+' visibility='+s.visibility+
+          ' flex='+s.flex+' width='+s.width+' height='+s.height+
+          ' overflow='+s.overflow+' children='+el.children.length;
+      }}).join('\n');
+    ">Measure DOM</button>
+  </div>
+  <pre style="margin:0 0 7px;white-space:pre-wrap">{escape(python_summary)}</pre>
+  <pre class="uniui-debug-dom" style="margin:0;white-space:pre-wrap;color:#9a3412">
+Click “Measure DOM”, then copy or screenshot these lines.</pre>
+</div>
+"""
+
+
+_DEBUG_MEASURE_JS = r"""
+(() => {
+  const roots = document.querySelectorAll('.uniui-admin-shell');
+  const root = roots[roots.length - 1];
+  document.querySelectorAll('.uniui-dom-debug-result').forEach(el => el.remove());
+  if (!root) {
+    const pre = document.createElement('pre');
+    pre.className = 'uniui-dom-debug-result';
+    pre.textContent = 'UniUI debug: .uniui-admin-shell was not found in the browser DOM';
+    pre.style.cssText = 'padding:12px;background:#fee2e2;color:#991b1b;border:1px solid #ef4444';
+    document.body.prepend(pre);
+    return;
+  }
+  const targets = [
+    ['root', root],
+    ['header', root.querySelector('.uniui-shell-header')],
+    ['body', root.querySelector('.uniui-shell-body')],
+    ['sidebar', root.querySelector('.uniui-admin-sidebar')],
+    ['content', root.querySelector('.uniui-shell-content')],
+    ['page', root.querySelector('.uniui-demo-page')]
+  ];
+  const colors = {root:'#7c3aed', body:'#2563eb', content:'#dc2626', page:'#16a34a'};
+  const lines = targets.map(([name, el]) => {
+    if (!el) return name + ': MISSING';
+    const r = el.getBoundingClientRect();
+    const s = getComputedStyle(el);
+    el.style.outline = '2px solid ' + (colors[name] || '#f59e0b');
+    return name + ': rect=' + Math.round(r.width) + 'x' + Math.round(r.height) +
+      ' @ ' + Math.round(r.x) + ',' + Math.round(r.y) +
+      ' display=' + s.display + ' visibility=' + s.visibility +
+      ' opacity=' + s.opacity + ' flex=' + s.flex +
+      ' width=' + s.width + ' height=' + s.height +
+      ' overflow=' + s.overflow + ' children=' + el.children.length;
+  });
+  const pre = document.createElement('pre');
+  pre.className = 'uniui-dom-debug-result';
+  pre.textContent = 'UniUI browser DOM measurements\n' + lines.join('\n');
+  pre.style.cssText = 'margin:8px 0;padding:12px;white-space:pre-wrap;background:#fff7ed;color:#7c2d12;border:2px solid #f97316;border-radius:8px;font:12px/1.5 Consolas,monospace';
+  root.insertAdjacentElement('beforebegin', pre);
+})();
 """
 
 
@@ -582,7 +706,16 @@ class JupyterAppShellAdapter(IAppShell):
         self._header = widgets.HBox()
         self._header.add_class("uniui-shell-header")
         self._header.layout.display = "none"
-        self._content = widgets.Box()
+        self._debug = widgets.HTML()
+        self._debug.layout.display = "none"
+        self._debug.layout.width = "100%"
+        self._debug_enabled = False
+        self._content = widgets.Box(
+            layout=widgets.Layout(
+                flex="1 1 0%", min_width="0", min_height="0", width="auto",
+                overflow="auto",
+            )
+        )
         self._content.add_class("uniui-shell-content")
         self._handle = widgets.HTML(value=_SPLITTER_HTML)
         self._handle.add_class("uniui-splitter-widget")
@@ -594,14 +727,26 @@ class JupyterAppShellAdapter(IAppShell):
         self._width_bridge.layout.display = "none"
         self._width_bridge.add_class("uniui-sidebar-width-bridge")
         self._width_bridge.observe(self._on_width, names="value")
-        self._body = widgets.HBox([self._handle, self._content, self._width_bridge])
+        self._body = widgets.HBox(
+            [self._handle, self._content, self._width_bridge],
+            layout=widgets.Layout(
+                display="flex", flex_flow="row nowrap", flex="1 1 auto",
+                width="100%", min_width="0", min_height="0",
+                align_items="stretch",
+            ),
+        )
         self._body.add_class("uniui-shell-body")
         self._footer = widgets.Box()
         self._footer.add_class("uniui-shell-footer")
         self._footer.layout.display = "none"
-        self._native = widgets.VBox([self._style, self._header, self._body, self._footer])
+        self._native = widgets.VBox([
+            self._style, self._header, self._debug, self._body, self._footer,
+        ])
         self._native.add_class("uniui-admin-shell")
         self._native.layout.width = "100%"
+        self._native.layout.min_height = "680px"
+        self._native.layout.display = "flex"
+        self._native.layout.flex_flow = "column nowrap"
         self._sidebar: Optional[JupyterSidebarAdapter] = None
         self._saved_sidebar_width = _M["sidebar_expanded"]
         _theme_targets.add(self)
@@ -620,7 +765,105 @@ class JupyterAppShellAdapter(IAppShell):
             self._sidebar.set_width(self._saved_sidebar_width)
 
     def set_content(self, widget) -> None:
-        self._content.children = (_native(widget),)
+        # Make the actual content widget the body's flex item.  An additional
+        # widgets.Box host can collapse its child to zero size in some
+        # notebook renderers even when the Python widget tree is complete.
+        old_content = self._content
+        native = _native(widget)
+        if hasattr(old_content, "remove_class"):
+            old_content.remove_class("uniui-shell-content")
+        self._content = native
+        if hasattr(native, "add_class"):
+            native.add_class("uniui-shell-content")
+        layout = getattr(native, "layout", None)
+        if layout is not None:
+            layout.display = "flex"
+            layout.flex_flow = "column nowrap"
+            layout.flex = "1 1 0%"
+            layout.width = "auto"
+            layout.min_width = "0"
+            layout.min_height = "0"
+            layout.overflow = "auto"
+
+        children = list(self._body.children)
+        try:
+            index = children.index(old_content)
+            children[index] = native
+        except ValueError:
+            if self._sidebar is not None:
+                children = (
+                    self._sidebar.get_native(), self._handle, native,
+                    self._width_bridge,
+                )
+            else:
+                children = (self._handle, native, self._width_bridge)
+        self._body.children = tuple(children)
+        if hasattr(native, "observe"):
+            native.observe(self._on_content_children, names="children")
+        self._refresh_debug()
+
+    def set_debug(self, enabled: bool = True) -> None:
+        """Show an in-notebook Python/widget-tree and browser DOM probe."""
+        self._debug_enabled = bool(enabled)
+        # Some notebook renderers keep the old inline display:none when the
+        # Layout trait is reset to None.  Use an explicit display value so the
+        # probe is guaranteed to become visible there as well.
+        self._debug.layout.display = "block" if self._debug_enabled else "none"
+        self._refresh_debug()
+
+    def debug_report(self) -> str:
+        """Return the current Python-side widget/layout diagnostics."""
+        return self._debug_summary()
+
+    def show_debug(self) -> None:
+        """Display the diagnostic probe as a separate notebook output."""
+        from IPython.display import HTML, display
+
+        self.set_debug(True)
+        print(self.debug_report())
+        display(HTML(_debug_html(self.debug_report())))
+
+    def measure_debug(self) -> None:
+        """Measure the live shell DOM and inject the result above the UI."""
+        from IPython.display import Javascript, display
+
+        display(Javascript(_DEBUG_MEASURE_JS))
+
+    def debug_script(self) -> str:
+        """Return the browser measurement script for diagnostics/tests."""
+        return _DEBUG_MEASURE_JS
+
+    def _on_content_children(self, _change) -> None:
+        self._refresh_debug()
+
+    def _refresh_debug(self) -> None:
+        if not self._debug_enabled:
+            return
+        self._debug.value = _debug_html(self._debug_summary())
+
+    def _debug_summary(self) -> str:
+        content = self._content
+        mounted = tuple(getattr(content, "children", ()))
+        layers = list(getattr(content, "_layers", ()))
+        active = getattr(content, "_active", "n/a")
+        page = mounted[0] if mounted else None
+        source_page = (
+            layers[active]
+            if isinstance(active, int) and 0 <= active < len(layers)
+            else None
+        )
+        wrapped = page is not None and source_page is not None and page is not source_page
+        page_children = len(getattr(page, "children", ())) if page is not None else 0
+        body_types = ", ".join(type(item).__name__ for item in self._body.children)
+        return "\n".join([
+            f"content={type(content).__name__}",
+            f"active={active} layers={len(layers)} mounted={len(mounted)} page={type(page).__name__ if page is not None else 'None'} wrapped={wrapped} page_children={page_children}",
+            f"body_children=[{body_types}]",
+            f"root_layout={self._native.layout}",
+            f"body_layout={self._body.layout}",
+            f"content_layout={getattr(content, 'layout', None)}",
+            f"page_layout={getattr(page, 'layout', None)}",
+        ])
 
     def set_footer(self, widget) -> None:
         self._footer.children = (_native(widget),)

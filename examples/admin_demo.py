@@ -441,8 +441,10 @@ def _browser_page_frame(title, subtitle, action_text=""):
     page.set_spec(LayoutSpec(gap=18))
     _add_class(page, "uniui-demo-page")
     page_native = page.get_native() if hasattr(page, "get_native") else page
-    if hasattr(page_native, "tooltip"):
-        page_native.tooltip(title)
+    if callable(getattr(page_native, "tooltip", None)):
+        page_native.tooltip(title)  # NiceGUI element
+    elif hasattr(page_native, "tooltip"):
+        page_native.tooltip = title  # ipywidgets trait
 
     heading = f.create_hbox()
     heading.set_spec(LayoutSpec(gap=16))
@@ -655,9 +657,15 @@ def _browser_not_found_page(ctx):
     return label
 
 
-def _main_browser(framework):
-    """Build the same Admin workflow for Jupyter and standalone Web."""
+def create_admin_ui(framework="auto"):
+    """Build the Admin dashboard shell and return it (Jupyter and Web only).
+
+    Mirrors the create_*_ui(framework) -> show_ui(layout, ...) pattern used
+    by the other examples (create_bmi_ui, create_sysmon_ui, ...).
+    """
     global _THEME_TOGGLE
+
+    use(framework)
 
     from uniui.routing import Router, Route, RouterView, sync_breadcrumb
     if framework == "jupyter":
@@ -747,6 +755,14 @@ def _main_browser(framework):
     theme_button.connect(toggle)
     apply_theme(False)
     router.push("/dashboard")
+    return shell
+
+
+def _main_browser(framework):
+    """Standalone entrypoint: build the Admin shell and display it."""
+    from uniui.display import show_ui
+
+    shell = create_admin_ui(framework)
     show_ui(shell, title="UniUI Admin Demo", width=1180, height=780)
 
 

@@ -78,7 +78,7 @@ def test_jupyter_gauge_chart_and_drawer_update_in_place():
     assert gauge.get_native() is native_gauge
     assert chart.get_native() is native_chart
     assert "uniui-gauge-svg" in native_gauge.value
-    assert len(chart._x) == 3
+    assert len(chart._model.x_values) == 3
     assert drawer.is_open()
     drawer.close(); assert not drawer.is_open()
 

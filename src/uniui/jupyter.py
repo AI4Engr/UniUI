@@ -1357,9 +1357,14 @@ class JupyterOverlayAdapter(IOverlay):
 # Jupyter Widget Factory
 # ============================================================================
 
-class JupyterWidgetFactory(IWidgetFactory):
+class _BaseJupyterWidgetFactory(IWidgetFactory):
     """
-    Jupyter Widget Factory
+    Base Jupyter Widget Factory — the core widgets every Jupyter app gets.
+
+    jupyter_components.JupyterWidgetFactory subclasses this to add
+    Card/Table/AppShell/etc.  create_factory() always returns that subclass;
+    this base class is an internal split point, not something callers
+    construct directly.
 
     Creates native Jupyter widgets and wraps them in adapters
     """
@@ -1448,4 +1453,4 @@ def _mark_created_widgets(factory_class) -> None:
         setattr(factory_class, name, marked)
 
 
-_mark_created_widgets(JupyterWidgetFactory)
+_mark_created_widgets(_BaseJupyterWidgetFactory)

@@ -162,17 +162,14 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
         web_module.set_backend_active(framework == "web")
 
     if framework == 'qt':
-        from .qt import QtWidgetFactory
-        from . import qt_components  # noqa: F401 — registers admin methods on QtWidgetFactory
+        from .qt_components import QtWidgetFactory
         return QtWidgetFactory()
     elif framework == 'jupyter':
-        from .jupyter import JupyterWidgetFactory
-        from . import jupyter_components  # noqa: F401 — registers Admin methods
+        from .jupyter_components import JupyterWidgetFactory
         return JupyterWidgetFactory()
     elif framework == 'web':
         try:
-            from .web import NiceGUIWidgetFactory
-            from . import web_components  # noqa: F401 — registers Admin methods
+            from .web_components import NiceGUIWidgetFactory
         except ImportError as exc:
             raise ImportError(
                 "The Web backend requires NiceGUI. Install it with "

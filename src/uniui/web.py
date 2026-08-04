@@ -630,8 +630,15 @@ class WebOverlayAdapter(_WebAdapter, IOverlay):
                 layer.classes(add="hidden")
 
 
-class NiceGUIWidgetFactory(IWidgetFactory):
-    """Create UniUI adapters backed by NiceGUI elements."""
+class _BaseNiceGUIWidgetFactory(IWidgetFactory):
+    """
+    Base NiceGUI Widget Factory — the core widgets every Web app gets.
+
+    web_components.NiceGUIWidgetFactory subclasses this to add
+    Card/Table/AppShell/etc.  create_factory() always returns that subclass;
+    this base class is an internal split point, not something callers
+    construct directly.
+    """
 
     def __init__(self):
         set_backend_active(True)

@@ -996,12 +996,13 @@ class QtOverlayAdapter(IOverlay):
 # Qt Widget Factory
 # ============================================================================
 
-class QtWidgetFactory(IWidgetFactory):
+class _BaseQtWidgetFactory(IWidgetFactory):
     """
-    Qt Widget Factory
+    Base Qt Widget Factory — the core widgets every Qt app gets.
 
-    Responsibility: create Qt adapter instances
-    Design pattern: Abstract Factory
+    qt_components.QtWidgetFactory subclasses this to add Card/Table/AppShell/
+    etc.  create_factory() always returns that subclass; this base class is an
+    internal split point, not something callers construct directly.
     """
 
     def __init__(self):

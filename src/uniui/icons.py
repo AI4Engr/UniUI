@@ -25,6 +25,11 @@ _ICON_ELEMENTS: Dict[str, Tuple[str, ...]] = {
         '<circle cx="15" cy="12" r="2" fill="currentColor"/>',
         '<circle cx="8" cy="18" r="2" fill="currentColor"/>',
     ),
+    "components": (
+        '<rect x="3" y="3" width="8" height="8" rx="2"/>',
+        '<circle cx="17.5" cy="7" r="4"/>',
+        '<path d="M4 21l7-7 7 7"/>',
+    ),
     "arrow_back": ('<path d="M15 5l-7 7 7 7M8 12h12"/>',),
     "arrow_forward": ('<path d="M9 5l7 7-7 7M4 12h12"/>',),
     "notifications": (

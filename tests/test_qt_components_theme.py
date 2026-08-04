@@ -9,7 +9,7 @@ pytestmark = pytest.mark.qt
 def test_admin_theme_updates_live_widgets_without_replacement():
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
-    from uniui.qt_admin import (
+    from uniui.qt_components import (
         QtSidebarAdapter,
         QtStatCardAdapter,
         QtTableAdapter,
@@ -48,7 +48,7 @@ def test_admin_theme_updates_live_widgets_without_replacement():
 
 
 def test_admin_palette_is_returned_as_a_copy():
-    from uniui.qt_admin import get_admin_palette
+    from uniui.qt_components import get_admin_palette
 
     palette = get_admin_palette()
     palette["bg"] = "changed"
@@ -58,7 +58,7 @@ def test_admin_palette_is_returned_as_a_copy():
 def test_admin_sidebar_splitter_is_draggable_and_restores_width():
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
-    from uniui.qt_admin import QtAppShellAdapter, QtSidebarAdapter
+    from uniui.qt_components import QtAppShellAdapter, QtSidebarAdapter
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     shell = QtAppShellAdapter()
@@ -94,8 +94,8 @@ def test_admin_sidebar_splitter_is_draggable_and_restores_width():
 def test_admin_footer_uses_shared_height_and_keeps_text_visible():
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
-    from uniui.admin_theme import get_admin_metrics
-    from uniui.qt_admin import QtAppShellAdapter
+    from uniui.theme import get_admin_metrics
+    from uniui.qt_components import QtAppShellAdapter
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     shell = QtAppShellAdapter()
@@ -135,7 +135,7 @@ def test_admin_footer_uses_shared_height_and_keeps_text_visible():
 def test_admin_sidebar_exposes_navigation_states_and_accessibility():
     pytest.importorskip("PySide2")
     from PySide2 import QtGui, QtWidgets
-    from uniui.qt_admin import QtSidebarAdapter
+    from uniui.qt_components import QtSidebarAdapter
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     sidebar = QtSidebarAdapter()
@@ -157,7 +157,7 @@ def test_admin_sidebar_exposes_navigation_states_and_accessibility():
 def test_admin_table_uses_status_pill_delegate_and_web_density():
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
-    from uniui.qt_admin import QtTableAdapter
+    from uniui.qt_components import QtTableAdapter
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     table = QtTableAdapter()
@@ -195,7 +195,7 @@ def test_qt_admin_icons_render_normal_and_selected_svg_states():
 
 def test_qt_gauge_and_chart_theme_switch_preserves_streaming_state():
     pytest.importorskip("PySide2")
-    from uniui.qt_admin import QtChartAdapter, QtGaugeAdapter, set_admin_theme
+    from uniui.qt_components import QtChartAdapter, QtGaugeAdapter, set_admin_theme
 
     gauge = QtGaugeAdapter(); gauge.set_value(72)
     chart = QtChartAdapter()

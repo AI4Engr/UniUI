@@ -11,12 +11,13 @@ import weakref
 
 from PySide2 import QtWidgets, QtCore, QtGui
 
-from uniui.admin import (
+from uniui.components import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
-from uniui.admin_theme import get_admin_metrics, get_admin_tokens
-from uniui.admin_visuals import CHART_TYPES, append_chart_point, normalized_series
+from uniui import theme_runtime
+from uniui.theme import get_admin_metrics, get_admin_tokens
+from uniui.visuals import CHART_TYPES, append_chart_point, normalized_series
 from uniui.core import IWidget
 from uniui.qt_effects import animate_value, motion_duration
 from uniui.qt_icons import admin_icon
@@ -37,13 +38,49 @@ def _qt_tokens(dark: bool) -> Dict[str, str]:
     return tokens
 
 
-_LIGHT = _qt_tokens(False)
-_DARK = _qt_tokens(True)
 _M = get_admin_metrics()
 
-_C = dict(_LIGHT)
-_ADMIN_DARK = False
+# Mutated in place by _sync_palette so the style helpers below, which read _C
+# at call time, always see the active theme.
+_C = dict(_qt_tokens(theme_runtime.is_dark()))
 _THEMED_ADAPTERS = weakref.WeakSet()
+
+
+_SCROLLBAR_TEMPLATE = """
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+    margin: 0;
+}
+QScrollBar::handle:vertical {
+    background: %(scrollbar)s;
+    border-radius: 4px;
+    min-height: 28px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+QScrollBar:horizontal {
+    background: transparent;
+    height: 8px;
+    margin: 0;
+}
+QScrollBar::handle:horizontal {
+    background: %(scrollbar)s;
+    border-radius: 4px;
+    min-width: 28px;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; }
+"""
+
+
+def _scrollbar_rules() -> str:
+    """Scrollbar QSS for the active theme.
+
+    Widgets that set a stylesheet on themselves stop inheriting an ancestor's
+    scrollbar rules, so every such widget has to embed these directly.
+    """
+    return _SCROLLBAR_TEMPLATE % _C
 
 
 def _card_style() -> str:
@@ -90,6 +127,7 @@ def _table_style() -> str:
         border: none;
         border-bottom: 1px solid {_C['border']};
     }}
+    {_scrollbar_rules()}
 """
 
 
@@ -153,21 +191,24 @@ def _breadcrumb_button_style() -> str:
 """
 
 
-def get_admin_palette() -> Dict[str, str]:
+def get_palette() -> Dict[str, str]:
     """Return a copy of the active Admin design tokens."""
     return dict(_C)
 
 
-def is_admin_dark() -> bool:
-    return _ADMIN_DARK
+def is_dark() -> bool:
+    return theme_runtime.is_dark()
 
 
-def set_admin_theme(dark: bool) -> bool:
-    """Switch every live Qt Admin adapter without rebuilding its widget tree."""
-    global _ADMIN_DARK
-    _ADMIN_DARK = bool(dark)
+@theme_runtime.register_refresh
+def _sync_palette() -> None:
+    """Re-render every live Qt adapter after a theme change.
+
+    Registered with theme_runtime, so switching from any backend restyles Qt
+    too — the per-backend flags used to drift apart.
+    """
     _C.clear()
-    _C.update(_DARK if _ADMIN_DARK else _LIGHT)
+    _C.update(_qt_tokens(theme_runtime.is_dark()))
     for adapter in list(_THEMED_ADAPTERS):
         try:
             adapter.apply_theme()
@@ -175,7 +216,21 @@ def set_admin_theme(dark: bool) -> bool:
             if "already deleted" not in str(exc):
                 raise
             _THEMED_ADAPTERS.discard(adapter)
-    return _ADMIN_DARK
+    # Restyle the plain Qt controls too.  Imported lazily because qt_style
+    # imports this module for its palette.
+    from .qt_style import refresh_styled_widgets
+    refresh_styled_widgets()
+
+
+def set_theme(dark: bool) -> bool:
+    """Switch every live adapter, on this and every other backend."""
+    return theme_runtime.set_theme(dark)
+
+
+# Names used before the admin_ prefix was dropped.
+get_admin_palette = get_palette
+is_admin_dark = is_dark
+set_admin_theme = set_theme
 
 
 def _track_themed(adapter, native_widget) -> None:
@@ -191,11 +246,7 @@ def _track_themed(adapter, native_widget) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _native(widget) -> QtWidgets.QWidget:
-    """Extract Qt native from a UniUI widget."""
-    if hasattr(widget, "get_native"):
-        return widget.get_native()
-    return widget
+_native = theme_runtime.native
 
 
 def _as_widget(widget) -> QtWidgets.QWidget:

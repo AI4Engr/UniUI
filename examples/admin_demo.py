@@ -391,6 +391,119 @@ def settings_page(_ctx):
     return root
 
 
+def _qt_labeled_field(title, control_native):
+    from PySide2 import QtWidgets
+
+    field = QtWidgets.QWidget()
+    field_layout = QtWidgets.QVBoxLayout(field)
+    field_layout.setContentsMargins(0, 0, 0, 0)
+    field_layout.setSpacing(6)
+    label = QtWidgets.QLabel(title)
+    label.setProperty("fieldLabel", "1")
+    field_layout.addWidget(label)
+    field_layout.addWidget(control_native)
+    return field
+
+
+def components_page(ctx):
+    f = uniui._get_factory()
+    from PySide2 import QtWidgets
+
+    root, layout, _ = _page_frame(
+        "Components",
+        "A quick reference for the form and navigation controls available in every backend.",
+    )
+
+    role_dropdown = f.create_dropdown()
+    for role in ("Admin", "Editor", "Viewer"):
+        role_dropdown.add_item(role)
+    role_dropdown.set_selection("Editor")
+
+    theme_combo = f.create_combo_box()
+    for option in ("System", "Light", "Dark", "High contrast"):
+        theme_combo.add_item(option)
+    theme_combo.set_selection("System")
+
+    status_dropdown = f.create_dropdown()
+    for status in ("Active", "Inactive", "Pending"):
+        status_dropdown.add_item(status)
+    status_dropdown.set_selection("Active")
+
+    hint = QtWidgets.QLabel("Editor · Active")
+    hint.setProperty("tableHint", "1")
+
+    def _update_hint():
+        hint.setText(f"{role_dropdown.get_text()}  ·  {status_dropdown.get_text()}")
+
+    role_dropdown.on_change(_update_hint)
+    status_dropdown.on_change(_update_hint)
+
+    fields_row = QtWidgets.QWidget()
+    fields_layout = QtWidgets.QHBoxLayout(fields_row)
+    fields_layout.setContentsMargins(0, 0, 0, 0)
+    fields_layout.setSpacing(16)
+    fields_layout.addWidget(_qt_labeled_field("Role (dropdown)", role_dropdown.get_native()))
+    fields_layout.addWidget(_qt_labeled_field("Theme (editable combo box)", theme_combo.get_native()))
+    fields_layout.addWidget(_qt_labeled_field("Status (dropdown)", status_dropdown.get_native()))
+    fields_layout.addStretch()
+
+    inputs_content = QtWidgets.QWidget()
+    inputs_layout = QtWidgets.QVBoxLayout(inputs_content)
+    inputs_layout.setContentsMargins(0, 0, 0, 0)
+    inputs_layout.setSpacing(14)
+    inputs_layout.addWidget(fields_row)
+    inputs_layout.addWidget(hint)
+
+    inputs_card = f.create_card()
+    inputs_card.set_title("Selection controls")
+    inputs_card.set_subtitle("Dropdown and combo box, wired to a shared change handler")
+    inputs_card.set_content(_NativeWrap(inputs_content))
+
+    overview_tab = QtWidgets.QLabel(
+        "Tabs mount every pane up front and only toggle visibility, so state "
+        "in inactive tabs is preserved when you switch back."
+    )
+    overview_tab.setWordWrap(True)
+
+    activity_tab = QtWidgets.QWidget()
+    activity_layout = QtWidgets.QVBoxLayout(activity_tab)
+    activity_layout.setContentsMargins(12, 12, 12, 12)
+    activity_layout.setSpacing(8)
+    for entry in (
+        "Alice Johnson updated the Dashboard layout",
+        "Bob Smith invited a new Editor",
+        "Nightly export completed without errors",
+    ):
+        activity_layout.addWidget(QtWidgets.QLabel(f"•  {entry}"))
+    activity_layout.addStretch()
+
+    settings_tab = QtWidgets.QWidget()
+    settings_tab_layout = QtWidgets.QVBoxLayout(settings_tab)
+    settings_tab_layout.setContentsMargins(12, 12, 12, 12)
+    settings_tab_layout.setSpacing(8)
+    notify_toggle = QtWidgets.QPushButton("Notifications: On")
+    notify_toggle.setProperty("buttonRole", "secondary")
+    settings_tab_layout.addWidget(notify_toggle)
+    compact_toggle = QtWidgets.QPushButton("Compact density: Off")
+    compact_toggle.setProperty("buttonRole", "secondary")
+    settings_tab_layout.addWidget(compact_toggle)
+    settings_tab_layout.addStretch()
+
+    tabs = f.create_tab_widget()
+    tabs.add_tab(_NativeWrap(overview_tab), "Overview")
+    tabs.add_tab(_NativeWrap(activity_tab), "Activity")
+    tabs.add_tab(_NativeWrap(settings_tab), "Settings")
+
+    tabs_card = f.create_card()
+    tabs_card.set_title("Tabs")
+    tabs_card.set_subtitle("Three panes sharing one tab strip")
+    tabs_card.set_content(tabs)
+
+    layout.addWidget(inputs_card.get_native())
+    layout.addWidget(tabs_card.get_native(), stretch=1)
+    return root
+
+
 def not_found_page(ctx):
     f = uniui._get_factory()
     lbl = f.create_label()
@@ -429,7 +542,7 @@ def _set_props(widget, props):
 
 def _set_icon_class(widget, icon_name):
     """Switch a shared SVG icon class on a browser-backed control."""
-    from uniui.admin_icons import ADMIN_ICON_NAMES
+    from uniui.icons import ADMIN_ICON_NAMES
 
     native = widget.get_native() if hasattr(widget, "get_native") else widget
     for name in ADMIN_ICON_NAMES:
@@ -658,6 +771,114 @@ def _browser_settings_page(_ctx):
     return page
 
 
+def _labeled_field(label_text, control):
+    f = uniui._get_factory()
+    field = f.create_vbox()
+    field.set_spec(LayoutSpec(gap=6))
+    _add_class(field, "uniui-demo-field")
+    label = f.create_label()
+    label.set_text(label_text)
+    _add_class(label, "uniui-demo-field-label")
+    field.add_item(label)
+    field.add_item(control)
+    return field
+
+
+def _browser_components_page(_ctx):
+    f = uniui._get_factory()
+    page, _ = _browser_page_frame(
+        "Components",
+        "A quick reference for the form and navigation controls available in every backend.",
+    )
+
+    role_dropdown = f.create_dropdown()
+    for role in ("Admin", "Editor", "Viewer"):
+        role_dropdown.add_item(role)
+    role_dropdown.set_selection("Editor")
+    role_field = _labeled_field("Role (dropdown)", role_dropdown)
+
+    theme_combo = f.create_combo_box()
+    for option in ("System", "Light", "Dark", "High contrast"):
+        theme_combo.add_item(option)
+    theme_combo.set_selection("System")
+    theme_field = _labeled_field("Theme (editable combo box)", theme_combo)
+
+    status_dropdown = f.create_dropdown()
+    for status in ("Active", "Inactive", "Pending"):
+        status_dropdown.add_item(status)
+    status_dropdown.set_selection("Active")
+    status_field = _labeled_field("Status (dropdown)", status_dropdown)
+
+    selection_hint = f.create_label()
+    selection_hint.set_text("Editor · Active")
+    _add_class(selection_hint, "uniui-demo-hint")
+
+    def _update_hint():
+        selection_hint.set_text(f"{role_dropdown.get_text()} · {status_dropdown.get_text()}")
+
+    role_dropdown.on_change(_update_hint)
+    status_dropdown.on_change(_update_hint)
+
+    fields_row = f.create_wrap()
+    fields_row.set_spec(LayoutSpec(gap=16))
+    fields_row.add_item(role_field)
+    fields_row.add_item(theme_field)
+    fields_row.add_item(status_field)
+
+    inputs_content = f.create_vbox()
+    inputs_content.set_spec(LayoutSpec(gap=14))
+    inputs_content.add_item(fields_row)
+    inputs_content.add_item(selection_hint)
+
+    inputs_card = f.create_card()
+    inputs_card.set_title("Selection controls")
+    inputs_card.set_subtitle("Dropdown and combo box, wired to a shared change handler")
+    inputs_card.set_content(inputs_content)
+
+    overview_tab = f.create_vbox()
+    overview_tab.set_spec(LayoutSpec(gap=10))
+    overview_label = f.create_label()
+    overview_label.set_text(
+        "Tabs mount every pane up front and only toggle visibility, so state "
+        "in inactive tabs is preserved when you switch back."
+    )
+    overview_tab.add_item(overview_label)
+
+    activity_tab = f.create_vbox()
+    activity_tab.set_spec(LayoutSpec(gap=8))
+    for entry in (
+        "Alice Johnson updated the Dashboard layout",
+        "Bob Smith invited a new Editor",
+        "Nightly export completed without errors",
+    ):
+        row = f.create_label()
+        row.set_text(f"•  {entry}")
+        activity_tab.add_item(row)
+
+    settings_tab = f.create_vbox()
+    settings_tab.set_spec(LayoutSpec(gap=8))
+    notify_toggle = f.create_button()
+    notify_toggle.set_text("Notifications: On")
+    settings_tab.add_item(notify_toggle)
+    compact_toggle = f.create_button()
+    compact_toggle.set_text("Compact density: Off")
+    settings_tab.add_item(compact_toggle)
+
+    tabs = f.create_tab_widget()
+    tabs.add_tab(overview_tab, "Overview")
+    tabs.add_tab(activity_tab, "Activity")
+    tabs.add_tab(settings_tab, "Settings")
+
+    tabs_card = f.create_card()
+    tabs_card.set_title("Tabs")
+    tabs_card.set_subtitle("Three panes sharing one tab strip")
+    tabs_card.set_content(tabs)
+
+    page.add_item(inputs_card)
+    page.add_item_with_spec(tabs_card, LayoutItem(tabs_card, grow=1))
+    return page
+
+
 def _browser_not_found_page(ctx):
     label = uniui._get_factory().create_label()
     label.set_text(f"404 — No page at: {ctx.path}")
@@ -676,9 +897,9 @@ def create_admin_ui(framework="auto", debug=False):
 
     from uniui.routing import Router, Route, RouterView, sync_breadcrumb
     if framework == "jupyter":
-        from uniui import jupyter_admin as admin_backend
+        from uniui import jupyter_components as admin_backend
     else:
-        from uniui import web_admin as admin_backend
+        from uniui import web_components as admin_backend
 
     _ADMIN_THEME.set("Light")
     admin_backend.set_admin_theme(False)
@@ -686,6 +907,7 @@ def create_admin_ui(framework="auto", debug=False):
     router = Router(
         Route("/dashboard", _browser_dashboard_page, name="dashboard"),
         Route("/users", _browser_users_page, name="users"),
+        Route("/components", _browser_components_page, name="components"),
         Route("/settings", _browser_settings_page, name="settings"),
         not_found=_browser_not_found_page,
     )
@@ -731,6 +953,7 @@ def create_admin_ui(framework="auto", debug=False):
     for key, label, icon in (
         ("dashboard", "Dashboard", "dashboard"),
         ("users", "Users", "users"),
+        ("components", "Components", "components"),
         ("settings", "Settings", "settings"),
     ):
         sidebar.add_item(key, label, icon)
@@ -780,17 +1003,18 @@ def _main_browser(framework):
 # ---------------------------------------------------------------------------
 
 def _admin_stylesheet():
-    from uniui.qt_admin import get_admin_palette
+    """Demo-only chrome, layered on top of the library's base widget style.
+
+    Ordinary controls (QPushButton, QLineEdit, QComboBox, QTabWidget, ...) are
+    styled by uniui.qt_style so any Qt app gets them, not just this demo.
+    Only the demo's own property-tagged widgets are defined here.
+    """
+    from uniui.qt_components import get_admin_palette
+    from uniui.qt_style import base_stylesheet
 
     p = get_admin_palette()
-    return """
-QWidget {
-    font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
-    font-size: 13px;
-    color: %(text)s;
-}
+    return base_stylesheet() + """
 QWidget[adminPage="1"], QWidget[pageHeading="1"] { background: transparent; }
-QLabel { background: transparent; color: %(text)s; }
 QLabel[pageSubtitle="1"] {
     color: %(text)s;
     font-size: 18px;
@@ -802,6 +1026,11 @@ QLabel[tableHint="1"] {
     border: 1px solid %(border)s;
     border-radius: 8px;
     padding: 8px 10px;
+}
+QLabel[fieldLabel="1"] {
+    color: %(text_muted)s;
+    font-size: 12px;
+    font-weight: 650;
 }
 QWidget[topBar="1"] { background: %(header_bg)s; }
 QLabel[logoMark="1"] {
@@ -821,69 +1050,6 @@ QToolButton[headerButton="1"] {
     border-radius: 7px; padding: 5px 8px; min-width: 18px; min-height: 18px;
 }
 QToolButton[headerButton="1"]:hover { background: %(surface_subtle)s; color: %(text)s; }
-
-QLineEdit {
-    background: %(input_bg)s;
-    border: 1px solid %(border_strong)s;
-    border-radius: 9px;
-    padding: 8px 11px;
-    color: %(text)s;
-    font-size: 13px;
-    min-height: 20px;
-}
-QLineEdit:focus { border: 2px solid %(accent)s; padding: 7px 10px; }
-QLineEdit:hover { border-color: %(text_muted)s; }
-QLineEdit:disabled {
-    color: %(text_muted)s;
-    background: %(surface_subtle)s;
-    border-color: %(border)s;
-}
-
-QPushButton {
-    background: %(accent)s;
-    color: #ffffff;
-    border: 1px solid %(accent)s;
-    border-radius: 9px;
-    padding: 7px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    min-height: 20px;
-    qproperty-iconSize: 18px 18px;
-}
-QPushButton:hover { background: %(accent_hover)s; border-color: %(accent_hover)s; }
-QPushButton:pressed { background: %(accent_press)s; }
-QPushButton:focus { border: 2px solid %(accent_hover)s; padding: 6px 13px; }
-QPushButton:disabled {
-    color: %(text_muted)s;
-    background: %(disabled)s;
-    border-color: %(disabled)s;
-}
-QPushButton[buttonRole="secondary"] {
-    background: %(surface)s;
-    color: %(text)s;
-    border: 1px solid %(border_strong)s;
-}
-QPushButton[buttonRole="secondary"]:hover { background: %(surface_subtle)s; }
-QPushButton:flat {
-    background: transparent;
-    color: %(text_muted)s;
-    border: none;
-    min-height: 0;
-    padding: 5px 7px;
-}
-QPushButton:flat:hover { color: %(text)s; background: %(surface_subtle)s; }
-
-QScrollBar:vertical {
-    background: transparent;
-    width: 8px;
-    margin: 0;
-}
-QScrollBar::handle:vertical {
-    background: %(scrollbar)s;
-    border-radius: 4px;
-    min-height: 28px;
-}
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 """ % p
 
 
@@ -902,16 +1068,17 @@ def main():
         return
 
     from uniui.routing import Router, Route, RouterView, sync_breadcrumb
-    from uniui.qt_admin import get_admin_palette, set_admin_theme
+    from uniui.qt_components import get_admin_palette, set_admin_theme
     from PySide2 import QtWidgets, QtCore
 
     _ADMIN_THEME.set("Light")
     set_admin_theme(False)
 
     router = Router(
-        Route("/dashboard", dashboard_page, name="dashboard"),
-        Route("/users",     users_page,     name="users"),
-        Route("/settings",  settings_page,  name="settings"),
+        Route("/dashboard",   dashboard_page,   name="dashboard"),
+        Route("/users",       users_page,       name="users"),
+        Route("/components",  components_page,  name="components"),
+        Route("/settings",    settings_page,    name="settings"),
         not_found=not_found_page,
     )
 
@@ -1015,6 +1182,7 @@ def main():
     for key, label, icon in (
         ("dashboard", "Dashboard", "dashboard"),
         ("users", "Users", "users"),
+        ("components", "Components", "components"),
         ("settings", "Settings", "settings"),
     ):
         sidebar.add_item(key, label, icon)

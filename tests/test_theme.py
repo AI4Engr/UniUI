@@ -1,6 +1,6 @@
 """Backend-neutral Admin design token tests."""
 
-from uniui.admin_theme import (
+from uniui.theme import (
     ADMIN_DARK,
     ADMIN_LIGHT,
     ADMIN_METRICS,

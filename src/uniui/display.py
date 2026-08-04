@@ -532,6 +532,14 @@ class UniversalDisplay:
                 from .jupyter import refresh_theme_jupyter
                 refresh_theme_jupyter(native)
 
+                # Publish the base widget stylesheet so plain controls are
+                # styled even when the app builds no AppShell.
+                try:
+                    from .jupyter_style import style_widget_html
+                    display(style_widget_html())
+                except ImportError:
+                    pass
+
                 display(native)
                 return True
 

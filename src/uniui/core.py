@@ -661,6 +661,10 @@ class IWidgetFactory(ABC):
         """Create a metric stat card (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("StatCard not supported on this platform")
 
+    def createMetricList(self) -> "IMetricList":
+        """Create a label/value metric list (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("MetricList not supported on this platform")
+
     def createTable(self) -> "ITable":
         """Create a tabular data table (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Table not supported on this platform")

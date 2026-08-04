@@ -11,6 +11,10 @@ import socket
 
 # Import capability interfaces from core
 from .core import *
+from ._adapter_mixins import (
+    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin,
+    TextMixin, VisibilityMixin,
+)
 from .strategies import normalize_text, parse_float
 
 # Qt imports
@@ -363,87 +367,17 @@ class QTGroupBox(QtWidgets.QGroupBox):
 # Adapter Classes (snake_case interface methods)
 # ============================================================================
 
-class QtLabelAdapter(ILabel):
+class QtLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, SizeMixin, ILabel):
     """Qt Label adapter - implements snake_case interface convention"""
 
-    def __init__(self, native_widget: QTLabel):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ITextCapable
-    def set_text(self, text: str):
-        self._native.setText(normalize_text(text))
-
-    def get_text(self) -> str:
-        return normalize_text(self._native.getText())
-
-    # IVisibilityCapable
-    def show(self):
-        self._native.show()
-
-    def hide(self):
-        self._native.hide()
-
-    def is_visible(self) -> bool:
-        return self._native.isVisible()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
 
 
-
-class QtButtonAdapter(IButton):
+class QtButtonAdapter(NativeMixin, TextMixin, EnableMixin, SizeMixin, IButton):
     """Qt Button adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: QTPushButton):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ITextCapable
-    def set_text(self, text: str):
-        self._native.setText(normalize_text(text))
-
-    def get_text(self) -> str:
-        return normalize_text(self._native.getText())
 
     # IEventCapable
     def connect(self, callback):
         self._native.connect(callback)
-
-    # IEnableCapable
-    def set_enabled(self, enabled: bool):
-        self._native.setEnabled(enabled)
-
-    def is_enabled(self) -> bool:
-        return self._native.isEnabled()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
-
 
 
 class QtLineEditAdapter(ILineEdit):
@@ -563,75 +497,19 @@ class QtTextAreaAdapter(ITextArea):
 
 
 
-class QtComboBoxAdapter(IComboBox):
+class QtComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, EnableMixin,
+                        SizeMixin, IComboBox):
     """Qt ComboBox adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: QTComboBox):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ISelectionCapable
-    def add_item(self, item: str):
-        self._native.addItem(item)
-
-    def clear(self):
-        self._native.clear()
-
-    def set_selection(self, item: str):
-        self._native.setSelection(item)
-
-    def get_text(self) -> str:
-        return self._native.currentText()
 
     # IChangeEventCapable
     def on_change(self, callback):
         self._native.connect(callback)
 
-    # IEnableCapable
-    def set_enabled(self, enabled: bool):
-        self._native.setEnabled(enabled)
-
-    def is_enabled(self) -> bool:
-        return self._native.isEnabled()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
 
 
-
-class QtDropdownAdapter(IDropdown):
+class QtDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin, VisibilityMixin,
+                       EnableMixin, SizeMixin, IDropdown):
     """Qt Dropdown adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: QTDropdown):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ISelectionCapable
-    def add_item(self, item: str):
-        self._native.addItem(item)
-
-    def clear(self):
-        self._native.clear()
-
-    def set_selection(self, item: str):
-        self._native.setSelection(item)
-
-    def get_text(self) -> str:
-        return self._native.currentText()
 
     # IValueCapable
     def set_value(self, value_list: list):
@@ -641,37 +519,6 @@ class QtDropdownAdapter(IDropdown):
     # IChangeEventCapable
     def on_change(self, callback):
         self._native.connect(callback)
-
-    # IVisibilityCapable
-    def show(self):
-        self._native.show()
-
-    def hide(self):
-        self._native.hide()
-
-    def is_visible(self) -> bool:
-        return self._native.isVisible()
-
-    # IEnableCapable
-    def set_enabled(self, enabled: bool):
-        self._native.setEnabled(enabled)
-
-    def is_enabled(self) -> bool:
-        return self._native.isEnabled()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
-
 
 
 class QtVBoxAdapter(IVBoxLayout):
@@ -754,14 +601,8 @@ class QtHBoxAdapter(IHBoxLayout):
 
 
 
-class QtTabWidgetAdapter(ITabWidget):
+class QtTabWidgetAdapter(NativeMixin, VisibilityMixin, ITabWidget):
     """Qt TabWidget adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: QTTabWidget):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
 
     # ITabCapable
     def add_tab(self, widget: IWidget, name: str):
@@ -772,17 +613,6 @@ class QtTabWidgetAdapter(ITabWidget):
 
     def get_current_index(self) -> int:
         return self._native.currentIndex()
-
-    # IVisibilityCapable
-    def show(self):
-        self._native.show()
-
-    def hide(self):
-        self._native.hide()
-
-    def is_visible(self) -> bool:
-        return self._native.isVisible()
-
 
 
 class QtImageAdapter(IImage):
@@ -1193,6 +1023,12 @@ class QtWidgetFactory(IWidgetFactory):
             self.app = QApplication(sys.argv)
         else:
             self.app = app
+
+        # Give plain Qt widgets the design-system look without requiring the
+        # caller to copy a stylesheet.  Imported here because qt_style pulls in
+        # the admin palette, which imports this module.
+        from .qt_style import apply_app_style
+        apply_app_style(self.app)
 
     def createLabel(self) -> ILabel:
         native = QTLabel()

@@ -19,7 +19,7 @@ pytestmark = pytest.mark.qt
 def test_qt_shell_responsive_geometry(width, sidebar_width, handle_width):
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
-    from uniui.qt_admin import QtAppShellAdapter, QtSidebarAdapter
+    from uniui.qt_components import QtAppShellAdapter, QtSidebarAdapter
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     shell = QtAppShellAdapter()
@@ -42,7 +42,7 @@ def test_qt_shell_responsive_geometry(width, sidebar_width, handle_width):
 def test_qt_chart_streaming_performance_and_gauge_animation_toggle():
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
-    from uniui.qt_admin import QtChartAdapter, QtGaugeAdapter
+    from uniui.qt_components import QtChartAdapter, QtGaugeAdapter
     from uniui.qt_effects import set_motion_enabled
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
@@ -69,7 +69,7 @@ def test_qt_chart_streaming_performance_and_gauge_animation_toggle():
 def test_qt_drawer_and_offscreen_visual_render_smoke():
     pytest.importorskip("PySide2")
     from PySide2 import QtCore, QtGui, QtWidgets
-    from uniui.qt_admin import QtChartAdapter, QtDrawerAdapter, QtGaugeAdapter
+    from uniui.qt_components import QtChartAdapter, QtDrawerAdapter, QtGaugeAdapter
     from uniui.qt_effects import set_motion_enabled
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
@@ -112,7 +112,7 @@ def test_qt_factory_enables_high_dpi_before_application_creation():
                 "-c",
                 "from uniui import create_factory; create_factory('qt'); "
                 "from PySide2 import QtCore, QtWidgets; "
-                "from uniui.qt_admin import QtAppShellAdapter; "
+                "from uniui.qt_components import QtAppShellAdapter; "
                 "from uniui.qt_icons import admin_pixmap; "
                 "app=QtWidgets.QApplication.instance(); shell=QtAppShellAdapter(); "
                 "root=shell.get_native(); root.resize(640,480); root.show(); app.processEvents(); "

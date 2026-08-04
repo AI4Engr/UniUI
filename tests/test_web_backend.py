@@ -14,8 +14,8 @@ pytest.importorskip("nicegui")
 
 from uniui import Button, Label, VBox, create_factory, toggle_theme, use
 from uniui.display import UniversalDisplay, refresh_theme
-from uniui.web_admin import is_admin_dark as is_web_admin_dark
-from uniui.web_admin import set_admin_theme as set_web_admin_theme
+from uniui.web_components import is_admin_dark as is_web_admin_dark
+from uniui.web_components import set_admin_theme as set_web_admin_theme
 
 
 def _free_port() -> int:

@@ -12,48 +12,62 @@ import weakref
 
 import ipywidgets as widgets
 
-from .admin import (
+from .components import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
-from .admin_icons import ADMIN_ICON_NAMES, css_mask
-from .admin_theme import get_admin_metrics, get_admin_tokens
-from .admin_visuals import (
+from .icons import ADMIN_ICON_NAMES, css_mask
+from . import theme_runtime
+from .theme import get_admin_metrics, get_admin_tokens
+from .visuals import (
     CHART_TYPES, append_chart_point, normalized_series,
     render_chart_svg, render_gauge_svg,
 )
 
 
-_LIGHT = get_admin_tokens(False)
-_DARK = get_admin_tokens(True)
 _M = get_admin_metrics()
 
-_admin_dark = False
 _theme_targets: "weakref.WeakSet[object]" = weakref.WeakSet()
 
 
-def get_admin_palette() -> Dict[str, str]:
+def get_palette() -> Dict[str, str]:
     """Return a copy of the active Jupyter Admin palette."""
-    return dict(_DARK if _admin_dark else _LIGHT)
+    return get_admin_tokens(theme_runtime.is_dark())
 
 
-def is_admin_dark() -> bool:
-    return _admin_dark
+def is_dark() -> bool:
+    return theme_runtime.is_dark()
 
 
-def set_admin_theme(dark: bool) -> bool:
-    """Switch all live Jupyter Admin shells between light and dark themes."""
-    global _admin_dark
-    _admin_dark = bool(dark)
+@theme_runtime.register_refresh
+def _sync_palette() -> None:
+    """Re-render every live shell after a theme change.
+
+    Registered with theme_runtime, so switching from any backend restyles
+    Jupyter too — the per-backend flags used to drift apart.
+    """
     for target in list(_theme_targets):
         apply_theme = getattr(target, "apply_theme", None)
         if callable(apply_theme):
             apply_theme()
-    return _admin_dark
+    # Restyle the plain ipywidgets too.  Imported lazily because jupyter_style
+    # imports this module for its palette.
+    from .jupyter_style import refresh
+    refresh()
 
 
-def _native(widget):
-    return widget.get_native() if hasattr(widget, "get_native") else widget
+def set_theme(dark: bool) -> bool:
+    """Switch every live shell, on this and every other backend."""
+    return theme_runtime.set_theme(dark)
+
+
+# Names used before the admin_ prefix was dropped.
+get_admin_palette = get_palette
+is_admin_dark = is_dark
+set_admin_theme = set_theme
+
+
+_native = theme_runtime.native
 
 
 def _html(text: str, class_name: str = "") -> widgets.HTML:
@@ -75,7 +89,7 @@ def _shared_icon_css() -> str:
 
 
 def _css() -> str:
-    p = get_admin_palette()
+    p = get_palette()
     variables = ";".join(f"--uniui-{key}:{value}" for key, value in p.items())
     return f"""
 <style>
@@ -105,6 +119,51 @@ def _css() -> str:
   background:var(--uniui-accent_hover)!important;
   border-color:var(--uniui-accent_hover)!important;
 }}
+.uniui-admin-shell .widget-dropdown > select,
+.uniui-admin-shell .widget-combobox input {{
+  color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
+  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
+  min-height:38px; padding:7px 30px 7px 10px; font-size:13px;
+}}
+.uniui-admin-shell .widget-dropdown > select:hover,
+.uniui-admin-shell .widget-combobox input:hover {{border-color:var(--uniui-text_muted)!important}}
+.uniui-admin-shell .widget-dropdown > select:focus,
+.uniui-admin-shell .widget-combobox input:focus {{
+  border:2px solid var(--uniui-accent)!important; outline:none;
+}}
+.uniui-admin-shell .widget-tab {{background:transparent; border:none}}
+.uniui-admin-shell .widget-tab > .p-TabBar,
+.uniui-admin-shell .widget-tab .lm-TabBar {{
+  border-bottom:1px solid var(--uniui-border); overflow:visible;
+}}
+.uniui-admin-shell .widget-tab .p-TabBar-tab,
+.uniui-admin-shell .widget-tab .lm-TabBar-tab {{
+  background:transparent!important; border:none!important;
+  color:var(--uniui-text_muted)!important; font-weight:600; font-size:13px;
+  padding:9px 16px; min-height:0;
+}}
+.uniui-admin-shell .widget-tab .p-TabBar-tab.p-mod-current,
+.uniui-admin-shell .widget-tab .lm-TabBar-tab.lm-mod-current {{
+  color:var(--uniui-accent)!important;
+  box-shadow:inset 0 -2px 0 var(--uniui-accent);
+}}
+.uniui-admin-shell .widget-tab .p-TabBar-tabLabel,
+.uniui-admin-shell .widget-tab .lm-TabBar-tabLabel {{color:inherit}}
+.uniui-admin-shell .widget-tab > .widget-tab-contents,
+.uniui-admin-shell .widget-tab .p-StackedPanel,
+.uniui-admin-shell .widget-tab .lm-StackedPanel {{
+  border:none; background:transparent; padding:16px 2px 0;
+}}
+.uniui-demo-field {{gap:6px; min-width:190px}}
+.uniui-demo-field-label, .uniui-demo-field-label .widget-label {{
+  color:var(--uniui-text_muted)!important; font-size:12px; font-weight:650;
+}}
+.uniui-demo-swatch-row {{gap:10px; align-items:center; flex-wrap:wrap!important}}
+.uniui-demo-swatch {{
+  width:34px; height:34px; border-radius:9px; border:1px solid var(--uniui-border);
+  flex:0 0 34px;
+}}
+.uniui-demo-badge-row {{gap:8px; flex-wrap:wrap!important}}
 .uniui-shell-header {{
   flex:0 0 {_M['header_height']}px; min-height:{_M['header_height']}px; padding:0 16px; gap:10px;
   align-items:center; background:var(--uniui-header_bg);
@@ -588,7 +647,7 @@ class JupyterGaugeAdapter(IGauge):
     def _render(self) -> None:
         self._native.value = render_gauge_svg(
             self._label, self._value, self._unit, self._minimum,
-            self._maximum, self._status, get_admin_palette(),
+            self._maximum, self._status, get_palette(),
         )
     def apply_theme(self) -> None: self._render()
 
@@ -615,7 +674,7 @@ class JupyterChartAdapter(IChart):
         self._render()
     def _render(self) -> None:
         self._native.value = render_chart_svg(
-            self._chart_type, self._title, self._x, self._series, get_admin_palette()
+            self._chart_type, self._title, self._x, self._series, get_palette()
         )
     def apply_theme(self) -> None: self._render()
 
@@ -934,5 +993,6 @@ __all__ = [
     "JupyterCardAdapter", "JupyterStatCardAdapter", "JupyterTableAdapter",
     "JupyterSidebarAdapter", "JupyterAppShellAdapter", "JupyterBreadcrumbAdapter",
     "JupyterGaugeAdapter", "JupyterChartAdapter", "JupyterDrawerAdapter",
+    "get_palette", "is_dark", "set_theme",
     "get_admin_palette", "is_admin_dark", "set_admin_theme",
 ]

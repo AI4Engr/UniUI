@@ -6,24 +6,22 @@ from typing import Callable, Dict, List, Optional
 
 from nicegui import ui
 
-from .admin import (
+from .components import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
-from .admin_icons import ADMIN_ICON_NAMES, css_mask
-from .admin_theme import get_admin_metrics, get_admin_tokens
-from .admin_visuals import (
+from . import theme_runtime
+from .icons import ADMIN_ICON_NAMES, css_mask
+from .theme import get_admin_metrics, get_admin_tokens
+from .visuals import (
     CHART_TYPES, append_chart_point, normalized_series,
     render_chart_svg, render_gauge_svg,
 )
 from .web import NiceGUIWidgetFactory, _WebAdapter
 
 
-_LIGHT = get_admin_tokens(False)
-_DARK = get_admin_tokens(True)
 _M = get_admin_metrics()
 
-_admin_dark = False
 _shells: List["WebAppShellAdapter"] = []
 _visuals: List[object] = []
 _css_installed = False
@@ -43,28 +41,37 @@ def _shared_icon_css() -> str:
     return "".join(rules)
 
 
-def get_admin_palette() -> Dict[str, str]:
-    return dict(_DARK if _admin_dark else _LIGHT)
+def get_palette() -> Dict[str, str]:
+    return get_admin_tokens(theme_runtime.is_dark())
 
 
-def is_admin_dark() -> bool:
-    return _admin_dark
+def is_dark() -> bool:
+    return theme_runtime.is_dark()
 
 
-def set_admin_theme(dark: bool) -> bool:
-    global _admin_dark
-    _admin_dark = bool(dark)
-    for shell in list(_shells):
+@theme_runtime.register_refresh
+def _sync_palette() -> None:
+    """Re-render every live shell and visual after a theme change.
+
+    Registered with theme_runtime, so switching from any backend restyles the
+    web components too — the per-backend flags used to drift apart.
+    """
+    for target in (*list(_shells), *list(_visuals)):
         try:
-            shell.apply_theme()
+            target.apply_theme()
         except Exception:
             continue
-    for visual in list(_visuals):
-        try:
-            visual.apply_theme()
-        except Exception:
-            continue
-    return _admin_dark
+
+
+def set_theme(dark: bool) -> bool:
+    """Switch every live shell, on this and every other backend."""
+    return theme_runtime.set_theme(dark)
+
+
+# Names used before the admin_ prefix was dropped.
+get_admin_palette = get_palette
+is_admin_dark = is_dark
+set_admin_theme = set_theme
 
 
 def _install_admin_css() -> None:
@@ -197,8 +204,7 @@ def _install_admin_css() -> None:
     _css_installed = True
 
 
-def _native(widget):
-    return widget.get_native() if hasattr(widget, "get_native") else widget
+_native = theme_runtime.native
 
 
 def _clear(element) -> None:
@@ -351,7 +357,7 @@ class WebGaugeAdapter(_WebAdapter, IGauge):
     def _render(self) -> None:
         self._native.set_content(render_gauge_svg(
             self._label, self._value, self._unit, self._minimum,
-            self._maximum, self._status, get_admin_palette(),
+            self._maximum, self._status, get_palette(),
         ))
     def apply_theme(self) -> None: self._render()
 
@@ -377,7 +383,7 @@ class WebChartAdapter(_WebAdapter, IChart):
         self._render()
     def _render(self) -> None:
         self._native.set_content(render_chart_svg(
-            self._chart_type, self._title, self._x, self._series, get_admin_palette()
+            self._chart_type, self._title, self._x, self._series, get_palette()
         ))
     def apply_theme(self) -> None: self._render()
 
@@ -466,7 +472,7 @@ class WebAppShellAdapter(_WebAdapter, IAppShell):
     def set_footer(self, widget) -> None:
         _clear(self._footer); _native(widget).move(self._footer); self._footer.set_visibility(True)
     def apply_theme(self) -> None:
-        p = get_admin_palette()
+        p = get_palette()
         variables = {f"--uniui-{key}": value for key, value in p.items()}
         variables.update({
             "--uniui-header-height": f"{_M['header_height']}px",
@@ -521,6 +527,7 @@ _register(NiceGUIWidgetFactory)
 
 __all__ = [
     "WebCardAdapter", "WebStatCardAdapter", "WebTableAdapter", "WebSidebarAdapter",
-    "WebAppShellAdapter", "WebBreadcrumbAdapter", "get_admin_palette", "is_admin_dark", "set_admin_theme",
+    "WebAppShellAdapter", "WebBreadcrumbAdapter", "get_palette", "is_dark", "set_theme",
+    "get_admin_palette", "is_admin_dark", "set_admin_theme",
     "WebGaugeAdapter", "WebChartAdapter", "WebDrawerAdapter",
 ]

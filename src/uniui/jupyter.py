@@ -10,6 +10,10 @@ from typing import List, Optional, Callable
 
 # Import capability interfaces from core
 from .core import *
+from ._adapter_mixins import (
+    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin,
+    TextMixin, VisibilityMixin,
+)
 from .strategies import normalize_text, parse_float
 from .theme import THEME, is_dark
 
@@ -79,18 +83,13 @@ def refresh_theme_jupyter(root_widget):
 
     Uses CSS injection for background/dropdown + inline style for text colors.
 
-    Admin shells are skipped: they ship a complete light/dark palette of
-    their own (see admin_theme.py) and this pass would fight it — the
-    injected rules are !important and _refresh_widget_tree writes colors
-    as inline widget styles, which no CSS can override.
+    This used to skip Admin shells, which carried a second, disagreeing
+    palette; both now render from uniui.theme, so one pass suits every tree.
 
     Args:
         root_widget: The root ipywidgets container (VBox/HBox)
     """
     global _jupyter_css_widget
-
-    if 'uniui-admin-shell' in getattr(root_widget, '_dom_classes', ()):
-        return
 
     # CSS injection for background and elements that don't support inline style
     root_widget.add_class('uniui-themed')
@@ -445,8 +444,9 @@ class JupyterDropdown(widgets.Dropdown):
         self.options = tuple(old_content)
 
     def clear(self):
+        # Clearing options resets index to None on its own; assigning 0 here
+        # raises "index out of bounds" because there is no option to select.
         self.options = tuple([])
-        self.index = 0
 
     def connect(self, function):
         self.observe(lambda change: function(), 'value')
@@ -622,8 +622,9 @@ class JupyterTabWidget(widgets.Tab):
         return self.layout.display != 'none'
 
     def removeTabs(self):
+        # Clearing children resets selected_index to None on its own; assigning
+        # 0 here raises "index out of bounds" because no tab is left to select.
         self.children = []
-        self.selected_index = 0
 
 
 class JupyterImage(widgets.Image):
@@ -891,87 +892,17 @@ class JupyterOverlay(widgets.VBox):
 # Adapter Classes (snake_case interface methods)
 # ============================================================================
 
-class JupyterLabelAdapter(ILabel):
+class JupyterLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, SizeMixin, ILabel):
     """Jupyter Label adapter - implements snake_case interface convention"""
 
-    def __init__(self, native_widget: JupyterLabel):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ITextCapable
-    def set_text(self, text: str):
-        self._native.setText(normalize_text(text))
-
-    def get_text(self) -> str:
-        return normalize_text(self._native.getText())
-
-    # IVisibilityCapable
-    def show(self):
-        self._native.show()
-
-    def hide(self):
-        self._native.hide()
-
-    def is_visible(self) -> bool:
-        return self._native.isVisible()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
 
 
-
-class JupyterButtonAdapter(IButton):
+class JupyterButtonAdapter(NativeMixin, TextMixin, EnableMixin, SizeMixin, IButton):
     """Jupyter Button adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: JupyterPushButton):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ITextCapable
-    def set_text(self, text: str):
-        self._native.setText(normalize_text(text))
-
-    def get_text(self) -> str:
-        return normalize_text(self._native.getText())
 
     # IEventCapable
     def connect(self, callback: Callable[[], None]):
         self._native.connect(callback)
-
-    # IEnableCapable
-    def set_enabled(self, enabled: bool):
-        self._native.setEnabled(enabled)
-
-    def is_enabled(self) -> bool:
-        return self._native.isEnabled()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
-
 
 
 class JupyterLineEditAdapter(ILineEdit):
@@ -1090,74 +1021,18 @@ class JupyterTextAreaAdapter(ITextArea):
         self._native.setMinimumHeight(height)
 
 
-class JupyterComboBoxAdapter(IComboBox):
+class JupyterComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, EnableMixin,
+                             SizeMixin, IComboBox):
     """Jupyter ComboBox adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: JupyterComboBox):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ISelectionCapable
-    def add_item(self, item: str):
-        self._native.addItem(item)
-
-    def clear(self):
-        self._native.clear()
-
-    def set_selection(self, item: str):
-        self._native.setSelection(item)
-
-    def get_text(self) -> str:
-        return self._native.currentText()
 
     # IChangeEventCapable
     def on_change(self, callback: Callable[[], None]):
         self._native.connect(callback)
 
-    # IEnableCapable
-    def set_enabled(self, enabled: bool):
-        self._native.setEnabled(enabled)
 
-    def is_enabled(self) -> bool:
-        return self._native.isEnabled()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
-
-
-class JupyterDropdownAdapter(IDropdown):
+class JupyterDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin,
+                            VisibilityMixin, EnableMixin, SizeMixin, IDropdown):
     """Jupyter Dropdown adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: JupyterDropdown):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
-
-    # ISelectionCapable
-    def add_item(self, item: str):
-        self._native.addItem(item)
-
-    def clear(self):
-        self._native.clear()
-
-    def set_selection(self, item: str):
-        self._native.setSelection(item)
-
-    def get_text(self) -> str:
-        return self._native.currentText()
 
     # IValueCapable
     def set_value(self, value_list: list):
@@ -1167,37 +1042,6 @@ class JupyterDropdownAdapter(IDropdown):
     # IChangeEventCapable
     def on_change(self, callback: Callable[[], None]):
         self._native.connect(callback)
-
-    # IVisibilityCapable
-    def show(self):
-        self._native.show()
-
-    def hide(self):
-        self._native.hide()
-
-    def is_visible(self) -> bool:
-        return self._native.isVisible()
-
-    # IEnableCapable
-    def set_enabled(self, enabled: bool):
-        self._native.setEnabled(enabled)
-
-    def is_enabled(self) -> bool:
-        return self._native.isEnabled()
-
-    # ISizeCapable
-    def set_fixed_width(self, width: int):
-        self._native.setFixedWidth(width)
-
-    def set_fixed_height(self, height: int):
-        self._native.setFixedHeight(height)
-
-    def set_minimum_width(self, width: int):
-        self._native.setMinimumWidth(width)
-
-    def set_minimum_height(self, height: int):
-        self._native.setMinimumHeight(height)
-
 
 
 class JupyterVBoxAdapter(IVBoxLayout):
@@ -1298,14 +1142,8 @@ class JupyterGroupBoxAdapter(IGroupBox):
             self._native.setLayout(layout)
 
 
-class JupyterTabWidgetAdapter(ITabWidget):
+class JupyterTabWidgetAdapter(NativeMixin, VisibilityMixin, ITabWidget):
     """Jupyter TabWidget adapter - implements snake_case interface convention"""
-
-    def __init__(self, native_widget: JupyterTabWidget):
-        self._native = native_widget
-
-    def get_native(self):
-        return self._native
 
     # ITabCapable
     def add_tab(self, widget: IWidget, name: str):
@@ -1316,16 +1154,6 @@ class JupyterTabWidgetAdapter(ITabWidget):
 
     def get_current_index(self) -> int:
         return self._native.currentIndex()
-
-    # IVisibilityCapable
-    def show(self):
-        self._native.show()
-
-    def hide(self):
-        self._native.hide()
-
-    def is_visible(self) -> bool:
-        return self._native.isVisible()
 
 
 class JupyterImageAdapter(IImage):
@@ -1596,3 +1424,28 @@ class JupyterWidgetFactory(IWidgetFactory):
 
     def createOverlay(self) -> IOverlay:
         return JupyterOverlayAdapter()
+
+
+def _mark_created_widgets(factory_class) -> None:
+    """Tag every widget the factory creates so the base stylesheet reaches it.
+
+    Wrapping the methods in one place keeps new create* methods covered without
+    each having to remember the marker class.
+    """
+    import functools
+
+    for name in [n for n in vars(factory_class) if n.startswith("create")]:
+        original = getattr(factory_class, name)
+
+        @functools.wraps(original)
+        def marked(self, *args, _original=original, **kwargs):
+            widget = _original(self, *args, **kwargs)
+            # Imported lazily: jupyter_style -> jupyter_components -> this module.
+            from .jupyter_style import mark
+            mark(widget)
+            return widget
+
+        setattr(factory_class, name, marked)
+
+
+_mark_created_widgets(JupyterWidgetFactory)

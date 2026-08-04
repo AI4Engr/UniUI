@@ -2,7 +2,7 @@
 
 import pytest
 
-from uniui.admin_icons import ADMIN_ICON_NAMES, css_mask, svg_data_uri, svg_icon
+from uniui.icons import ADMIN_ICON_NAMES, css_mask, svg_data_uri, svg_icon
 
 
 def test_shared_admin_icons_are_valid_svg_and_css_masks():

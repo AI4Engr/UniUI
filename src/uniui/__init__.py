@@ -57,7 +57,7 @@ from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
 from .routing import Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu, sync_breadcrumb
 
 # Admin component interfaces
-from .admin import (
+from .components import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
@@ -66,7 +66,9 @@ from .admin import (
 from .strategies import parse_float, parse_int, parse_flexible, normalize_text
 
 # Theme configuration
-from .theme import THEME, THEME_LIGHT, THEME_DARK, toggle_theme, is_dark
+from .theme import (
+    THEME, THEME_LIGHT, THEME_DARK, toggle_theme, set_theme, is_dark,
+)
 
 # Display
 from .display import show_ui, refresh_theme, schedule_after
@@ -161,16 +163,16 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
 
     if framework == 'qt':
         from .qt import QtWidgetFactory
-        from . import qt_admin  # noqa: F401 — registers admin methods on QtWidgetFactory
+        from . import qt_components  # noqa: F401 — registers admin methods on QtWidgetFactory
         return QtWidgetFactory()
     elif framework == 'jupyter':
         from .jupyter import JupyterWidgetFactory
-        from . import jupyter_admin  # noqa: F401 — registers Admin methods
+        from . import jupyter_components  # noqa: F401 — registers Admin methods
         return JupyterWidgetFactory()
     elif framework == 'web':
         try:
             from .web import NiceGUIWidgetFactory
-            from . import web_admin  # noqa: F401 — registers Admin methods
+            from . import web_components  # noqa: F401 — registers Admin methods
         except ImportError as exc:
             raise ImportError(
                 "The Web backend requires NiceGUI. Install it with "

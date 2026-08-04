@@ -1,7 +1,7 @@
 """Backend-neutral tests for Gauge and streaming Chart data."""
 
-from uniui.admin_theme import get_admin_tokens
-from uniui.admin_visuals import (
+from uniui.theme import get_admin_tokens
+from uniui.visuals import (
     append_chart_point, normalized_series, render_chart_svg, render_gauge_svg,
 )
 

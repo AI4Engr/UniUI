@@ -5,7 +5,7 @@ from typing import Optional
 
 from PySide2 import QtCore, QtGui, QtSvg
 
-from .admin_icons import svg_icon
+from .icons import svg_icon
 
 
 def admin_pixmap(name: str, color: str, size: int = 20) -> QtGui.QPixmap:

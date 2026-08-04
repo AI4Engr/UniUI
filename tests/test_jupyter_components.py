@@ -4,7 +4,7 @@ import pytest
 pytest.importorskip("ipywidgets")
 
 from uniui import create_factory
-from uniui.jupyter_admin import is_admin_dark, set_admin_theme
+from uniui.jupyter_components import is_admin_dark, set_admin_theme
 from uniui.routing import Route, Router, RouterView
 
 

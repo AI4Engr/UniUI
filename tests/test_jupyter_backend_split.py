@@ -174,3 +174,61 @@ class TestStylesModuleOutput:
 
     def test_metrics_are_shared(self):
         assert jupyter_components._M is runtime.M
+
+
+class TestBaseControlScopes:
+    """One builder emits the stock-control rules for both Jupyter scopes.
+
+    The two scopes are not interchangeable, and the difference is invisible in
+    a rendered notebook until a control silently loses its styling - so it is
+    pinned here rather than left to review.
+    """
+
+    def test_the_admin_scope_only_matches_descendants(self):
+        """``.uniui-admin-shell`` sits on a container, so a self-matching
+        selector like ``.uniui-admin-shell.widget-text`` can never match."""
+        rules = styles.base_control_rules(".uniui-admin-shell", nested=True)
+        assert ".uniui-admin-shell.widget" not in rules
+        assert ".uniui-admin-shell .widget-text input" in rules
+
+    def test_the_widget_scope_also_matches_the_element_itself(self):
+        """The factory marks each widget, so ``.uniui-widget`` lands *on* the
+        control for flat widgets and on an ancestor for nested ones. Emitting
+        only the descendant form leaves flat controls unstyled."""
+        rules = styles.base_control_rules(".uniui-widget", nested=False)
+        assert ".uniui-widget.widget-text input" in rules
+        assert ".uniui-widget .widget-text input" in rules
+
+    def test_labels_stay_descendant_only_in_both_scopes(self):
+        """A label is always a child node, never the marked widget."""
+        for scope, nested in ((".uniui-admin-shell", True), (".uniui-widget", False)):
+            rules = styles.base_control_rules(scope, nested=nested)
+            assert f"{scope} .widget-label" in rules
+            assert f"{scope}.widget-label" not in rules
+
+    def test_only_the_admin_scope_paints_the_button_wrapper(self):
+        """Widening this to the plain scope would restyle every stock button
+        in a notebook, not just UniUI's."""
+        admin = styles.base_control_rules(".uniui-admin-shell", nested=True)
+        widget = styles.base_control_rules(".uniui-widget", nested=False)
+        assert ".uniui-admin-shell .widget-button,\n" in admin
+        assert ".uniui-widget .widget-button button" in widget
+        # The wrapper must not appear as a selector in its own right - check
+        # every selector line, since a stray one hides inside a comma list.
+        selectors = [
+            line.rstrip(",{ ").strip()
+            for line in widget.splitlines()
+            if line.strip().startswith(".uniui-widget")
+        ]
+        assert ".uniui-widget .widget-button" not in selectors
+        assert ".uniui-widget.widget-button" not in selectors
+
+    def test_both_stylesheets_use_the_shared_builder(self):
+        """Guards against a future edit re-inlining one copy and letting the
+        two scopes drift apart again."""
+        from uniui import jupyter_style
+
+        assert styles.base_control_rules(".uniui-widget", nested=False) in (
+            jupyter_style._BASE_RULES
+        )
+        assert styles.base_control_rules(".uniui-admin-shell", nested=True) in styles.css()

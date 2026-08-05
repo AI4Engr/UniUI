@@ -16,24 +16,30 @@ from __future__ import annotations
 
 from nicegui import ui
 
-from ...icons import ADMIN_ICON_NAMES, css_mask
+from ...browser_css import icon_mask_rules
 
 
 _css_installed = False
 
 
+#: Base geometry for the standalone icon span this backend renders into
+#: Quasar button slots. Jupyter has no equivalent - it styles ``button::before``
+#: directly, because ipywidgets gives it no span to target.
+_ICON_BASE_RULE = (
+    ".uniui-svg-icon{display:inline-block;width:18px;height:18px;"
+    "flex:0 0 18px;margin-right:9px;color:inherit;vertical-align:-4px}"
+)
+
+#: Two rules per icon: the standalone span, and Quasar's button content slot.
+_ICON_RULES = (
+    ".uniui-svg-icon.uniui-icon-{name}{{{mask}}}"
+    ".uniui-icon-{name} .q-btn__content::before{{content:'';display:inline-block;"
+    "width:18px;height:18px;flex:0 0 18px;margin-right:7px;{mask}}}"
+)
+
+
 def shared_icon_css() -> str:
-    rules = [
-        ".uniui-svg-icon{display:inline-block;width:18px;height:18px;"
-        "flex:0 0 18px;margin-right:9px;color:inherit;vertical-align:-4px}"
-    ]
-    for name in ADMIN_ICON_NAMES:
-        rules.append(f".uniui-svg-icon.uniui-icon-{name}{{{css_mask(name)}}}")
-        rules.append(
-            f".uniui-icon-{name} .q-btn__content::before{{content:'';display:inline-block;"
-            f"width:18px;height:18px;flex:0 0 18px;margin-right:7px;{css_mask(name)}}}"
-        )
-    return "".join(rules)
+    return _ICON_BASE_RULE + icon_mask_rules(_ICON_RULES)
 
 
 def install_admin_css() -> None:

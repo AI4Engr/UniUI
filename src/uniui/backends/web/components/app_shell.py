@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from ....browser_css import declarations, metric_variables, token_variables
 from ....components import IAppShell
 from ....web import _WebAdapter
 from ..runtime import M, clear, get_palette, native, track_shell
@@ -34,20 +35,12 @@ class WebAppShellAdapter(_WebAdapter, IAppShell):
     def set_footer(self, widget) -> None:
         clear(self._footer); native(widget).move(self._footer); self._footer.set_visibility(True)
     def apply_theme(self) -> None:
-        p = get_palette()
-        variables = {f"--uniui-{key}": value for key, value in p.items()}
-        variables.update({
-            "--uniui-header-height": f"{M['header_height']}px",
-            "--uniui-footer-height": f"{M['footer_height']}px",
-            "--uniui-shell-bars": f"{M['header_height'] + M['footer_height']}px",
-            "--uniui-sidebar-collapsed": f"{M['sidebar_collapsed']}px",
-            "--uniui-control-height": f"{M['control_height']}px",
-            "--uniui-stat-value-size": f"{M['stat_value_size']}px",
-            "--uniui-stat-label-size": f"{M['stat_label_size']}px",
-            "--uniui-sidebar-edge-width": f"{M['sidebar_edge_width']}px",
-            "--uniui-content-padding": f"{M['content_padding']}px {M['content_padding'] + 4}px {M['content_padding'] + 4}px",
-            "--uniui-card-padding": f"{M['card_padding']}px {M['card_padding'] + 2}px",
-            "--uniui-card-gap": f"{M['card_gap']}px",
-            "--uniui-section-gap": f"{M['section_gap']}px",
-        })
-        self._native.style(";".join(f"{key}:{value}" for key, value in variables.items()))
+        """Rewrite the shell's custom properties.
+
+        This is the whole web theme spine: every rule in ``styles.py`` reads
+        ``var(--uniui-*)``, so restyling is one inline ``style`` write rather
+        than a stylesheet re-emission.
+        """
+        variables = token_variables(get_palette())
+        variables.update(metric_variables(M))
+        self._native.style(declarations(variables))

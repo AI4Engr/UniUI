@@ -13,24 +13,93 @@ from __future__ import annotations
 
 from html import escape
 
-from ...icons import ADMIN_ICON_NAMES, css_mask
+from ...browser_css import icon_mask_rules, palette_declarations
 from .runtime import M, get_palette
 
 
+#: The icon sits on the ipywidgets ``button`` element, which is nested inside
+#: the widget's own wrapper - hence ``button::before`` rather than the Web
+#: backend's standalone span.
+_ICON_RULE = (
+    ".uniui-icon-{name} button::before{{content:'';display:inline-block;"
+    "width:18px;height:18px;flex:0 0 18px;margin-right:8px;"
+    "vertical-align:-4px;{mask}}}"
+)
+
+
 def shared_icon_css() -> str:
-    rules = []
-    for name in ADMIN_ICON_NAMES:
-        rules.append(
-            f".uniui-icon-{name} button::before{{content:'';display:inline-block;"
-            f"width:18px;height:18px;flex:0 0 18px;margin-right:8px;"
-            f"vertical-align:-4px;{css_mask(name)}}}"
-        )
-    return "".join(rules)
+    return icon_mask_rules(_ICON_RULE)
+
+
+def _selectors(scope: str, suffix: str, nested: bool) -> str:
+    """Build the selector list for one base-control rule.
+
+    ``nested`` scopes (the Admin shell) only ever match descendants, because the
+    shell class sits on a container.  The plain-widget scope also has to match
+    the element *itself*: the factory puts ``.uniui-widget`` on each widget, so
+    ``.uniui-widget.widget-text`` and ``.uniui-widget .widget-text`` are both
+    real cases depending on how ipywidgets nested that particular control.
+    """
+    parts = [f"{scope} {part.strip()}" for part in suffix.split(",")]
+    if not nested:
+        parts = [
+            f"{scope}{part.strip()},\n{scope} {part.strip()}"
+            for part in suffix.split(",")
+        ]
+    return ",\n".join(parts)
+
+
+def base_control_rules(scope: str, nested: bool = True) -> str:
+    """Return the themed rules for stock ipywidgets controls under ``scope``.
+
+    One builder serves both scopes: ``.uniui-admin-shell`` (nested, emitted
+    inside :func:`css`) and ``.uniui-widget`` (not nested, emitted by
+    ``uniui.jupyter_style`` for apps that never build an AppShell).  The two
+    stylesheets still reach the DOM by different routes and on different
+    schedules - only the rule *text* is shared.
+
+    ipywidgets ships inline styles of its own, hence the ``!important`` flags.
+    """
+    sel = lambda suffix: _selectors(scope, suffix, nested)
+    # The Admin shell paints the wrapper as well as the button; the plain scope
+    # historically only painted the button, and widening it here would restyle
+    # every stock button in a plain notebook.
+    button_suffix = ".widget-button,.widget-button button" if nested else ".widget-button button"
+    # A label is always a child node, never the marked widget itself, so this
+    # one stays descendant-only in both scopes.
+    rules = f"""{scope} .widget-label {{color:var(--uniui-text)}}
+{sel(".widget-text input")} {{
+  color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
+  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
+  min-height:38px; padding:7px 10px;
+}}
+{sel(button_suffix)} {{
+  background:var(--uniui-accent)!important; color:white!important;
+  border:1px solid var(--uniui-accent)!important; border-radius:9px!important;
+  min-height:36px; padding:6px 13px; font-weight:600;
+}}
+{sel(button_suffix.replace(",", ":hover,") + ":hover")} {{
+  background:var(--uniui-accent_hover)!important;
+  border-color:var(--uniui-accent_hover)!important;
+}}
+{sel(".widget-dropdown > select,.widget-combobox input")} {{
+  color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
+  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
+  min-height:38px; padding:7px 30px 7px 10px; font-size:13px;
+}}
+"""
+    if nested:
+        rules += f"""{sel(".widget-dropdown > select:hover,.widget-combobox input:hover")} {{border-color:var(--uniui-text_muted)!important}}
+"""
+    rules += f"""{sel(".widget-dropdown > select:focus,.widget-combobox input:focus")} {{
+  border:2px solid var(--uniui-accent)!important; outline:none;
+}}"""
+    return rules
 
 
 def css() -> str:
     p = get_palette()
-    variables = ";".join(f"--uniui-{key}:{value}" for key, value in p.items())
+    variables = palette_declarations(p)
     return f"""
 <style>
 {shared_icon_css()}
@@ -42,35 +111,7 @@ def css() -> str:
   box-shadow:var(--uniui-shadow); box-sizing:border-box;
 }}
 .uniui-admin-shell, .uniui-admin-shell * {{box-sizing:border-box}}
-.uniui-admin-shell .widget-label {{color:var(--uniui-text)}}
-.uniui-admin-shell .widget-text input {{
-  color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
-  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
-  min-height:38px; padding:7px 10px;
-}}
-.uniui-admin-shell .widget-button,
-.uniui-admin-shell .widget-button button {{
-  background:var(--uniui-accent)!important; color:white!important;
-  border:1px solid var(--uniui-accent)!important; border-radius:9px!important;
-  min-height:36px; padding:6px 13px; font-weight:600;
-}}
-.uniui-admin-shell .widget-button:hover,
-.uniui-admin-shell .widget-button button:hover {{
-  background:var(--uniui-accent_hover)!important;
-  border-color:var(--uniui-accent_hover)!important;
-}}
-.uniui-admin-shell .widget-dropdown > select,
-.uniui-admin-shell .widget-combobox input {{
-  color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
-  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
-  min-height:38px; padding:7px 30px 7px 10px; font-size:13px;
-}}
-.uniui-admin-shell .widget-dropdown > select:hover,
-.uniui-admin-shell .widget-combobox input:hover {{border-color:var(--uniui-text_muted)!important}}
-.uniui-admin-shell .widget-dropdown > select:focus,
-.uniui-admin-shell .widget-combobox input:focus {{
-  border:2px solid var(--uniui-accent)!important; outline:none;
-}}
+{base_control_rules(".uniui-admin-shell", nested=True)}
 .uniui-admin-shell .widget-tab {{background:transparent; border:none}}
 .uniui-admin-shell .widget-tab > .p-TabBar,
 .uniui-admin-shell .widget-tab .lm-TabBar {{

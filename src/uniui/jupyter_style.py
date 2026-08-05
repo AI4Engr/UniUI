@@ -16,6 +16,8 @@ from typing import Optional
 
 import ipywidgets as widgets
 
+from .backends.jupyter.styles import base_control_rules
+from .browser_css import palette_declarations
 from .jupyter_components import get_admin_palette
 
 
@@ -34,8 +36,7 @@ def mark(widget) -> None:
 
 def base_css() -> str:
     """Return the base widget CSS for the active theme, wrapped in <style>."""
-    palette = get_admin_palette()
-    variables = ";".join(f"--uniui-{key}:{value}" for key, value in palette.items())
+    variables = palette_declarations(get_admin_palette())
     return f"<style>\n.{WIDGET_CLASS} {{{variables}}}\n{_BASE_RULES}</style>"
 
 
@@ -61,41 +62,11 @@ def refresh() -> None:
 
 
 # Scoped to .uniui-widget so these never fight the admin shell's own rules.
-# ipywidgets ships its own inline styles, hence the !important flags.
+# The stock-control rules come from the shared builder in the Jupyter backend;
+# only the tab rules below are specific to this scope.
 _BASE_RULES = f"""
 .{WIDGET_CLASS} {{box-sizing:border-box}}
-.{WIDGET_CLASS} .widget-label {{color:var(--uniui-text)}}
-.{WIDGET_CLASS}.widget-text input,
-.{WIDGET_CLASS} .widget-text input {{
-  color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
-  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
-  min-height:38px; padding:7px 10px;
-}}
-.{WIDGET_CLASS}.widget-button button,
-.{WIDGET_CLASS} .widget-button button {{
-  background:var(--uniui-accent)!important; color:white!important;
-  border:1px solid var(--uniui-accent)!important; border-radius:9px!important;
-  min-height:36px; padding:6px 13px; font-weight:600;
-}}
-.{WIDGET_CLASS}.widget-button button:hover,
-.{WIDGET_CLASS} .widget-button button:hover {{
-  background:var(--uniui-accent_hover)!important;
-  border-color:var(--uniui-accent_hover)!important;
-}}
-.{WIDGET_CLASS}.widget-dropdown > select,
-.{WIDGET_CLASS} .widget-dropdown > select,
-.{WIDGET_CLASS}.widget-combobox input,
-.{WIDGET_CLASS} .widget-combobox input {{
-  color:var(--uniui-text)!important; background:var(--uniui-input_bg)!important;
-  border:1px solid var(--uniui-border_strong)!important; border-radius:9px!important;
-  min-height:38px; padding:7px 30px 7px 10px; font-size:13px;
-}}
-.{WIDGET_CLASS}.widget-dropdown > select:focus,
-.{WIDGET_CLASS} .widget-dropdown > select:focus,
-.{WIDGET_CLASS}.widget-combobox input:focus,
-.{WIDGET_CLASS} .widget-combobox input:focus {{
-  border:2px solid var(--uniui-accent)!important; outline:none;
-}}
+{base_control_rules(f".{WIDGET_CLASS}", nested=False)}
 .{WIDGET_CLASS}.widget-tab, .{WIDGET_CLASS} .widget-tab {{background:transparent; border:none}}
 .{WIDGET_CLASS}.widget-tab .p-TabBar, .{WIDGET_CLASS} .widget-tab .p-TabBar,
 .{WIDGET_CLASS}.widget-tab .lm-TabBar, .{WIDGET_CLASS} .widget-tab .lm-TabBar {{

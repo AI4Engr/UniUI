@@ -24,3 +24,14 @@ class JupyterDrawerAdapter(IDrawer):
     def close(self) -> None: self._open = False; self._native.remove_class("uniui-open")
     def toggle(self) -> None: self.close() if self._open else self.open()
     def is_open(self) -> bool: return self._open
+
+
+def drawer_css() -> str:
+    """The Drawer CSS fragment, composed into the shell sheet by ``styles.css``."""
+    return """.uniui-admin-drawer {max-height:0;opacity:0;overflow:hidden;transform:translateX(24px);
+  pointer-events:none;padding:0 20px;background:var(--uniui-surface);border:1px solid transparent;
+  border-radius:14px;transition:max-height .2s ease,opacity .18s ease,transform .2s ease,padding .2s ease}
+.uniui-admin-drawer.uniui-open {max-height:520px;opacity:1;transform:none;pointer-events:auto;
+  padding:18px 20px;border-color:var(--uniui-border);box-shadow:var(--uniui-shadow)}
+.uniui-drawer-header {align-items:center}
+.uniui-drawer-title,.uniui-drawer-title p {margin:0;color:var(--uniui-text);font-size:18px;font-weight:700}"""

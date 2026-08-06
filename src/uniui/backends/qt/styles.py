@@ -1,8 +1,8 @@
 """Qt QSS fragments shared by more than one Admin component.
 
 Per-component QSS lives with its component. What stays here is the QSS with
-more than one owner: the scrollbar rules (which ``qt_style`` also serves to
-the plain controls) and the card frame (shared by Card and Drawer).
+more than one owner: the scrollbar rules (which ``primitives.styles`` also
+serves to the plain controls) and the card frame (shared by Card and Drawer).
 
 Every builder reads the live palette at call time, so a theme switch is picked
 up simply by calling them again.

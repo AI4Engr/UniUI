@@ -8,7 +8,7 @@ import ipywidgets as widgets
 
 from ....components import ITable
 from ....models.table import CELL_NUMBER, CELL_STATUS, TableModel
-from ..runtime import html
+from ..runtime import M, html
 
 class JupyterTableAdapter(ITable):
     def __init__(self):
@@ -94,3 +94,29 @@ class JupyterTableAdapter(ITable):
             self._row_click_cb(clicked)
         if index != -1:
             self._bridge.value = -1
+
+
+def table_css() -> str:
+    """The Table CSS fragment, composed into the shell sheet by ``styles.css``.
+
+    Includes the status-pill rules: the pill is a table-cell rendering concern
+    and its markup is emitted by this module.
+    """
+    return f""".uniui-admin-table {{width:100%; min-width:0}}
+.uniui-admin-table table {{width:100%; border-collapse:separate; border-spacing:0; color:var(--uniui-text); font-size:13px}}
+.uniui-admin-table th {{
+  padding:10px 12px; text-align:left; color:var(--uniui-text_muted);
+  background:var(--uniui-surface); border-bottom:1px solid var(--uniui-border);
+  font-size:{M['stat_label_size']}px; font-weight:600;
+}}
+.uniui-admin-table td {{padding:11px 12px;border-bottom:1px solid var(--uniui-border)}}
+.uniui-admin-table tbody tr {{cursor:pointer}}
+.uniui-admin-table tbody tr:hover {{background:var(--uniui-surface_subtle)}}
+.uniui-admin-table .uniui-number {{text-align:right}}
+.uniui-status-pill {{display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;
+  border-radius:999px;font-size:11px;font-weight:700}}
+.uniui-status-pill.uniui-status-ok {{color:var(--uniui-status_ok_fg);background:var(--uniui-status_ok_bg)}}
+.uniui-status-pill.uniui-status-warn {{color:var(--uniui-status_warn_fg);background:var(--uniui-status_warn_bg)}}
+.uniui-status-pill.uniui-status-error {{color:var(--uniui-status_error_fg);background:var(--uniui-status_error_bg)}}
+.uniui-status-pill.uniui-status-neutral {{color:var(--uniui-status_neutral_fg);background:var(--uniui-status_neutral_bg)}}
+.uniui-table-message, .uniui-table-message p {{margin:20px 0;text-align:center;color:var(--uniui-text_muted)}}"""

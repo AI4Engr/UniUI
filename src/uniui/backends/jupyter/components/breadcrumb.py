@@ -46,3 +46,15 @@ class JupyterBreadcrumbAdapter(IBreadcrumb):
     def _on_click(self, path: str) -> None:
         if self._click_cb:
             self._click_cb(path)
+
+
+def breadcrumb_css() -> str:
+    """The Breadcrumb CSS fragment, composed into the shell sheet by ``styles.css``."""
+    return """.uniui-breadcrumb {align-items:center;gap:4px;min-width:0}
+.uniui-breadcrumb .widget-button,
+.uniui-breadcrumb .widget-button button {
+  min-height:28px;padding:2px 5px;background:transparent!important;
+  color:var(--uniui-text_muted)!important;border-color:transparent!important;
+}
+.uniui-breadcrumb-current, .uniui-breadcrumb-current p {margin:0;color:var(--uniui-text);font-weight:650}
+.uniui-breadcrumb-separator, .uniui-breadcrumb-separator p {margin:0;color:var(--uniui-text_muted)}"""

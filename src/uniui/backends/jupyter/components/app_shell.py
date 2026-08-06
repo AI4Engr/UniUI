@@ -7,7 +7,8 @@ import ipywidgets as widgets
 
 from ....components import IAppShell
 from ....models.navigation import clamp_width
-from ..styles import DEBUG_MEASURE_JS, SPLITTER_HTML, css, debug_html
+from ..styles import css
+from .app_shell_assets import DEBUG_MEASURE_JS, SPLITTER_HTML, debug_html
 from .sidebar import JupyterSidebarAdapter
 from ..runtime import M, native_of, track_themed
 
@@ -188,3 +189,46 @@ class JupyterAppShellAdapter(IAppShell):
 
     def apply_theme(self) -> None:
         self._style.value = css()
+
+
+def app_shell_css() -> str:
+    """The AppShell chrome: header, body, content and footer regions."""
+    return f""".uniui-shell-header {{
+  flex:0 0 {M['header_height']}px; min-height:{M['header_height']}px; padding:0 16px; gap:10px;
+  align-items:center; background:var(--uniui-header_bg);
+  border-bottom:1px solid var(--uniui-border);
+}}
+.uniui-shell-body {{display:flex; width:100%; min-width:0; flex:1 1 auto}}
+.uniui-shell-content {{
+  min-width:0; flex:1 1 0; padding:{M['content_padding']}px {M['content_padding'] + 4}px {M['content_padding'] + 4}px;
+  overflow:auto; background:var(--uniui-bg);
+}}
+.uniui-shell-footer {{
+  flex:0 0 auto; min-height:{M['footer_height']}px; padding:8px 16px;
+  background:var(--uniui-surface); border-top:1px solid var(--uniui-border);
+}}"""
+
+
+def app_shell_responsive_css() -> str:
+    """The container queries that collapse the shell at narrow widths.
+
+    These stay together rather than moving to each component, because one
+    breakpoint reshapes the sidebar, splitter, content and footer as a single
+    layout decision. Splitting them per component would make it impossible to
+    read what the shell looks like at a given width.
+    """
+    return f"""@container (max-width:1019px) {{
+  .uniui-admin-sidebar {{width:{M['sidebar_collapsed']}px!important;min-width:{M['sidebar_collapsed']}px!important;max-width:{M['sidebar_collapsed']}px!important;flex-basis:{M['sidebar_collapsed']}px!important;padding:14px 8px}}
+  .uniui-admin-sidebar .widget-button,
+  .uniui-admin-sidebar .widget-button button {{font-size:0;text-align:center;padding:8px 4px}}
+  .uniui-admin-sidebar .widget-button button::before {{margin-right:0}}
+  .uniui-admin-sidebar .widget-button::first-letter,
+  .uniui-admin-sidebar .widget-button button::first-letter {{font-size:16px}}
+  .uniui-splitter-widget {{display:none!important}}
+  .uniui-shell-content {{padding:22px 18px}}
+}}
+@container (max-width:719px) {{
+  .uniui-shell-header {{padding:0 10px}}
+  .uniui-shell-content {{padding:18px 12px}}
+  .uniui-shell-footer {{display:none!important}}
+}}"""

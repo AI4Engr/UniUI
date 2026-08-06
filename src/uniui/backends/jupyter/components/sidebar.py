@@ -10,6 +10,7 @@ from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import (
     SIDEBAR_MAX, SIDEBAR_MIN, NavigationModel, clamp_width,
 )
+from ..runtime import M
 
 class JupyterSidebarAdapter(ISidebar):
     def __init__(self):
@@ -64,3 +65,40 @@ class JupyterSidebarAdapter(ISidebar):
     def _on_select(self, key: str) -> None:
         if self._select_cb:
             self._select_cb(key)
+
+
+def sidebar_css() -> str:
+    """The Sidebar CSS fragment, composed into the shell sheet by ``styles.css``.
+
+    Includes the splitter rules: the drag handle resizes *this* rail and its
+    markup lives in ``app_shell_assets.SPLITTER_HTML``, so the two belong to
+    the same visual unit. The collapsed-rail rules under ``@container`` live in
+    :func:`..app_shell.app_shell_responsive_css`, because that media query also
+    reshapes the header, content and footer.
+    """
+    return f""".uniui-admin-sidebar {{
+  width:{M['sidebar_expanded']}px; min-width:{M['sidebar_min']}px;
+  max-width:{M['sidebar_max']}px; flex:0 0 {M['sidebar_expanded']}px;
+  padding:14px 10px; gap:5px; overflow:auto; background:var(--uniui-sidebar_bg);
+}}
+.uniui-admin-sidebar .widget-button {{width:100%}}
+.uniui-admin-sidebar .widget-button,
+.uniui-admin-sidebar .widget-button button {{
+  width:100%; min-height:42px; padding:8px 11px; text-align:left;
+  background:transparent!important; color:var(--uniui-sidebar_fg)!important;
+  border-color:transparent!important; box-shadow:none!important;
+}}
+.uniui-admin-sidebar .widget-button:hover,
+.uniui-admin-sidebar .widget-button button:hover,
+.uniui-admin-sidebar .uniui-active,
+.uniui-admin-sidebar .uniui-active button {{
+  color:white!important; background:var(--uniui-sidebar_active)!important;
+}}
+.uniui-admin-sidebar .uniui-active {{box-shadow:inset {M['sidebar_edge_width']}px 0 0 var(--uniui-sidebar_edge)}}
+.uniui-admin-sidebar .uniui-active button::before {{background:var(--uniui-accent)}}
+.uniui-splitter-widget {{
+  width:6px; min-width:6px; flex:0 0 6px; align-self:stretch;
+  background:var(--uniui-border); cursor:col-resize; touch-action:none;
+}}
+.uniui-splitter-widget:hover, .uniui-splitter-widget:active {{background:var(--uniui-accent)}}
+.uniui-splitter-handle {{width:100%;height:100%;min-height:520px;touch-action:none}}"""

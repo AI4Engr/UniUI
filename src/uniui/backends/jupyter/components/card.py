@@ -6,7 +6,7 @@ from html import escape
 import ipywidgets as widgets
 
 from ....components import ICard
-from ..runtime import html, native
+from ..runtime import M, html, native
 
 class JupyterCardAdapter(ICard):
     def __init__(self):
@@ -40,3 +40,20 @@ class JupyterCardAdapter(ICard):
     def set_action(self, widget) -> None:
         self._action.children = (native(widget),)
         self._action.layout.display = None
+
+
+def card_css() -> str:
+    """The Card CSS fragment, composed into the shell sheet by ``styles.css``."""
+    return f""".uniui-admin-card {{
+  width:100%; min-width:0; padding:{M['card_padding']}px {M['card_padding'] + 2}px; gap:{M['card_gap']}px;
+  background:var(--uniui-surface); border:1px solid var(--uniui-border);
+  border-radius:14px; box-shadow:none;
+}}
+.uniui-card-header {{display:flex; flex-flow:row; align-items:flex-start; gap:12px}}
+.uniui-card-copy {{min-width:0; flex:1 1 auto; gap:2px}}
+.uniui-card-title, .uniui-card-title p {{
+  margin:0; color:var(--uniui-text); font-size:16px; font-weight:700;
+}}
+.uniui-card-subtitle, .uniui-card-subtitle p {{
+  margin:0; color:var(--uniui-text_muted); font-size:12px;
+}}"""

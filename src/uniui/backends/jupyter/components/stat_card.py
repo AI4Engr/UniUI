@@ -10,7 +10,7 @@ from ....models.stat_card import (
     TREND_DOWN, TREND_UP, normalize_card_status, trend_presentation,
 )
 from ....models.status import STATUS_ERROR, STATUS_WARN
-from ..runtime import html
+from ..runtime import M, html
 
 class JupyterStatCardAdapter(IStatCard):
     def __init__(self):
@@ -62,3 +62,21 @@ class JupyterStatCardAdapter(IStatCard):
     def set_status(self, status: str) -> None:
         self._status = normalize_card_status(status)
         self._apply_trend()
+
+
+def stat_card_css() -> str:
+    """The StatCard CSS fragment, composed into the shell sheet by ``styles.css``."""
+    return f""".uniui-stat-card {{
+  min-width:190px; min-height:136px; padding:15px 18px 14px;
+  background:var(--uniui-surface); border:1px solid var(--uniui-border);
+  border-radius:14px;
+  box-shadow:none; gap:1px; flex:1 1 190px;
+}}
+.uniui-stat-label, .uniui-stat-label p {{margin:0;color:var(--uniui-text_muted);font-size:{M['stat_label_size']}px;font-weight:600}}
+.uniui-stat-value, .uniui-stat-value p {{margin:2px 0 0;color:var(--uniui-text);font-size:{M['stat_value_size']}px;line-height:1.15;font-weight:750}}
+.uniui-stat-unit, .uniui-stat-unit p {{margin:0;color:var(--uniui-text_muted);font-size:11px}}
+.uniui-stat-trend, .uniui-stat-trend p {{margin:9px 0 0;color:var(--uniui-text_muted);font-size:11px;font-weight:650}}
+.uniui-stat-trend.uniui-up, .uniui-stat-trend.uniui-up p {{color:var(--uniui-ok)}}
+.uniui-stat-trend.uniui-down, .uniui-stat-trend.uniui-down p {{color:var(--uniui-error)}}
+.uniui-stat-trend.uniui-status-warn, .uniui-stat-trend.uniui-status-warn p {{color:var(--uniui-warn)}}
+.uniui-stat-trend.uniui-status-error, .uniui-stat-trend.uniui-status-error p {{color:var(--uniui-error)}}"""

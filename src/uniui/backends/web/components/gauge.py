@@ -7,7 +7,7 @@ from nicegui import ui
 from ....components import IGauge
 from ....models.gauge import GaugeModel
 from ....visuals import render_gauge_svg
-from ....web import _WebAdapter
+from ..primitives import _WebAdapter
 from ..runtime import get_palette, track_visual
 from ..styles import install_admin_css
 
@@ -30,3 +30,14 @@ class WebGaugeAdapter(_WebAdapter, IGauge):
             render_gauge_svg(*self._model.render_args(), get_palette())
         )
     def apply_theme(self) -> None: self._render()
+
+
+def gauge_css() -> str:
+    """The Gauge CSS fragment, composed into the sheet by ``styles.install_admin_css``.
+
+    Gauge and Chart share one selector list because both render a single
+    responsive ``<svg>``; :func:`..chart.chart_css` returns the same block.
+    """
+    return """        .uniui-web-gauge,.uniui-web-chart {width:100%;min-width:0}
+        .uniui-web-gauge svg,.uniui-web-chart svg {display:block;width:100%;height:auto;max-height:250px}
+"""

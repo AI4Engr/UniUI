@@ -9,7 +9,7 @@ from nicegui import ui
 from ....components import ISidebar
 from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import NavigationModel
-from ....web import _WebAdapter
+from ..primitives import _WebAdapter
 from ..styles import install_admin_css
 
 class WebSidebarAdapter(_WebAdapter, ISidebar):
@@ -48,3 +48,22 @@ class WebSidebarAdapter(_WebAdapter, ISidebar):
             )
     def _emit(self, key: str) -> None:
         if self._select_cb: self._select_cb(key)
+
+
+def sidebar_css() -> str:
+    """The Sidebar CSS fragment, composed into the sheet by ``styles.install_admin_css``.
+
+    The collapsed-rail rules under ``@media`` live in
+    :func:`..app_shell.app_shell_responsive_css`, because that breakpoint also
+    reshapes the splitter, content and header.
+    """
+    return """        .uniui-web-sidebar {width:100%;height:100%;padding:18px 12px;gap:6px!important;overflow:auto;background:var(--uniui-sidebar_bg)}
+        .uniui-web-sidebar .q-btn {position:relative;width:100%;min-height:42px;justify-content:flex-start;padding:8px 12px;
+          color:var(--uniui-sidebar_fg)!important;background:transparent!important;border-radius:8px;font-size:13px;font-weight:500}
+        .uniui-web-sidebar .q-btn .q-icon {width:22px;margin-right:10px;color:#94a3b8;font-size:19px}
+        .uniui-web-sidebar .q-btn:hover {color:#fff!important;background:rgba(255,255,255,.055)!important}
+        .uniui-web-sidebar .uniui-active {color:#fff!important;background:var(--uniui-sidebar_active)!important;box-shadow:inset var(--uniui-sidebar-edge-width) 0 0 var(--uniui-accent)}
+        .uniui-web-sidebar .uniui-active .uniui-svg-icon {color:var(--uniui-accent)}
+        .uniui-web-sidebar .uniui-collapsed .uniui-nav-label {display:none}
+        .uniui-web-sidebar .uniui-collapsed .uniui-svg-icon {margin-right:0}
+"""

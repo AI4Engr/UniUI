@@ -24,3 +24,14 @@ class JupyterGaugeAdapter(IGauge):
     def _render(self) -> None:
         self._native.value = render_gauge_svg(*self._model.render_args(), get_palette())
     def apply_theme(self) -> None: self._render()
+
+
+def gauge_css() -> str:
+    """The Gauge CSS fragment, composed into the shell sheet by ``styles.css``.
+
+    Gauge and Chart share one selector list because both render a single
+    responsive ``<svg>`` into the same kind of wrapper; keeping one copy avoids
+    the two drifting apart. :func:`..chart.chart_css` returns the same block.
+    """
+    return """.uniui-admin-gauge,.uniui-admin-chart {width:100%;min-width:0}
+.uniui-admin-gauge svg,.uniui-admin-chart svg {display:block;width:100%;height:auto;max-height:250px}"""

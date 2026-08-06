@@ -6,7 +6,7 @@ from typing import Dict, List
 from nicegui import ui
 
 from ....components import IMetricList
-from ....web import _WebAdapter
+from ..primitives import _WebAdapter
 from ..runtime import clear
 from ..styles import install_admin_css
 
@@ -28,3 +28,12 @@ class WebMetricListAdapter(_WebAdapter, IMetricList):
                 with ui.row().classes(classes):
                     ui.label(str(item.get("label", ""))).classes("uniui-web-metric-label")
                     ui.label(str(item.get("value", ""))).classes("uniui-web-metric-value")
+
+
+def metric_list_css() -> str:
+    """The MetricList CSS fragment, composed into the sheet by ``styles.install_admin_css``."""
+    return """        .uniui-web-metric-row {padding:8px 0!important;justify-content:space-between!important;align-items:center!important}
+        .uniui-web-metric-row.uniui-metric-divider {border-top:1px solid var(--uniui-border)}
+        .uniui-web-metric-label {color:var(--uniui-text_muted)!important;font-size:var(--uniui-stat-label-size)}
+        .uniui-web-metric-value {color:var(--uniui-text)!important;font-size:13px;font-weight:600}
+"""

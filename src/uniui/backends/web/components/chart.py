@@ -8,7 +8,7 @@ from nicegui import ui
 from ....components import IChart
 from ....models.chart import ChartModel
 from ....visuals import render_chart_svg
-from ....web import _WebAdapter
+from ..primitives import _WebAdapter
 from ..runtime import get_palette, track_visual
 from ..styles import install_admin_css
 
@@ -32,3 +32,9 @@ class WebChartAdapter(_WebAdapter, IChart):
             render_chart_svg(*self._model.render_args(), get_palette())
         )
     def apply_theme(self) -> None: self._render()
+
+
+def chart_css() -> str:
+    """The Chart CSS fragment; :func:`..gauge.gauge_css` owns the shared text."""
+    from .gauge import gauge_css
+    return gauge_css()

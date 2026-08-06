@@ -8,7 +8,7 @@ from nicegui import ui
 from ....components import ITable
 from ....models.status import status_class_expression_js
 from ....models.table import TableModel
-from ....web import _WebAdapter
+from ..primitives import _WebAdapter
 from ..styles import install_admin_css
 
 class WebTableAdapter(_WebAdapter, ITable):
@@ -61,3 +61,35 @@ class WebTableAdapter(_WebAdapter, ITable):
         if row is None and isinstance(args, (list, tuple)) and args:
             row = args[-1]
         if self._row_click_cb and isinstance(row, dict): self._row_click_cb(row)
+
+
+def table_css() -> str:
+    """The Table CSS fragment, composed into the sheet by ``styles.install_admin_css``.
+
+    Includes the status-pill rules: the pill is a table-cell rendering concern
+    and its markup is emitted by this module.
+    """
+    return """        .uniui-web-table {width:100%;color:var(--uniui-text);background:var(--uniui-surface);border:1px solid var(--uniui-border);
+          border-radius:10px;box-shadow:none!important;overflow:hidden;font-family:inherit}
+        .uniui-web-table .q-table__container,.uniui-web-table .q-table__card {box-shadow:none!important;background:transparent}
+        .uniui-web-table thead tr {height:44px;background:var(--uniui-surface);color:var(--uniui-text_muted);
+          border-bottom:1px solid var(--uniui-border)}
+        .uniui-web-table thead th {font-size:var(--uniui-stat-label-size);font-weight:600}
+        .uniui-web-table tbody td {height:52px;font-size:13px;border-color:var(--uniui-border)}
+        .uniui-web-table tbody tr:hover {background:var(--uniui-surface_subtle)}
+        .uniui-web-table .q-table__bottom {min-height:42px;border-top:1px solid var(--uniui-border);color:var(--uniui-text_muted);font-size:12px}
+"""
+
+
+def status_pill_css() -> str:
+    """The status-pill rules, emitted after the drawer block.
+
+    Separate from :func:`table_css` only to preserve the original rule order in
+    the emitted sheet - CSS is order-sensitive, and these sat further down.
+    """
+    return """        .uniui-status-pill {display:inline-flex;align-items:center;min-height:24px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+        .uniui-status-pill.uniui-status-ok {color:var(--uniui-status_ok_fg);background:var(--uniui-status_ok_bg)}
+        .uniui-status-pill.uniui-status-warn {color:var(--uniui-status_warn_fg);background:var(--uniui-status_warn_bg)}
+        .uniui-status-pill.uniui-status-error {color:var(--uniui-status_error_fg);background:var(--uniui-status_error_bg)}
+        .uniui-status-pill.uniui-status-neutral {color:var(--uniui-status_neutral_fg);background:var(--uniui-status_neutral_bg)}
+"""

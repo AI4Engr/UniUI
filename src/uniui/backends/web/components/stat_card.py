@@ -9,7 +9,7 @@ from ....models.stat_card import (
     TREND_DOWN, TREND_UP, normalize_card_status, trend_presentation,
 )
 from ....models.status import STATUS_ERROR, STATUS_WARN
-from ....web import _WebAdapter
+from ..primitives import _WebAdapter
 from ..styles import install_admin_css
 
 class WebStatCardAdapter(_WebAdapter, IStatCard):
@@ -52,3 +52,17 @@ class WebStatCardAdapter(_WebAdapter, IStatCard):
     def set_status(self, status: str) -> None:
         self._status = normalize_card_status(status)
         self._apply_trend()
+
+
+def stat_card_css() -> str:
+    """The StatCard CSS fragment, composed into the sheet by ``styles.install_admin_css``."""
+    return """        .uniui-web-stat {min-width:190px;min-height:136px;flex:1 1 190px;padding:15px 18px!important;gap:1px!important;
+          border:1px solid var(--uniui-border)!important;
+          border-radius:14px!important;background:var(--uniui-surface)!important;box-shadow:none!important}
+        .uniui-web-stat-label {color:var(--uniui-text_muted);font-size:var(--uniui-stat-label-size);font-weight:600}
+        .uniui-web-stat-value {color:var(--uniui-text);font-size:var(--uniui-stat-value-size);line-height:1.15;font-weight:750}
+        .uniui-web-stat-unit {color:var(--uniui-text_muted);font-size:11px}
+        .uniui-web-stat-trend {margin-top:auto;color:var(--uniui-text_muted);font-size:11px;font-weight:650}
+        .uniui-web-stat-trend.uniui-up {color:var(--uniui-ok)} .uniui-web-stat-trend.uniui-down {color:var(--uniui-error)}
+        .uniui-web-stat-trend.uniui-warn {color:var(--uniui-warn)} .uniui-web-stat-trend.uniui-error {color:var(--uniui-error)}
+"""

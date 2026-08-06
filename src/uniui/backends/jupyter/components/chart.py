@@ -26,3 +26,14 @@ class JupyterChartAdapter(IChart):
     def _render(self) -> None:
         self._native.value = render_chart_svg(*self._model.render_args(), get_palette())
     def apply_theme(self) -> None: self._render()
+
+
+def chart_css() -> str:
+    """The Chart CSS fragment.
+
+    Chart and Gauge share one selector list; :func:`..gauge.gauge_css` owns the
+    text. ``styles.css`` emits it once, so this is here for symmetry and for
+    callers that want the chart rules on their own.
+    """
+    from .gauge import gauge_css
+    return gauge_css()

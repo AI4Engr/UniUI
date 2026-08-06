@@ -7,7 +7,7 @@ from typing import Dict, List
 import ipywidgets as widgets
 
 from ....components import IMetricList
-from ..runtime import html
+from ..runtime import M, html
 
 class JupyterMetricListAdapter(IMetricList):
     """Dense two-column key/value list for secondary metrics."""
@@ -30,3 +30,12 @@ class JupyterMetricListAdapter(IMetricList):
                 f'<span class="uniui-metric-value">{value}</span></div>'
             )
         self._html.value = "".join(rows)
+
+
+def metric_list_css() -> str:
+    """The MetricList CSS fragment, composed into the shell sheet by ``styles.css``."""
+    return f""".uniui-metric-list-wrap {{width:100%; min-width:0}}
+.uniui-metric-row {{display:flex; justify-content:space-between; align-items:center; padding:8px 0}}
+.uniui-metric-row.uniui-metric-divider {{border-top:1px solid var(--uniui-border)}}
+.uniui-metric-label {{color:var(--uniui-text_muted); font-size:{M['stat_label_size']}px}}
+.uniui-metric-value {{color:var(--uniui-text); font-size:13px; font-weight:600}}"""

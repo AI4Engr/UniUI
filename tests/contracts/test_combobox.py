@@ -74,7 +74,7 @@ class TestComboBoxContract(WidgetContractTest):
         combo_box.on_change(lambda: called.append(1))
 
         # Trigger change via the adapter interface — backend-agnostic.
-        # Qt fires the signal synchronously; Tk/wx go through their own paths.
+        # Qt fires the signal synchronously; Jupyter/Web go through their own paths.
         combo_box.set_selection("Beta")
         combo_box.set_selection("Alpha")
 

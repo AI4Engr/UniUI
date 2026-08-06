@@ -511,84 +511,9 @@ class IWidgetFactory(ABC):
     def createDrawer(self) -> "IDrawer":
         raise NotSupportedError("Drawer not supported on this platform")
 
-    # snake_case aliases
-    def create_label(self) -> ILabel:
-        return self.createLabel()
-
-    def create_button(self) -> IButton:
-        return self.createButton()
-
-    def create_line_edit(self) -> ILineEdit:
-        return self.createLineEdit()
-
-    def create_text_area(self) -> ITextArea:
-        return self.createTextArea()
-
-    def create_combo_box(self) -> IComboBox:
-        return self.createComboBox()
-
-    def create_dropdown(self) -> IDropdown:
-        return self.createDropdown()
-
-    def create_vbox(self) -> IVBoxLayout:
-        return self.createVBox()
-
-    def create_hbox(self) -> IHBoxLayout:
-        return self.createHBox()
-
-    def create_tab_widget(self) -> ITabWidget:
-        return self.createTabWidget()
-
-    def create_image(self) -> IImage:
-        return self.createImage()
-
-    def create_group_box(self) -> IGroupBox:
-        return self.createGroupBox()
-
-    def create_grid(self, columns: int = 12) -> "IGrid":
-        return self.createGrid(columns)
-
-    def create_wrap(self) -> "IWrap":
-        return self.createWrap()
-
-    def create_scroll_view(self) -> "IScrollView":
-        return self.createScrollView()
-
-    def create_split_pane(self, orientation: str = "horizontal") -> "ISplitPane":
-        return self.createSplitPane(orientation)
-
-    def create_overlay(self) -> "IOverlay":
-        return self.createOverlay()
-
-    def create_card(self) -> "ICard":
-        return self.createCard()
-
-    def create_stat_card(self) -> "IStatCard":
-        return self.createStatCard()
-
-    def create_table(self) -> "ITable":
-        return self.createTable()
-
-    def create_metric_list(self) -> "IMetricList":
-        return self.createMetricList()
-
-    def create_sidebar(self) -> "ISidebar":
-        return self.createSidebar()
-
-    def create_app_shell(self) -> "IAppShell":
-        return self.createAppShell()
-
-    def create_breadcrumb(self) -> "IBreadcrumb":
-        return self.createBreadcrumb()
-
-    def create_gauge(self) -> "IGauge":
-        return self.createGauge()
-
-    def create_chart(self) -> "IChart":
-        return self.createChart()
-
-    def create_drawer(self) -> "IDrawer":
-        return self.createDrawer()
+    # The snake_case aliases (create_label, create_vbox, ...) are not written
+    # out here. They are generated from _SNAKE_ALIASES below and attached to
+    # this class at import time - see _install_snake_aliases.
 
 
 #: camelCase name -> snake_case alias. Generated in one place instead of 26

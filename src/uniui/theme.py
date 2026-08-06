@@ -143,7 +143,7 @@ METRICS: Dict[str, Any] = {
 
 
 # Names the pre-merge palette used, mapped onto their current equivalents.
-# Keeping them means qt.py / tk.py / wx.py / web.py / display.py need no edits.
+# Keeping them means qt.py / jupyter.py / web.py / display.py need no edits.
 _ALIASES = {
     "fg": "text",
     "fg_muted": "text_muted",
@@ -151,9 +151,10 @@ _ALIASES = {
     "border_radius": "radius_medium",
 }
 
-# Tokens the old palette had that have no counterpart today.  `fg_button` is
-# genuinely useful (text on an accent-filled button); the spacing values are
-# only read by the legacy tk/wx/web renderers.
+# Tokens the old palette had that have no counterpart in the current design
+# tokens.  All four are still live: `fg_button` (text on an accent-filled
+# button) and the spacing values are read by the Qt, Jupyter and Web
+# renderers alike, so they are not removable without a palette redesign.
 _LEGACY_EXTRAS = {
     "fg_button": "#ffffff",
     "padding": 14,

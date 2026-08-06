@@ -13,7 +13,7 @@ def test_theme_is_mutated_in_place_not_rebound():
     """Backends do `from .theme import THEME` and hold that dict forever.
 
     Rebinding the name instead of updating it would silently break colours in
-    qt/jupyter/web/tk/wx/display with no error anywhere.
+    qt/jupyter/web/display with no error anywhere.
     """
     from uniui import theme
     from uniui.theme import THEME, set_theme, toggle_theme
@@ -48,7 +48,7 @@ def test_legacy_token_names_alias_current_ones(dark, legacy_name, current_name):
 
 
 def test_legacy_backends_still_find_every_key_they_read():
-    """qt/tk/wx/web/display read these directly; a missing one is a KeyError."""
+    """qt/jupyter/web/display read these directly; a missing one is a KeyError."""
     from uniui.theme import THEME, set_theme
 
     set_theme(True)

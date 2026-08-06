@@ -15,7 +15,7 @@ def test_widget_creation():
     print("Testing Widget Creation")
     print("=" * 60)
 
-    ui = UniUI(framework='tk')
+    ui = UniUI(framework='qt')
     print(f"Using framework: {ui.framework}\n")
 
     widget_types = [
@@ -53,7 +53,7 @@ def test_widget_methods():
     print("Testing Widget Methods")
     print("=" * 60)
 
-    ui = UniUI(framework='tk')
+    ui = UniUI(framework='qt')
     print(f"Using framework: {ui.framework}\n")
 
     # Test Label

@@ -23,7 +23,7 @@ from .helpers import convert_control_text
 class JupyterPushButton(widgets.Button):
     """Jupyter Push Button Widget - native implementation"""
 
-    # btntype -> theme key mapping (mirrors Qt/Tk)
+    # btntype -> theme key mapping (mirrors Qt)
     _BTNTYPE_KEY = {
         'action':  'accent_action',
         'op':      'accent_op',

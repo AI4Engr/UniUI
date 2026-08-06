@@ -1,7 +1,7 @@
 """
 Smoke tests for optional backends that may or may not be installed.
 
-These tests exercise the core widget surface on Qt, wx, and Jupyter when the
+These tests exercise the core widget surface on Qt, Jupyter and Web when the
 dependencies are available in the current environment.
 """
 import importlib
@@ -16,7 +16,6 @@ from uniui import create_factory
 
 BACKEND_MODULES = {
     "qt": "PySide2",
-    "wx": "wx",
     "jupyter": "ipywidgets",
     "web": "nicegui",
 }
@@ -31,7 +30,7 @@ def backend_available(framework: str) -> bool:
     return True
 
 
-@pytest.fixture(params=["qt", "wx", "jupyter", "web"])
+@pytest.fixture(params=["qt", "jupyter", "web"])
 def optional_framework(request):
     """Yield each optional framework that is installed locally."""
     framework = request.param

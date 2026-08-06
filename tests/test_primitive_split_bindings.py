@@ -22,10 +22,8 @@ import uniui.core as core
 
 SRC = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "uniui")
 
-#: Includes the legacy tk/wx backends deliberately. wxPython is not installed
-#: in CI, so this static check is the *only* verification those modules get -
-#: see ``tests/test_wx_backend_split.py``.
-BACKENDS = ["qt", "jupyter", "web", "tk", "wx"]
+#: The three supported backends. The legacy tk and wx backends were removed.
+BACKENDS = ["qt", "jupyter", "web"]
 
 #: ``from ...core import *`` binds these, which no AST walk can see.
 STAR_NAMES = {n for n in dir(core) if not n.startswith("_")}

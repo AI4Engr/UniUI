@@ -25,8 +25,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC = REPO_ROOT / "src"
 
-# Toolkits that must stay lazy. Tk is excluded: it ships with CPython and the
-# stdlib may legitimately pull it in.
+# Toolkits that must stay lazy. `wx` is kept in the list even though the wx
+# backend was removed: it costs nothing and catches an accidental re-import.
 LAZY_TOOLKITS = ["PySide2", "PySide6", "nicegui", "ipywidgets", "wx"]
 
 

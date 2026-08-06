@@ -17,7 +17,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--ui",
         default="qt",
-        choices=["qt", "jupyter", "web", "tk", "wx"],
+        choices=["qt", "jupyter", "web"],
         help="UI framework to use for contract tests (default: qt)",
     )
 

@@ -1,6 +1,6 @@
 # UniUI TODO: Admin / Dashboard Capabilities
 
-> "Admin-like" is defined here as: using the same UniUI Python API to build usable admin backends and data dashboards in both Qt and Jupyter. wxPython and Tkinter are legacy backends and are not required to support the new capabilities below.
+> "Admin-like" is defined here as: using the same UniUI Python API to build usable admin backends and data dashboards in both Qt and Jupyter. The wxPython and Tkinter backends have since been removed entirely.
 
 ## Product Positioning
 
@@ -62,10 +62,10 @@ app.run(page)
 - [ ] If needed, provide a thin compatibility layer for temporary PySide2 support
 - [ ] `show_ui()` must not call `sys.exit()` directly; allow embedding in existing Qt applications
 - [ ] Support high DPI, system scaling, keyboard navigation, and basic accessibility attributes
-- [ ] Fix the primary supported backends to Qt, Jupyter, and Web
-- [ ] Remove wxPython/Tkinter from auto-detection, default tests, and main CI
-- [ ] Move wxPython/Tkinter to a legacy package, separate branch, or an explicitly frozen compatibility layer
-- [ ] Legacy backends must report unsupported uniformly for new components; no further expansion
+- [x] Fix the primary supported backends to Qt, Jupyter, and Web
+- [x] Remove wxPython/Tkinter from auto-detection, default tests, and main CI
+- [x] Move wxPython/Tkinter to a legacy package, separate branch, or an explicitly frozen compatibility layer *(resolved by deleting both backends outright)*
+- [x] Legacy backends must report unsupported uniformly for new components; no further expansion *(no legacy backends remain)*
 
 ### Qt Web-Quality Visual Parity Roadmap
 
@@ -77,7 +77,7 @@ app.run(page)
 #### Phase 1: Design System and Shell
 
 - [x] Extract shared Admin design tokens: color, typography, spacing, radius, border, shadow, and semantic status colors
-- [ ] Add Qt-specific theme, icon, and visual-effect modules (`qt_theme.py`, `qt_icons.py`, `qt_effects.py`)
+- [x] Add Qt-specific icon and visual-effect modules (now `backends/qt/icons.py` and `backends/qt/effects.py`)
 - [x] Use one SVG icon set across Qt, Jupyter, and Web; remove text glyphs and operating-system-dependent icons
 - [x] Rebuild the Qt Header, Sidebar, Content, and Footer against the Web visual baseline
 - [ ] Match Web navigation states: normal, hover, active, disabled, collapsed, and keyboard focus
@@ -651,7 +651,7 @@ src/uniui/
 - [ ] Do not allow a passing CI result when all official backend tests were skipped due to missing dependencies
 - [ ] Ruff, format checks, and pytest must block non-conforming commits
 - [ ] Gradually enable strict mypy; stop using `|| true` to suppress type errors
-- [ ] Test suite default backend must no longer be legacy Tkinter
+- [x] Test suite default backend must no longer be legacy Tkinter
 - [ ] Add public API compatibility tests and a deprecation cycle
 - [ ] Add visual snapshot or key-page screenshot regression tests
 - [ ] Add performance benchmarks for DataGrid, dynamic charts, and 3D scenes

@@ -31,17 +31,30 @@ uniui/
   components.py       Admin component interfaces (ICard, ITable, ...)
   models/             backend-independent view models (status, table, chart, ...)
   theme.py            palettes + the single is_dark() flag
-  qt.py web.py jupyter.py tk.py wx.py
-                      compat shims; each re-exports its backends/<name>/primitives
+  display.py          framework-detecting dispatcher; owns no backend code
+  qt.py web.py jupyter.py
+  qt_components.py web_components.py jupyter_components.py
+  qt_style.py qt_icons.py qt_effects.py jupyter_style.py
+                      compat shims; pure re-exports, nothing is defined in them
   backends/
     registry.py       backend detection and factory selection
     <name>/
       primitives/     the controls every app gets (label, button, layouts, ...)
-      components/     the Admin layer (Card, Table, AppShell, ...) - qt/jupyter/web only
-      styles.py       that backend's stylesheet generation
+        styles.py     the themed sheet for those plain controls
+      components/     the Admin layer (Card, Table, AppShell, ...)
+      factory.py      the canonical factory: primitives + components
+      display.py      that backend's show / theme-refresh / scheduling
+      styles.py       shared base rules + composition of component fragments
+      demo_styles.py  .uniui-demo-* rules for examples/ (jupyter, web)
+      icons.py        SVG icon rendering (qt)
+      effects.py      optional motion helpers (qt)
       runtime.py      shared per-backend helpers
   browser_css.py      CSS rule builders shared by the jupyter and web sheets
 ```
+
+There are three backends: `qt`, `jupyter` and `web`. The legacy `tk` and `wx`
+backends were removed; `create_factory("tk")` now raises `ValueError` like any
+other unknown framework name.
 
 ## Dependency direction
 
@@ -71,13 +84,16 @@ uniui/
 package/submodule kind: `backends/web/primitives/__init__.py` imports
 `.theming`, which does `from . import state`. Everything else that *looks*
 circular in a naive scan (`registry` -> `qt_components` -> ... -> `uniui`) is
-broken by a deliberately deferred, function-level import. Two of those are
+broken by a deliberately deferred, function-level import. Three of those are
 load-bearing and documented at their call sites:
 
-- `backends/tk/primitives/layouts.py` and `text.py` need each other for
-  `isinstance` checks, resolved by a `_group_box()` helper that imports on call.
 - `routing.py` calls `_get_factory()` per navigation rather than binding a
   factory at import time.
+- `backends/<name>/styles.py` imports each component's `*_css()` fragment
+  *inside* the composing function, because the component modules import back
+  from `styles.py`.
+- `display.py` imports `backends/<name>/display.py` inside each dispatch
+  branch, so `import uniui` never pulls in PySide2, ipywidgets or NiceGUI.
 
 ## Two kinds of mutable state
 
@@ -106,8 +122,35 @@ only ever sees adapters.
 
 **primitives vs components**: `primitives/` holds the controls every app needs;
 `components/` holds the Admin layer. The `_Base<Name>WidgetFactory` class is the
-split point, so a plain app never imports the Admin layer. Tk and wx are legacy
-and have no Admin layer, hence no `_Base` split.
+split point, so a plain app never imports the Admin layer.
+`backends/<name>/factory.py` combines the two into the public factory the
+registry actually returns.
+
+**The canonical import chain never touches a compat shim.** It runs
+`registry -> backends/<name>/factory.py -> primitives + components`. The root
+`qt.py` / `web.py` / `jupyter.py` / `*_components.py` modules exist only for
+external callers that still import the old names; nothing inside the package
+imports them, so the package never depends on its own back-compat surface.
+`tests/test_widget_factory_composition.py` enforces this by breaking every
+shim and asserting `create_factory("qt")` still works. The same holds for the
+implementation modules that used to sit at the root: `qt_style.py`,
+`qt_icons.py`, `qt_effects.py` and `jupyter_style.py` are re-export files now,
+and the code lives under `backends/`.
+
+**Component CSS lives beside its component.** Each Jupyter/Web component module
+exports a `*_css()` fragment; `styles.py` keeps only what no single component
+owns (CSS variables, base control rules, shared icon helpers) and concatenates
+the fragments. Rules that style `examples/` markup rather than a widget live in
+`demo_styles.py`. Fragment order is the original rule order and must stay that
+way — CSS resolves ties by source order. Qt keeps its component QSS local
+already and is deliberately not centralised.
+
+**`display.py` is a dispatcher, not an implementation.** It detects the
+framework and delegates to `backends/<name>/display.py`. The per-backend
+`refresh_theme_*` forwarders are looked up as module globals so they stay
+monkeypatchable. `schedule_after()` keeps its Jupyter leg inlined on purpose —
+it is a toolkit-free `asyncio` check, and delegating it would drag ipywidgets
+into every Qt and fallback schedule.
 
 **Three separate theme spines**, because the backends deliver CSS differently:
 Qt mutates a live palette dict, Jupyter re-emits its whole stylesheet, and Web

@@ -11,17 +11,17 @@ dependency graph.
 | Lives in | `backends/<name>/primitives/` | `backends/<name>/components/` |
 | Interface goes in | `contracts/widgets.py` | `components.py` |
 | Factory method on | `IWidgetFactory` (abstract) | `IWidgetFactory` (raises `NotSupportedError` by default) |
-| Backends that must implement it | all five | qt, jupyter, web only |
+| Backends that must implement it | all three | those that need it |
 
 The dividing line is the `_Base<Name>WidgetFactory` class. Everything a plain
 app needs is reachable from the base factory; the Admin layer is added by the
 subclass. Keep it that way — an app that never touches Admin must not pay to
 import it.
 
-**Tk and wx are legacy and unsupported.** They have no Admin layer and no
-`_Base` split. Do not add components to them. New *primitives* need a tk/wx
-implementation only if they are abstract on `IWidgetFactory`; prefer adding
-them as optional methods that raise `NotSupportedError`.
+There are three backends: `qt`, `jupyter` and `web`. All three have both
+layers, so a new component needs an implementation in each. Prefer adding new
+factory methods as optional ones that raise `NotSupportedError` by default
+rather than as `@abstractmethod`, so a backend can adopt them incrementally.
 
 ## 2. Add the interface
 
@@ -52,9 +52,10 @@ Do **not** hand-write a `create_badge` forwarder — the table generates it.
 Check the snake_case spelling you actually want: the rule is not mechanical
 (`createVBox` is published as `create_vbox`, not `create_v_box`).
 
-Making a method `@abstractmethod` instead of a raising default forces all five
-backends to implement it, including the two legacy ones. That is usually the
-wrong trade for anything new.
+Making a method `@abstractmethod` instead of a raising default forces all three
+backends to implement it before anything can be instantiated. That is usually
+the wrong trade for anything new — a raising default lets a backend adopt the
+component when it is ready.
 
 ## 3. Put shared logic in `models/`, not in a backend
 
@@ -82,6 +83,7 @@ different routes and on different schedules.
 
 - **Qt** — a stylesheet string per widget, built in `backends/qt/styles.py`
   and applied with `setStyleSheet`. Colours come from the live palette dict.
+  The sheet for plain controls lives in `backends/qt/primitives/styles.py`.
 - **Jupyter** — one `<style>` node re-emitted wholesale on a theme switch.
   Rules are built by `base_control_rules(scope, nested=...)` in
   `backends/jupyter/styles.py`, which serves both the Admin shell scope and the
@@ -103,7 +105,7 @@ palette.
 Contract tests in `tests/contracts/` run against every backend via `--ui`:
 
 ```bash
-python -m pytest -q --no-cov --ui qt        # then jupyter, web, tk
+python -m pytest -q --no-cov --ui qt        # then jupyter, web
 ```
 
 Two habits worth keeping, both of which caught real bugs during the refactor:
@@ -116,6 +118,14 @@ Two habits worth keeping, both of which caught real bugs during the refactor:
   confirm it fails, then change it back.
 
 Backends whose toolkit is not installed still get static coverage:
-`tests/test_primitive_split_bindings.py` checks every name a primitives module
-uses is actually bound, and `tests/test_wx_backend_split.py` stubs wxPython to
-verify the wx surface without the real library.
+`tests/test_primitive_split_bindings.py` checks that every name a primitives
+module uses is actually bound, without importing the toolkit.
+
+If your component ships CSS on Jupyter or Web, put the fragment in the
+component module as a `*_css()` function and add it to the composition in
+`backends/<name>/styles.py`. Append it in the position its rules previously
+occupied — CSS resolves ties by source order, so a fragment placed elsewhere
+changes rendering even when the text is identical.
+
+If the rule styles demo markup in `examples/` rather than a widget, it belongs
+in `backends/<name>/demo_styles.py`, which `styles.py` composes in the same way.

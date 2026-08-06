@@ -25,21 +25,24 @@ def test_toggle_theme_and_refresh_delegates_to_active_root(monkeypatch):
     assert refreshed == [sentinel]
 
 
-def test_refresh_theme_dispatches_tk_widgets(monkeypatch):
-    """Tk widgets should route through the Tk theme refresh helper."""
-    factory = create_factory("tk")
+def test_refresh_theme_dispatches_qt_widgets(monkeypatch):
+    """Qt widgets should route through the Qt theme refresh helper.
+
+    The dispatcher looks its per-backend helpers up as module globals, so
+    patching ``display.refresh_theme_qt`` must intercept the call. That
+    indirection is the reason ``refresh_theme`` does not import the backend
+    helper directly.
+    """
+    pytest.importorskip("PySide2")
+    factory = create_factory("qt")
     label = factory.create_label()
     native = label.get_native()
-    root = native.winfo_toplevel()
     refreshed = []
 
-    monkeypatch.setattr(display, "refresh_theme_tk", lambda widget: refreshed.append(widget))
+    monkeypatch.setattr(display, "refresh_theme_qt", lambda widget: refreshed.append(widget))
 
-    try:
-        display.refresh_theme(native)
-        assert refreshed == [root]
-    finally:
-        root.destroy()
+    display.refresh_theme(native)
+    assert refreshed == [native]
 
 
 @pytest.mark.qt

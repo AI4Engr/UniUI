@@ -1,6 +1,10 @@
 """Backend detection and factory selection.
 
 This is the one place that knows which backends exist and how to reach them.
+There are three: ``qt``, ``jupyter`` and ``web``. The legacy ``tk`` and ``wx``
+backends were removed; asking for either raises ``ValueError`` like any other
+unknown framework name.
+
 ``uniui/__init__.py`` used to carry it, which meant the public package module
 imported backend-selection logic just to re-export three functions.
 
@@ -11,6 +15,15 @@ itself - a re-exported ``_factory`` would be a stale snapshot taken at import
 time, and ``use()`` would appear to do nothing. ``routing.py`` relies on this:
 it calls ``_get_factory()`` lazily, per navigation, precisely so it observes
 the current backend.
+
+Factories are imported from ``backends/<name>/factory.py``, never from the
+root ``qt.py`` / ``qt_components.py`` compatibility modules. Those are for
+external callers only; routing the canonical path through them would make the
+package depend on its own back-compat surface.
+
+Every backend import is deliberately inside the function body. Importing
+``uniui`` must not drag in PySide2, ipywidgets or NiceGUI - only asking for a
+backend may do that.
 """
 
 from __future__ import annotations
@@ -40,34 +53,10 @@ def _detect_framework() -> str:
     except ImportError:
         pass
 
-    # 3. Detect wxPython
-    try:
-        import wx
-        return 'wx'
-    except ImportError:
-        pass
-
-    # 4. Detect Tkinter (Python built-in)
-    try:
-        import tkinter
-        return 'tk'
-    except ImportError:
-        pass
-
     raise ImportError(
         "No available UI framework found! "
-        "Please install PySide2, wxPython, or use Jupyter."
+        "Please install PySide2, use Jupyter, or install the Web extra."
     )
-
-
-#: Legacy backends warn on construction. Kept as data so the two branches
-#: cannot drift apart.
-_LEGACY = {
-    'wx': "The wxPython backend ('wx') is legacy and no longer supported. "
-          "No new features will be developed. Please migrate to 'qt' or 'jupyter'.",
-    'tk': "The Tkinter backend ('tk') is legacy and no longer supported. "
-          "No new features will be developed. Please migrate to 'qt' or 'jupyter'.",
-}
 
 
 def _create_factory(framework: str = 'auto') -> IWidgetFactory:
@@ -75,37 +64,32 @@ def _create_factory(framework: str = 'auto') -> IWidgetFactory:
     if framework == 'auto':
         framework = _detect_framework()
 
-    # Only poke the web backend if it has already been imported: touching
-    # uniui.web here would drag NiceGUI into every Qt/Tk process.
-    web_module = sys.modules.get("uniui.web")
-    if web_module is not None:
-        web_module.set_backend_active(framework == "web")
-
-    if framework in _LEGACY:
-        import warnings
-        warnings.warn(_LEGACY[framework], DeprecationWarning, stacklevel=2)
+    # Only poke the web backend if it has already been imported: touching the
+    # web backend here would drag NiceGUI into every Qt process.
+    #
+    # ``state`` is the module that *owns* the flag. It must be addressed
+    # directly: ``set_backend_active`` rebinds a module global, so calling it
+    # through any module that re-exported it would still work, but reading the
+    # flag back through a re-export would see a stale snapshot.
+    web_state = sys.modules.get("uniui.backends.web.primitives.state")
+    if web_state is not None:
+        web_state.set_backend_active(framework == "web")
 
     if framework == 'qt':
-        from ..qt_components import QtWidgetFactory
+        from .qt.factory import QtWidgetFactory
         return QtWidgetFactory()
     elif framework == 'jupyter':
-        from ..jupyter_components import JupyterWidgetFactory
+        from .jupyter.factory import JupyterWidgetFactory
         return JupyterWidgetFactory()
     elif framework == 'web':
         try:
-            from ..web_components import NiceGUIWidgetFactory
+            from .web.factory import NiceGUIWidgetFactory
         except ImportError as exc:
             raise ImportError(
                 "The Web backend requires NiceGUI. Install it with "
                 "'pip install -e .[web]'."
             ) from exc
         return NiceGUIWidgetFactory()
-    elif framework == 'wx':
-        from ..wx import WxWidgetFactory
-        return WxWidgetFactory()
-    elif framework == 'tk':
-        from ..tk import TkWidgetFactory
-        return TkWidgetFactory()
     else:
         raise ValueError(f"Unsupported framework: {framework}")
 

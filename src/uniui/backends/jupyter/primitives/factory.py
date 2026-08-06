@@ -1,7 +1,7 @@
 """The base Jupyter widget factory for primitive controls.
 
-``jupyter_components.JupyterWidgetFactory`` subclasses this to add the Admin
-components, so a plain notebook never imports them.
+``backends.jupyter.factory.JupyterWidgetFactory`` subclasses this to add the
+Admin components, so a plain notebook never imports them.
 
 Importing this module wraps every ``create*`` method via
 :func:`_mark_created_widgets`. That is a one-shot, in-place mutation of the
@@ -35,7 +35,7 @@ class _BaseJupyterWidgetFactory(IWidgetFactory):
     """
     Base Jupyter Widget Factory — the core widgets every Jupyter app gets.
 
-    jupyter_components.JupyterWidgetFactory subclasses this to add
+    backends.jupyter.factory.JupyterWidgetFactory subclasses this to add
     Card/Table/AppShell/etc.  create_factory() always returns that subclass;
     this base class is an internal split point, not something callers
     construct directly.

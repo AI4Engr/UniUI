@@ -1,6 +1,6 @@
 """The base NiceGUI widget factory for primitive controls.
 
-``web_components.WebWidgetFactory`` subclasses this to add the Admin
+``backends.web.factory.NiceGUIWidgetFactory`` subclasses this to add the Admin
 components, so a plain NiceGUI app never imports them.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ class _BaseNiceGUIWidgetFactory(IWidgetFactory):
     """
     Base NiceGUI Widget Factory — the core widgets every Web app gets.
 
-    web_components.NiceGUIWidgetFactory subclasses this to add
+    backends.web.factory.NiceGUIWidgetFactory subclasses this to add
     Card/Table/AppShell/etc.  create_factory() always returns that subclass;
     this base class is an internal split point, not something callers
     construct directly.

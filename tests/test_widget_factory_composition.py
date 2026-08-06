@@ -5,11 +5,14 @@ to static analysis (IDE jump-to-definition, type checkers, `vars()` on the
 base class) and any real ImportError inside qt.py/jupyter.py/web.py during
 that registration was silently swallowed by a bare `except ImportError: pass`.
 
-They're explicit subclasses now: qt.py/jupyter.py/web.py define a private
-_Base*WidgetFactory with the required + layout methods, and
-qt_components.py/jupyter_components.py/web_components.py define the public
-factory class the rest of the app actually uses, adding Card/Table/AppShell/
-etc. as real class-body methods.
+They're explicit subclasses now: ``backends/<name>/primitives/factory.py``
+defines a private _Base*WidgetFactory with the required + layout methods, and
+``backends/<name>/factory.py`` defines the public factory class the rest of the
+app actually uses, adding Card/Table/AppShell/etc. as real class-body methods.
+
+The public factory classes are still reachable from the root
+``*_components.py`` modules, which re-export them for backwards compatibility,
+but those modules no longer define anything.
 """
 
 import pytest
@@ -94,28 +97,67 @@ def test_create_factory_returns_the_component_capable_subclass():
     assert type(card).__name__ == "QtCardAdapter"
 
 
-def test_a_real_import_error_in_qt_py_is_no_longer_swallowed(monkeypatch):
+def test_a_real_import_error_in_the_qt_backend_is_no_longer_swallowed(monkeypatch):
     """The old code: `try: from uniui.qt import QtWidgetFactory ... except
-    ImportError: pass`.  A genuine failure inside qt.py used to vanish with no
-    trace.  qt_components.py no longer wraps its import of the base class in
-    a try/except, so a broken qt.py now surfaces as a real traceback.
+    ImportError: pass`.  A genuine failure inside the Qt backend used to vanish
+    with no trace.  Nothing in the factory chain wraps its imports in a
+    try/except, so a broken backend now surfaces as a real traceback.
+
+    The break is applied to ``backends.qt.primitives`` rather than ``uniui.qt``
+    because that is what the factory actually depends on now: the canonical
+    chain is ``registry -> backends.qt.factory -> primitives + components``,
+    and ``uniui.qt`` is a leaf compatibility module nothing imports.
     """
     pytest.importorskip("PySide2")
     import sys
 
     for name in list(sys.modules):
-        if name == "uniui.qt" or name.startswith("uniui.qt."):
+        if name == "uniui.backends.qt" or name.startswith("uniui.backends.qt."):
             monkeypatch.delitem(sys.modules, name, raising=False)
     monkeypatch.delitem(sys.modules, "uniui.qt_components", raising=False)
 
     real_import = __import__
 
     def broken_import(name, *args, **kwargs):
-        if name == "uniui.qt":
-            raise ImportError("simulated failure deep inside qt.py")
+        if name == "uniui.backends.qt.primitives":
+            raise ImportError("simulated failure deep inside primitives")
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr("builtins.__import__", broken_import)
 
     with pytest.raises(ImportError, match="simulated failure"):
         import uniui.qt_components  # noqa: F401
+
+
+def test_registry_reaches_factories_without_the_compat_modules(monkeypatch):
+    """The canonical chain must not route through the root shims.
+
+    Breaking every root compatibility module must leave ``create_factory('qt')``
+    working. This is the structural guarantee of the split: production code
+    depends on ``backends/<name>/factory.py``, and ``qt.py`` /
+    ``qt_components.py`` exist only for external callers.
+    """
+    pytest.importorskip("PySide2")
+    import sys
+
+    shims = ("uniui.qt", "uniui.qt_components")
+    for name in shims:
+        monkeypatch.delitem(sys.modules, name, raising=False)
+    for name in list(sys.modules):
+        if name == "uniui.backends.qt" or name.startswith("uniui.backends.qt."):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+
+    real_import = __import__
+
+    def broken_import(name, *args, **kwargs):
+        if name in shims:
+            raise ImportError(f"{name} must not be on the canonical path")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", broken_import)
+
+    from uniui.backends.registry import _create_factory
+
+    factory = _create_factory("qt")
+    assert type(factory).__name__ == "QtWidgetFactory"
+    assert type(factory.create_card()).__name__ == "QtCardAdapter"

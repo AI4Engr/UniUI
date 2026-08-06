@@ -1,14 +1,15 @@
 """
 Modern Admin components for the Jupyter/ipywidgets backend.
 
-Compatibility layer. The implementations now live in
+Compatibility layer. The implementations live in
 :mod:`uniui.backends.jupyter`; this module re-exports them so existing imports
-keep working - ``jupyter_style`` imports ``get_admin_palette`` from here, and
-``examples/`` imports this module as its admin backend.
+keep working - ``examples/`` imports this module as its admin backend.
 
-Everything below is a re-export, with one exception: ``JupyterWidgetFactory``,
-which is still defined here because it is what ``create_factory('jupyter')``
-returns.
+Everything below is a re-export. Nothing is defined here, including
+``JupyterWidgetFactory``: that is now
+:mod:`uniui.backends.jupyter.factory`, so the canonical path
+``registry -> backends.jupyter.factory -> primitives + components`` does not
+detour through this module. No production code imports it.
 """
 from __future__ import annotations
 
@@ -16,6 +17,8 @@ from uniui.components import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
+from uniui.backends.jupyter.factory import JupyterWidgetFactory
+from uniui.backends.jupyter.primitives import _BaseJupyterWidgetFactory
 from uniui.backends.jupyter.runtime import (
     M as _M,
     THEME_TARGETS as _theme_targets,
@@ -51,28 +54,6 @@ from uniui.backends.jupyter.components import (
 get_admin_palette = get_palette
 is_admin_dark = is_dark
 set_admin_theme = set_theme
-
-
-# ---------------------------------------------------------------------------
-# JupyterWidgetFactory: base factory + Card/Table/AppShell/... support
-# ---------------------------------------------------------------------------
-
-from uniui.jupyter import _BaseJupyterWidgetFactory
-
-
-class JupyterWidgetFactory(_BaseJupyterWidgetFactory):
-    """The Jupyter factory create_factory('jupyter') actually returns."""
-
-    def createCard(self) -> ICard: return JupyterCardAdapter()
-    def createStatCard(self) -> IStatCard: return JupyterStatCardAdapter()
-    def createMetricList(self) -> IMetricList: return JupyterMetricListAdapter()
-    def createTable(self) -> ITable: return JupyterTableAdapter()
-    def createSidebar(self) -> ISidebar: return JupyterSidebarAdapter()
-    def createAppShell(self) -> IAppShell: return JupyterAppShellAdapter()
-    def createBreadcrumb(self) -> IBreadcrumb: return JupyterBreadcrumbAdapter()
-    def createGauge(self) -> IGauge: return JupyterGaugeAdapter()
-    def createChart(self) -> IChart: return JupyterChartAdapter()
-    def createDrawer(self) -> IDrawer: return JupyterDrawerAdapter()
 
 
 __all__ = [

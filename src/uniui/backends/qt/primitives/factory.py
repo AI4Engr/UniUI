@@ -1,7 +1,8 @@
 """The base Qt widget factory for primitive controls.
 
-``qt_components.QtWidgetFactory`` subclasses this to add the Admin components;
-keeping the split here is what lets a plain Qt app avoid importing them.
+``backends.qt.factory.QtWidgetFactory`` subclasses this to add the Admin
+components; keeping the split here is what lets a plain Qt app avoid importing
+them.
 """
 from __future__ import annotations
 
@@ -28,9 +29,9 @@ class _BaseQtWidgetFactory(IWidgetFactory):
     """
     Base Qt Widget Factory — the core widgets every Qt app gets.
 
-    qt_components.QtWidgetFactory subclasses this to add Card/Table/AppShell/
-    etc.  create_factory() always returns that subclass; this base class is an
-    internal split point, not something callers construct directly.
+    backends.qt.factory.QtWidgetFactory subclasses this to add Card/Table/
+    AppShell/etc.  create_factory() always returns that subclass; this base
+    class is an internal split point, not something callers construct directly.
     """
 
     def __init__(self):

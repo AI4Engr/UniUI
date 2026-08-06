@@ -1,14 +1,14 @@
 """
 Qt/PySide2 implementations of admin components.
 
-Compatibility layer. The implementations now live in :mod:`uniui.backends.qt`;
-this module re-exports them so existing imports keep working - ``qt_style``
-imports the palette helpers from here, and ``examples/`` imports
-``get_admin_palette`` and ``set_admin_theme``.
+Compatibility layer. The implementations live in :mod:`uniui.backends.qt`;
+this module re-exports them so existing imports keep working - ``examples/``
+imports ``get_admin_palette`` and ``set_admin_theme`` from here.
 
-Everything below is a re-export, with one exception: ``QtWidgetFactory``,
-which is still defined here because it is what ``create_factory('qt')``
-returns.
+Everything below is a re-export. Nothing is defined here, including
+``QtWidgetFactory``: that is now :mod:`uniui.backends.qt.factory`, so the
+canonical path ``registry -> backends.qt.factory -> primitives + components``
+does not detour through this module. No production code imports it.
 
 ``_C`` is bound to the *same* dict object that ``backends.qt.runtime`` mutates
 in place on a theme change - never rebind it, or this module would freeze at
@@ -20,6 +20,8 @@ from uniui.components import (
     IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
+from uniui.backends.qt.factory import QtWidgetFactory
+from uniui.backends.qt.primitives import _BaseQtWidgetFactory
 from uniui.backends.qt.runtime import (
     C as _C,
     M as _M,
@@ -66,28 +68,6 @@ from uniui.backends.qt.components import (
 get_admin_palette = get_palette
 is_admin_dark = is_dark
 set_admin_theme = set_theme
-
-
-# ---------------------------------------------------------------------------
-# QtWidgetFactory: base factory + Card/Table/AppShell/... support
-# ---------------------------------------------------------------------------
-
-from uniui.qt import _BaseQtWidgetFactory
-
-
-class QtWidgetFactory(_BaseQtWidgetFactory):
-    """The Qt factory create_factory('qt') actually returns."""
-
-    def createCard(self)       -> ICard:       return QtCardAdapter()
-    def createStatCard(self)   -> IStatCard:   return QtStatCardAdapter()
-    def createMetricList(self) -> IMetricList: return QtMetricListAdapter()
-    def createTable(self)      -> ITable:      return QtTableAdapter()
-    def createSidebar(self)    -> ISidebar:    return QtSidebarAdapter()
-    def createAppShell(self)   -> IAppShell:   return QtAppShellAdapter()
-    def createBreadcrumb(self) -> IBreadcrumb: return QtBreadcrumbAdapter()
-    def createGauge(self)      -> IGauge:      return QtGaugeAdapter()
-    def createChart(self)      -> IChart:      return QtChartAdapter()
-    def createDrawer(self)     -> IDrawer:     return QtDrawerAdapter()
 
 
 __all__ = [

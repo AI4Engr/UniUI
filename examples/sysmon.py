@@ -141,12 +141,7 @@ def create_sysmon_ui(framework="auto"):
     mem_area.set_maximum_height(70)
     proc_area.set_maximum_height(320)
 
-    # Monospace font for Tk (Qt gets it from stylesheet, Jupyter from set_html)
-    for w in (cpu_area, mem_area, proc_area):
-        try:
-            w.get_native().config(font=("Courier New", 9))
-        except Exception:
-            pass
+    # Qt takes the monospace font from the stylesheet, Jupyter from set_html.
 
     layout = VBox(
         GroupBox("CPU",            layout=VBox(cpu_area)),

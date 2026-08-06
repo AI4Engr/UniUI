@@ -25,7 +25,8 @@ from uniui.display import show_ui, toggle_theme_and_refresh
 
 
 def _set_btn_type(btn, btntype):
-    """Set button visual category for Qt (stylesheet property) and wx (owner-draw)."""
+    """Set button visual category for Qt (stylesheet property) and for the
+    browser backends (Jupyter/Web expose ``set_btntype`` on the native)."""
     native = btn.get_native()
     # Qt: dynamic property drives stylesheet selectors
     try:
@@ -34,7 +35,7 @@ def _set_btn_type(btn, btntype):
         native.style().polish(native)
     except Exception:
         pass
-    # wx: owner-draw paint handler reads _btntype directly
+    # Jupyter/Web: the adapter exposes set_btntype on the native element
     try:
         if hasattr(native, 'set_btntype'):
             native.set_btntype(btntype)
@@ -302,5 +303,5 @@ def create_calculator_ui(framework="auto"):
 if __name__ == "__main__":
     from uniui import parse_args_ui
     layout = create_calculator_ui(parse_args_ui())
-    # Slightly taller to ensure history panel remains visible across backends (wx needs a bit more space)
+    # Slightly taller to ensure the history panel remains visible across backends
     show_ui(layout, "Scientific Calculator", 360, 640)

@@ -18,7 +18,8 @@ from uniui.display import show_ui, toggle_theme_and_refresh
 
 
 def _set_btn_type(btn, btntype):
-    """Set button visual category for Qt (stylesheet property) and wx (owner-draw)."""
+    """Set button visual category for Qt (stylesheet property) and for the
+    browser backends (Jupyter/Web expose ``set_btntype`` on the native)."""
     native = btn.get_native()
     try:
         native.setProperty("btntype", btntype)
@@ -132,7 +133,7 @@ def create_test_ui(framework="auto", mode="simple"):
     """Create test UI.
 
     Args:
-        framework: 'auto', 'qt', 'jupyter', 'wx', or 'tk'
+        framework: 'auto', 'qt', 'jupyter', or 'web'
         mode: 'simple' or 'advanced'
 
     Returns:
@@ -170,7 +171,7 @@ if __name__ == "__main__":
     from uniui import parse_args_ui
 
     parser = argparse.ArgumentParser(description='UniUI test runner')
-    parser.add_argument('--ui', choices=['auto', 'qt', 'jupyter', 'wx', 'tk'], default='auto')
+    parser.add_argument('--ui', choices=['auto', 'qt', 'jupyter', 'web'], default='auto')
     parser.add_argument('--mode', choices=['simple', 'advanced'], default='simple')
     args = parser.parse_args()
 

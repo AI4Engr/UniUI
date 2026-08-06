@@ -82,10 +82,28 @@ def test_self_styled_widgets_embed_their_own_scrollbar_rules():
 
 def test_metric_list_reports_unsupported_rather_than_attribute_error():
     """create_metric_list() had an alias but no base stub, so it raised
-    AttributeError instead of NotSupportedError on backends without admin."""
-    from uniui.core import NotSupportedError
-    from uniui.tk import TkWidgetFactory
+    AttributeError instead of NotSupportedError on backends without admin.
 
-    factory = TkWidgetFactory.__new__(TkWidgetFactory)
+    Asserted against ``IWidgetFactory`` directly: the stub lives there, and a
+    backend that simply does not override it must surface NotSupportedError.
+    The required primitives are stubbed only to satisfy ABC instantiation —
+    the test is about the *optional* Admin methods, which stay unoverridden.
+    """
+    from uniui.core import IWidgetFactory, NotSupportedError
+
+    required = [
+        "createButton", "createComboBox", "createDropdown", "createHBox",
+        "createImage", "createLabel", "createLineEdit", "createTabWidget",
+        "createTextArea", "createVBox",
+    ]
+
+    class _NoAdminFactory(IWidgetFactory):
+        """A backend with primitives only - no Admin component layer."""
+
+    for name in required:
+        setattr(_NoAdminFactory, name, lambda self: None)
+    _NoAdminFactory.__abstractmethods__ = frozenset()
+
+    factory = _NoAdminFactory()
     with pytest.raises(NotSupportedError):
         factory.create_metric_list()

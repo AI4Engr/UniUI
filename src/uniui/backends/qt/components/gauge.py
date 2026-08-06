@@ -5,7 +5,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 
 from ....components import IGauge
 from ....models.gauge import GaugeModel
-from ....qt_effects import animate_value
+from ..effects import animate_value
 from ..runtime import C, track_themed
 
 

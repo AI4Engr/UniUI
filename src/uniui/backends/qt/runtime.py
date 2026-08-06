@@ -15,7 +15,7 @@ from typing import Dict, Optional
 from PySide2 import QtCore, QtGui, QtWidgets
 
 from ... import theme_runtime
-from ...qt_icons import admin_icon
+from .icons import admin_icon
 from ...theme import get_admin_metrics, get_admin_tokens
 
 
@@ -67,9 +67,9 @@ def sync_palette() -> None:
             if "already deleted" not in str(exc):
                 raise
             THEMED_ADAPTERS.discard(adapter)
-    # Restyle the plain Qt controls too. Imported lazily because qt_style
-    # imports the Qt palette for its own rules.
-    from ...qt_style import refresh_styled_widgets
+    # Restyle the plain Qt controls too. Imported lazily because the primitive
+    # stylesheet imports the Qt palette from this module for its own rules.
+    from .primitives.styles import refresh_styled_widgets
     refresh_styled_widgets()
 
 

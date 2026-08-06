@@ -117,8 +117,8 @@ def _mark_created_widgets(factory_class) -> None:
         @functools.wraps(original)
         def marked(self, *args, _original=original, **kwargs):
             widget = _original(self, *args, **kwargs)
-            # Imported lazily: jupyter_style -> jupyter_components -> this module.
-            from ....jupyter_style import mark
+            # Imported lazily: styles -> ..runtime -> ..components -> this module.
+            from .styles import mark
             mark(widget)
             return widget
 

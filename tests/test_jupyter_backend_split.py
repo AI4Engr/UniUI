@@ -90,12 +90,12 @@ class TestCompatibilityReExports:
 
     def test_jupyter_style_can_still_import_the_palette(self):
         """The import that would break first on a circular-import mistake:
-        jupyter_style -> jupyter_components -> backends.jupyter.runtime, while
-        runtime imports jupyter_style lazily inside sync_palette."""
-        from uniui import jupyter_style
+        primitives.styles -> backends.jupyter.runtime, while runtime imports
+        primitives.styles lazily inside sync_palette."""
+        from uniui.backends.jupyter.primitives import styles as prim_styles
 
-        assert jupyter_style.get_admin_palette() is not None
-        assert "--uniui-bg" in jupyter_style.base_css()
+        assert prim_styles.get_admin_palette() is not None
+        assert "--uniui-bg" in prim_styles.base_css()
 
 
 class TestThemeSwitchReachesEveryModule:
@@ -226,9 +226,9 @@ class TestBaseControlScopes:
     def test_both_stylesheets_use_the_shared_builder(self):
         """Guards against a future edit re-inlining one copy and letting the
         two scopes drift apart again."""
-        from uniui import jupyter_style
+        from uniui.backends.jupyter.primitives import styles as prim_styles
 
         assert styles.base_control_rules(".uniui-widget", nested=False) in (
-            jupyter_style._BASE_RULES
+            prim_styles._BASE_RULES
         )
         assert styles.base_control_rules(".uniui-admin-shell", nested=True) in styles.css()

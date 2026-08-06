@@ -4,8 +4,8 @@ from __future__ import annotations
 from PySide2 import QtCore, QtWidgets
 
 from ....components import IDrawer
-from ....qt_effects import motion_duration
-from ....qt_icons import admin_icon
+from ..effects import motion_duration
+from ..icons import admin_icon
 from ..runtime import C, as_widget, clear_layout, track_themed
 
 class QtDrawerAdapter(IDrawer):

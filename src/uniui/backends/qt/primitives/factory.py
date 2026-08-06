@@ -54,9 +54,9 @@ class _BaseQtWidgetFactory(IWidgetFactory):
             self.app = app
 
         # Give plain Qt widgets the design-system look without requiring the
-        # caller to copy a stylesheet.  Imported here because qt_style pulls in
-        # the admin palette, which imports this module.
-        from ....qt_style import apply_app_style
+        # caller to copy a stylesheet.  Imported here because the stylesheet
+        # pulls in the admin palette, which imports this module.
+        from .styles import apply_app_style
         apply_app_style(self.app)
 
     def createLabel(self) -> ILabel:

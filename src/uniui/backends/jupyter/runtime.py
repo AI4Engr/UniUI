@@ -56,10 +56,10 @@ def sync_palette() -> None:
         apply_theme = getattr(target, "apply_theme", None)
         if callable(apply_theme):
             apply_theme()
-    # Restyle the plain ipywidgets too. Imported lazily because jupyter_style
-    # imports uniui.jupyter_components for its palette, which imports this
-    # module - a module-level import here would be circular.
-    from ...jupyter_style import refresh
+    # Restyle the plain ipywidgets too. Imported lazily because the primitive
+    # stylesheet imports get_palette from this module - a module-level import
+    # here would be circular.
+    from .primitives.styles import refresh
     refresh()
 
 

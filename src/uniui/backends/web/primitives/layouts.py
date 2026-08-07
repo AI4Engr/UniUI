@@ -13,6 +13,23 @@ from .state import T, register_adapter
 from .base import _WebAdapter
 from .helpers import _plain_html, _style_size
 
+
+def _apply_flex(native, item) -> None:
+    """Translate a LayoutItem's flex overrides onto a NiceGUI element.
+
+    ``basis`` defaults to ``0`` rather than CSS's ``auto`` when the caller asks
+    to grow: with ``auto`` the item's content width seeds the distribution, so
+    a row of buttons ends up as wide as its longest label instead of dividing
+    the row evenly.
+    """
+    if item.grow <= 0 and item.basis is None:
+        return
+    basis = item.basis if item.basis is not None else (0 if item.grow > 0 else "auto")
+    if isinstance(basis, (int, float)):
+        basis = f"{basis}px" if basis else "0"
+    native.style(f"flex: {item.grow} {item.shrink} {basis}; min-width: 0")
+
+
 class WebVBoxAdapter(_WebAdapter, IVBoxLayout):
     def __init__(self):
         super().__init__(ui.column().classes("uniui-vbox w-full items-stretch"))
@@ -20,6 +37,11 @@ class WebVBoxAdapter(_WebAdapter, IVBoxLayout):
 
     def add_item(self, widget: IWidget) -> None:
         widget.get_native().move(self._native)
+
+    def add_item_with_spec(self, widget: IWidget, item) -> None:
+        native = widget.get_native()
+        native.move(self._native)
+        _apply_flex(native, item)
 
     def add_stretch(self) -> None:
         ui.element("div").classes("grow").move(self._native)
@@ -37,11 +59,20 @@ class WebHBoxAdapter(_WebAdapter, IHBoxLayout):
     def add_item(self, widget: IWidget) -> None:
         widget.get_native().move(self._native)
 
+    def add_item_with_spec(self, widget: IWidget, item) -> None:
+        native = widget.get_native()
+        native.move(self._native)
+        _apply_flex(native, item)
+
     def add_stretch(self) -> None:
         ui.element("div").classes("grow").move(self._native)
 
     def set_alignment_top(self) -> None:
         self._native.classes(add="items-start")
+
+    def set_responsive_stack(self, enabled: bool) -> None:
+        self._native.classes(add="" if enabled else "uniui-hbox--no-stack",
+                              remove="uniui-hbox--no-stack" if enabled else "")
 
     def _apply_theme(self) -> None:
         self._native.style(f"color: {T['fg']}")

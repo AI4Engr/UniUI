@@ -276,6 +276,16 @@ class IHBoxLayout(IWidget):
         """Apply container-level layout spec (gap, padding, etc.). Default: no-op."""
         pass
 
+    def set_responsive_stack(self, enabled: bool) -> None:
+        """Allow/forbid this row collapsing to a stacked column on narrow
+        screens. Default True (matches prior behavior). A key row, toolbar or
+        button grid that must stay a row at every width should pass False;
+        an ordinary form row of label+input is fine collapsing on mobile.
+
+        No-op on backends without a narrow-screen stacking rule (Qt, Jupyter).
+        """
+        pass
+
     def clear(self) -> None:
         """Remove all children. Default: not supported."""
         raise NotSupportedError("clear() not supported on this layout")

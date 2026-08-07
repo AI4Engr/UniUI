@@ -20,7 +20,9 @@ Jupyter:
     show_ui(create_calculator_ui("jupyter"), "Calculator", 400, 600)
 """
 import math
-from uniui import use, VBox, HBox, Label, Button, LineEdit, TextArea, GroupBox
+from uniui import (
+    use, VBox, HBox, Label, Button, LineEdit, TextArea, GroupBox, LayoutItem,
+)
 from uniui.display import show_ui, toggle_theme_and_refresh
 
 
@@ -141,16 +143,28 @@ def create_calculator_ui(framework="auto"):
     # Display group
     display_group = GroupBox("Display", layout=VBox(display))
 
-    # Button grid - using nested HBox/VBox
+    # Button grid - using nested HBox/VBox.
+    # Every key gets grow=1 so the four columns divide the row evenly; without
+    # it each button sizes to its own label and "Clr Hist" ends up far wider
+    # than "C". set_responsive_stack(False) keeps the row horizontal on a
+    # narrow/mobile screen too -- a keypad must stay a grid at every width,
+    # unlike an ordinary form row that is fine collapsing to a column there.
+    def key_row(*buttons):
+        row = HBox()
+        row.set_responsive_stack(False)
+        for button in buttons:
+            row.add_item_with_spec(button, LayoutItem(widget=button, grow=1))
+        return row
+
     buttons_layout = VBox(
-        HBox(btn_clear, btn_back, btn_open_paren, btn_close_paren),
-        HBox(btn_sin, btn_cos, btn_tan, btn_log),
-        HBox(btn_ln, btn_sqrt, btn_power, btn_square),
-        HBox(btn_pi, btn_e, btn_div, btn_mul),
-        HBox(btn_7, btn_8, btn_9, btn_sub),
-        HBox(btn_4, btn_5, btn_6, btn_add),
-        HBox(btn_1, btn_2, btn_3, btn_equals),
-        HBox(btn_0, btn_dot, btn_neg, btn_clear_hist),
+        key_row(btn_clear, btn_back, btn_open_paren, btn_close_paren),
+        key_row(btn_sin, btn_cos, btn_tan, btn_log),
+        key_row(btn_ln, btn_sqrt, btn_power, btn_square),
+        key_row(btn_pi, btn_e, btn_div, btn_mul),
+        key_row(btn_7, btn_8, btn_9, btn_sub),
+        key_row(btn_4, btn_5, btn_6, btn_add),
+        key_row(btn_1, btn_2, btn_3, btn_equals),
+        key_row(btn_0, btn_dot, btn_neg, btn_clear_hist),
     )
 
     buttons_group = GroupBox("Keypad", layout=buttons_layout)

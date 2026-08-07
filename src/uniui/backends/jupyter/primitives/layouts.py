@@ -391,7 +391,14 @@ class JupyterHBoxAdapter(IHBoxLayout):
         native = widget.get_native()
         if hasattr(native, "layout"):
             if item.grow > 0:
-                native.layout.flex = f"{item.grow} 1 auto"
+                # basis 0, not auto: with auto the child's content width seeds
+                # the distribution, so a row of buttons sizes to its longest
+                # label instead of dividing the row evenly.
+                basis = item.basis if item.basis is not None else 0
+                if isinstance(basis, (int, float)):
+                    basis = f"{basis}px" if basis else "0"
+                native.layout.flex = f"{item.grow} {item.shrink} {basis}"
+                native.layout.min_width = "0"
             else:
                 native.layout.flex = None
                 if not native.layout.width:

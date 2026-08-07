@@ -75,6 +75,8 @@ def _install_css() -> None:
             .uniui-root { width: 100% !important; padding: 10px !important; }
             .uniui-hbox { flex-direction: column; align-items: stretch; }
             .uniui-hbox > * { width: 100%; }
+            .uniui-hbox.uniui-hbox--no-stack { flex-direction: row; align-items: center; }
+            .uniui-hbox.uniui-hbox--no-stack > * { width: auto; }
         }
         """,
         shared=True,

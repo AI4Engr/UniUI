@@ -70,13 +70,20 @@ class QtAppShellAdapter(IAppShell):
         )
         self._content_layout = QtWidgets.QVBoxLayout(self._content_wrap)
         padding = M["content_padding"]
-        self._content_layout.setContentsMargins(padding, 24, padding, padding)
+        self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._content_layout.setSpacing(0)
         self._content_scroll = QtWidgets.QScrollArea()
         self._content_scroll.setProperty("shellScroll", "1")
         self._content_scroll.setWidgetResizable(True)
         self._content_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
         self._content_scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        # Margins live on the viewport, not the outer layout: the scrollbar is
+        # drawn at the QScrollArea's own right edge, so a right margin on
+        # content_layout would push the scrollbar itself away from the
+        # window edge, not add breathing room between the scrollbar and the
+        # cards. setViewportMargins keeps the scrollbar flush with the shell
+        # edge while still padding the content around it on every side.
+        self._content_scroll.setViewportMargins(padding, 24, padding, padding)
         self._content_layout.addWidget(self._content_scroll)
         self._splitter.addWidget(self._content_wrap)
 
@@ -158,7 +165,10 @@ class QtAppShellAdapter(IAppShell):
                 self._splitter.setSizes([restored, max(1, width - restored)])
             self._compact_mode = compact
         margin = 18 if compact else 28
-        self._content_layout.setContentsMargins(margin, 22, margin, margin)
+        # See the comment in __init__: margins belong on the viewport so the
+        # scrollbar stays flush with the shell edge instead of being pushed
+        # outward by its own right margin.
+        self._content_scroll.setViewportMargins(margin, 22, margin, margin)
 
     def _on_splitter_moved(self, _pos: int, _index: int) -> None:
         if self._compact_mode is False and self._sidebar_widget is not None:

@@ -16,12 +16,19 @@ from PySide2 import QtCore, QtGui, QtWidgets
 
 from ... import theme_runtime
 from .icons import admin_icon
-from ...theme import get_admin_metrics, get_admin_tokens
+from ...theme import get_admin_metrics
 
 
-def _qt_tokens(dark: bool) -> Dict[str, str]:
-    """Add temporary aliases used by the existing Qt renderer."""
-    tokens = get_admin_tokens(dark)
+def _qt_tokens() -> Dict[str, str]:
+    """Snapshot the active theme, plus temporary aliases the Qt renderer uses.
+
+    Reads ``theme_runtime.get_palette()`` -- the actual active palette --
+    rather than re-deriving one from a light/dark bool. A bool-keyed lookup
+    only ever knows about the two built-in themes; any theme registered by
+    name (``uniui.register_theme``) would silently fall back to plain
+    light/dark here even though ``THEME`` itself held the right values.
+    """
+    tokens = theme_runtime.get_palette()
     tokens.update({
         "sidebar_act": tokens["sidebar_active"],
         "sidebar_act_fg": tokens["sidebar_active_fg"],
@@ -35,7 +42,7 @@ def _qt_tokens(dark: bool) -> Dict[str, str]:
 M = get_admin_metrics()
 
 #: The live palette. Mutated in place - never rebind this name.
-C = dict(_qt_tokens(theme_runtime.is_dark()))
+C = dict(_qt_tokens())
 
 THEMED_ADAPTERS = weakref.WeakSet()
 
@@ -59,7 +66,7 @@ def sync_palette() -> None:
     too - the per-backend flags used to drift apart.
     """
     C.clear()
-    C.update(_qt_tokens(theme_runtime.is_dark()))
+    C.update(_qt_tokens())
     for adapter in list(THEMED_ADAPTERS):
         try:
             adapter.apply_theme()

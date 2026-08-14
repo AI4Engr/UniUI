@@ -18,15 +18,38 @@ from uniui import (
     LayoutSpec, LayoutItem,
 )
 import uniui
+from uniui import theme_runtime
 
 
-_ADMIN_THEME = State("Light")
+_ADMIN_THEME = State("light")
 _THEME_TOGGLE = None
 
 
 def _toggle_admin_theme():
     if _THEME_TOGGLE is not None:
         _THEME_TOGGLE()
+
+
+#: Set by main()'s Qt path to its _apply_theme(dark) closure. Qt's
+#: stylesheet is a one-shot string baked into setStyleSheet() at apply
+#: time, not a live binding like Web's CSS variables or Jupyter's re-emitted
+#: <style> node -- theme_runtime.set_active_theme() alone updates THEME but
+#: never repaints an already-built Qt widget tree. Web/Jupyter don't need
+#: this hook: their refresh_theme_* already reads THEME live.
+_QT_RESTYLE_HOOK = None
+
+
+def _apply_named_theme(name: str) -> None:
+    """Switch to any registered theme by name, refreshing every backend.
+
+    Additive alongside the light/dark quick-toggle (_toggle_admin_theme):
+    the picker calls this, the header's toggle button keeps flipping
+    between the two defaults exactly as before.
+    """
+    theme_runtime.set_active_theme(name)
+    _ADMIN_THEME.set(name)
+    if _QT_RESTYLE_HOOK is not None:
+        _QT_RESTYLE_HOOK(uniui.is_dark())
 
 # ---------------------------------------------------------------------------
 # Fake data
@@ -355,16 +378,25 @@ def settings_page(_ctx):
 
     info = f.create_label()
     bind_text(info, Computed(
-        lambda: f"Current theme: {_ADMIN_THEME.value}", _ADMIN_THEME
+        lambda: f"Current theme: {_ADMIN_THEME.value.title()}", _ADMIN_THEME
     ))
     drawer_theme = f.create_button()
     bind_text(drawer_theme, Computed(
-        lambda: (
-            "Switch to Light" if _ADMIN_THEME.value == "Dark" else "Switch to Dark"
-        ),
+        # _ADMIN_THEME is the reactive trigger; the label itself reads the
+        # real is_dark() flag so it stays correct after the picker below
+        # switches to a named theme, not just after the quick toggle.
+        lambda: "Switch to Light" if uniui.is_dark() else "Switch to Dark",
         _ADMIN_THEME,
     ))
     drawer_theme.connect(_toggle_admin_theme)
+
+    # Theme picker: every registered theme, not just the light/dark pair the
+    # header's quick-toggle button flips between.
+    theme_picker = f.create_combo_box()
+    for name in uniui.list_themes():
+        theme_picker.add_item(name)
+    theme_picker.set_selection(_ADMIN_THEME.value)
+    theme_picker.on_change(lambda: _apply_named_theme(theme_picker.get_text()))
 
     drawer = f.create_drawer()
     drawer.set_title("Workspace settings")
@@ -381,6 +413,7 @@ def settings_page(_ctx):
     card.set_subtitle("Theme changes preserve routes, table state, and loaded data")
     inner = f.create_vbox()
     inner.add_item(info)
+    inner.add_item(theme_picker)
     open_button = f.create_button()
     open_button.set_text("Open settings drawer")
     open_button.connect(drawer.open)
@@ -744,13 +777,25 @@ def _browser_settings_page(_ctx):
         "Settings", "Choose how the workspace looks and behaves.", "Open drawer"
     )
     info = f.create_label()
-    bind_text(info, Computed(lambda: f"Current theme: {_ADMIN_THEME.value}", _ADMIN_THEME))
+    bind_text(info, Computed(lambda: f"Current theme: {_ADMIN_THEME.value.title()}", _ADMIN_THEME))
     drawer_button = f.create_button()
     bind_text(drawer_button, Computed(
-        lambda: "Switch to Light" if _ADMIN_THEME.value == "Dark" else "Switch to Dark",
+        # _ADMIN_THEME is the reactive trigger; the label reads the real
+        # is_dark() flag so it stays correct after the picker below
+        # switches to a named theme, not just after the quick toggle.
+        lambda: "Switch to Light" if uniui.is_dark() else "Switch to Dark",
         _ADMIN_THEME,
     ))
     drawer_button.connect(_toggle_admin_theme)
+
+    # Theme picker: every registered theme, not just the light/dark pair the
+    # header's quick-toggle button flips between.
+    theme_picker = f.create_combo_box()
+    for name in uniui.list_themes():
+        theme_picker.add_item(name)
+    theme_picker.set_selection(_ADMIN_THEME.value)
+    theme_picker.on_change(lambda: _apply_named_theme(theme_picker.get_text()))
+
     drawer = f.create_drawer(); drawer.set_title("Workspace settings")
     drawer_content = f.create_vbox(); drawer_hint = f.create_label()
     drawer_hint.set_text("Changes apply immediately without rebuilding the current route.")
@@ -760,6 +805,7 @@ def _browser_settings_page(_ctx):
     content = f.create_vbox()
     content.set_spec(LayoutSpec(gap=12))
     content.add_item(info)
+    content.add_item(theme_picker)
     open_button = f.create_button(); open_button.set_text("Open settings drawer")
     open_button.connect(drawer.open); content.add_item(open_button)
     card = f.create_card()
@@ -901,7 +947,7 @@ def create_admin_ui(framework="auto", debug=False):
     else:
         from uniui import web_components as admin_backend
 
-    _ADMIN_THEME.set("Light")
+    _ADMIN_THEME.set("light")
     admin_backend.set_admin_theme(False)
     f = uniui._get_factory()
     router = Router(
@@ -976,12 +1022,16 @@ def create_admin_ui(framework="auto", debug=False):
 
     def apply_theme(dark):
         admin_backend.set_admin_theme(dark)
-        _ADMIN_THEME.set("Dark" if dark else "Light")
+        _ADMIN_THEME.set("dark" if dark else "light")
         theme_button.set_text("Light mode" if dark else "Dark mode")
         _set_icon_class(theme_button, "light_mode" if dark else "dark_mode")
 
     def toggle():
-        apply_theme(_ADMIN_THEME.value != "Dark")
+        # Read the real active-theme flag, not the display-name string: if
+        # the settings-page picker has switched to a named theme like
+        # "sunset", _ADMIN_THEME.value is no longer "Light"/"Dark" and a
+        # string comparison here would silently toggle the wrong direction.
+        apply_theme(not uniui.is_dark())
 
     _THEME_TOGGLE = toggle
     theme_button.connect(toggle)
@@ -1071,7 +1121,7 @@ def main():
     from uniui.qt_components import get_admin_palette, set_admin_theme
     from PySide2 import QtWidgets, QtCore
 
-    _ADMIN_THEME.set("Light")
+    _ADMIN_THEME.set("light")
     set_admin_theme(False)
 
     router = Router(
@@ -1219,8 +1269,11 @@ def main():
     footer_layout.addWidget(version, stretch=1)
     shell.set_footer(_NativeWrap(footer))
 
-    def _apply_theme(dark: bool):
-        set_admin_theme(dark)
+    def _restyle_shell(dark: bool):
+        """Repaint chrome (icons, stylesheet, toggle label) from THEME as it
+        stands right now. Does not touch THEME itself -- set_admin_theme()
+        would force it back to the plain light/dark palette, clobbering a
+        named theme picked from the settings-page dropdown."""
         palette = get_admin_palette()
         icon_color = palette["text_muted"]
         back_btn.setIcon(_header_icon("back", icon_color))
@@ -1231,16 +1284,25 @@ def main():
             "light_mode" if dark else "dark_mode", icon_color
         ))
         shell.get_native().setStyleSheet(_admin_stylesheet())
-        name = "Dark" if dark else "Light"
-        _ADMIN_THEME.set(name)
         theme_btn.setText("Light mode" if dark else "Dark mode")
 
+    def _apply_theme(dark: bool):
+        set_admin_theme(dark)
+        _restyle_shell(dark)
+        _ADMIN_THEME.set("dark" if dark else "light")
+
     def _toggle_theme():
-        _apply_theme(_ADMIN_THEME.value != "Dark")
+        # See the matching comment on the Jupyter/Web toggle() above: read
+        # the real flag, not the display-name string, so a named theme
+        # picked from the settings page doesn't desync the quick toggle.
+        _apply_theme(not uniui.is_dark())
 
     _THEME_TOGGLE = _toggle_theme
     theme_btn.clicked.connect(_toggle_theme)
     _apply_theme(False)
+
+    global _QT_RESTYLE_HOOK
+    _QT_RESTYLE_HOOK = _restyle_shell
 
     router.push("/dashboard")
 

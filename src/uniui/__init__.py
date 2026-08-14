@@ -78,6 +78,7 @@ from .strategies import parse_float, parse_int, parse_flexible, normalize_text
 # Theme configuration
 from .theme import (
     THEME, THEME_LIGHT, THEME_DARK, toggle_theme, set_theme, is_dark,
+    set_active_theme, get_active_theme_name, register_theme, list_themes,
 )
 
 # Display
@@ -255,6 +256,10 @@ __all__ = [
     'THEME_DARK',
     'toggle_theme',
     'is_dark',
+    'set_active_theme',
+    'get_active_theme_name',
+    'register_theme',
+    'list_themes',
 
     # Display
     'show_ui',

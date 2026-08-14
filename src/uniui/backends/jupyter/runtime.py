@@ -18,7 +18,7 @@ from typing import Dict
 import ipywidgets as widgets
 
 from ... import theme_runtime
-from ...theme import get_admin_metrics, get_admin_tokens
+from ...theme import get_admin_metrics
 
 
 #: Design metrics. Static for the process lifetime.
@@ -37,8 +37,14 @@ native_of = native
 
 
 def get_palette() -> Dict[str, str]:
-    """Return a copy of the active Jupyter Admin palette."""
-    return get_admin_tokens(theme_runtime.is_dark())
+    """Return a copy of the active Jupyter Admin palette.
+
+    Reads theme_runtime.get_palette() -- the actual active palette -- rather
+    than re-deriving one from a light/dark bool, which only ever knows about
+    the two built-in themes and would silently ignore a named theme
+    registered via uniui.register_theme.
+    """
+    return theme_runtime.get_palette()
 
 
 def is_dark() -> bool:

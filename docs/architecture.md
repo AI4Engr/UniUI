@@ -157,6 +157,17 @@ Qt mutates a live palette dict, Jupyter re-emits its whole stylesheet, and Web
 rewrites CSS custom properties on the shell element. Rule *generation* is shared
 (`browser_css.py`, `backends/jupyter/styles.py`); stylesheet *emission* is not.
 
+**Themes are named, not just light/dark.** `theme_registry.py` holds any
+number of registered palettes (`register_theme(name, palette_or_json_path,
+dark=...)`); `theme.py` seeds it with the two built-in `"light"`/`"dark"`
+entries and adds `set_active_theme(name)` alongside the unchanged
+`set_theme(bool)`. This generalizes palette *count* only — it does not
+change how any backend delivers CSS. Each theme still flows through the
+same one `THEME` dict, mutated in place, that the three spines above
+already read from; a fourth registered theme needs no backend code changes,
+only a per-theme `dark` flag (Web's `ui.dark_mode()` is inherently
+boolean, so any theme still has to say which side of that split it's on).
+
 **Jupyter theming**: ipywidgets has limited inline style support, so dark mode
 is hybrid — CSS injection via `widgets.HTML` for backgrounds, inline
 `widget.style.*` for text and button colours, plus a recursive tree walk

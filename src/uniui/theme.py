@@ -20,123 +20,69 @@ Public API:
 - toggle_theme() -> bool  (returns True if now dark)
 - set_theme(dark) -> bool
 - is_dark() -> bool
+
+Beyond the built-in light/dark pair, additional named themes can be
+registered (from a dict or a JSON file) and switched to by name:
+- register_theme(name, palette, *, dark, metrics=None) -> None
+- set_active_theme(name) -> str
+- get_active_theme_name() -> str
+- list_themes() -> List[str]
+
+``set_theme``/``toggle_theme``/``is_dark`` are unchanged and keep working
+exactly as before — they are a boolean-typed special case of the same
+mechanism, not a separate code path: ``set_theme(dark)`` just calls
+``set_active_theme("dark" if dark else "light")``.
 """
 from __future__ import annotations
 
-from typing import Any, Dict
+import json
+import warnings
+from typing import Any, Dict, List
+
+from . import theme_registry
+
+try:
+    from importlib.resources import read_text as _read_resource_text
+except ImportError:  # pragma: no cover - importlib.resources always exists on 3.8+
+    from importlib_resources import read_text as _read_resource_text
 
 
 # ---------------------------------------------------------------------------
 # Colour tokens
 # ---------------------------------------------------------------------------
+#
+# Every built-in theme -- including light/dark -- is stored as JSON in the
+# uniui.themes package, not as a Python dict literal here. That keeps "ship a
+# new built-in theme" a data change (add a .json file, list it below) rather
+# than a code change, and means a theme registered by a user
+# (uniui.register_theme) and a theme shipped with the library go through the
+# exact same validation path in theme_registry.register_theme.
+#
+# read_text() rather than the newer files()/as_file() API: this package
+# targets Python 3.8, and files() needs 3.9+. read_text is deprecated (not
+# removed) starting 3.11 in favour of files() -- the warning is suppressed
+# here rather than left to leak into every importing application's console.
 
-LIGHT: Dict[str, str] = {
-    "bg": "#f6f8fc",
-    "surface": "#ffffff",
-    "surface_subtle": "#f8fafc",
-    "text": "#182230",
-    "text_muted": "#667085",
-    "border": "#e7ebf0",
-    "border_strong": "#d5dae1",
-    "accent": "#2563eb",
-    "accent_hover": "#1d4ed8",
-    "accent_press": "#1e40af",
-    "accent_soft": "#eff6ff",
-    "accent_op": "#0891b2",
-    "accent_op_hover": "#0e7490",
-    "accent_op_press": "#155e75",
-    "accent_sci": "#059669",
-    "accent_sci_hover": "#047857",
-    "accent_sci_press": "#065f46",
-    "accent_action": "#ea580c",
-    "accent_action_hover": "#c2410c",
-    "accent_action_press": "#9a3412",
-    "accent_neutral": "#374151",
-    "accent_neutral_hover": "#1f2937",
-    "accent_neutral_press": "#111827",
-    "ok": "#16a34a",
-    "warn": "#d97706",
-    "error": "#dc2626",
-    "sidebar_bg": "#111827",
-    "sidebar_fg": "#cbd5e1",
-    "sidebar_active": "#182235",
-    "sidebar_hover": "#182235",
-    "sidebar_edge": "#2563eb",
-    "sidebar_active_fg": "#ffffff",
-    "header_bg": "#ffffff",
-    "header_border": "#e7ebf0",
-    "input_bg": "#ffffff",
-    "row_alt": "#f8fafc",
-    "row_selected": "#eff6ff",
-    "row_selected_fg": "#1d4ed8",
-    "disabled": "#bfdbfe",
-    "scrollbar": "#cbd5e1",
-    "avatar_bg": "#dbeafe",
-    "avatar_fg": "#1d4ed8",
-    "status_ok_bg": "#dcfce7",
-    "status_ok_fg": "#15803d",
-    "status_warn_bg": "#fef3c7",
-    "status_warn_fg": "#b45309",
-    "status_error_bg": "#fee2e2",
-    "status_error_fg": "#b91c1c",
-    "status_neutral_bg": "#f1f5f9",
-    "status_neutral_fg": "#475569",
-    "shadow": "0 1px 2px rgba(16,24,40,.04),0 4px 12px rgba(16,24,40,.04)",
-}
+#: (registry name, filename in uniui/themes/, is this theme dark-leaning)
+_BUILTIN_THEMES = (
+    ("light", "light.json", False),
+    ("dark", "dark.json", True),
+    ("ocean", "ocean.json", True),
+    ("midnight", "midnight.json", True),
+    ("sand", "sand.json", False),
+    ("sunset", "sunset.json", False),
+)
 
-DARK: Dict[str, str] = {
-    "bg": "#0b0f19",
-    "surface": "#121826",
-    "surface_subtle": "#182131",
-    "text": "#f1f5f9",
-    "text_muted": "#94a3b8",
-    "border": "#263244",
-    "border_strong": "#344154",
-    "accent": "#60a5fa",
-    "accent_hover": "#93c5fd",
-    "accent_press": "#3b82f6",
-    "accent_soft": "#172554",
-    "accent_op": "#0891b2",
-    "accent_op_hover": "#22d3ee",
-    "accent_op_press": "#67e8f9",
-    "accent_sci": "#059669",
-    "accent_sci_hover": "#10b981",
-    "accent_sci_press": "#34d399",
-    "accent_action": "#ea580c",
-    "accent_action_hover": "#f97316",
-    "accent_action_press": "#fb923c",
-    "accent_neutral": "#334155",
-    "accent_neutral_hover": "#475569",
-    "accent_neutral_press": "#64748b",
-    "ok": "#4ade80",
-    "warn": "#fbbf24",
-    "error": "#f87171",
-    "sidebar_bg": "#0d1220",
-    "sidebar_fg": "#94a3b8",
-    "sidebar_active": "#1b2740",
-    "sidebar_hover": "#161f33",
-    "sidebar_edge": "#60a5fa",
-    "sidebar_active_fg": "#ffffff",
-    "header_bg": "#111726",
-    "header_border": "#1f2a3c",
-    "input_bg": "#182131",
-    "row_alt": "#141b2a",
-    "row_selected": "#172554",
-    "row_selected_fg": "#bfdbfe",
-    "disabled": "#1e293b",
-    "scrollbar": "#475569",
-    "avatar_bg": "#1e3a8a",
-    "avatar_fg": "#dbeafe",
-    "status_ok_bg": "#0f2a1d",
-    "status_ok_fg": "#86efac",
-    "status_warn_bg": "#2a2010",
-    "status_warn_fg": "#fcd34d",
-    "status_error_bg": "#3b1720",
-    "status_error_fg": "#fda4af",
-    "status_neutral_bg": "#1e293b",
-    "status_neutral_fg": "#cbd5e1",
-    "shadow": "0 1px 2px rgba(0,0,0,.25),0 8px 24px rgba(0,0,0,.16)",
-}
+
+def _load_bundled_colors(filename: str) -> Dict[str, str]:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        text = _read_resource_text("uniui.themes", filename)
+    return json.loads(text)
+
+
+LIGHT: Dict[str, str] = _load_bundled_colors("light.json")
+DARK: Dict[str, str] = _load_bundled_colors("dark.json")
 
 
 # ---------------------------------------------------------------------------
@@ -187,14 +133,24 @@ _LEGACY_EXTRAS = {
 }
 
 
-def _palette(dark: bool) -> Dict[str, Any]:
-    """Build a full palette: tokens + metrics + legacy aliases."""
-    palette: Dict[str, Any] = dict(DARK if dark else LIGHT)
-    palette.update(METRICS)
+def _build_palette(colors: Dict[str, str], metrics: Dict[str, Any] = None) -> Dict[str, Any]:
+    """Build a full palette from color tokens: colors + metrics + legacy aliases.
+
+    ``metrics`` defaults to the shared ``METRICS`` — sizing/typography is a
+    layout concern, not a palette one, so every theme shares it unless it
+    explicitly opts into an override.
+    """
+    palette: Dict[str, Any] = dict(colors)
+    palette.update(metrics if metrics is not None else METRICS)
     palette.update(_LEGACY_EXTRAS)
     for old_name, current_name in _ALIASES.items():
         palette[old_name] = palette[current_name]
     return palette
+
+
+def _palette(dark: bool) -> Dict[str, Any]:
+    """Build a full palette: tokens + metrics + legacy aliases."""
+    return _build_palette(DARK if dark else LIGHT)
 
 
 THEME_LIGHT = _palette(False)
@@ -204,17 +160,76 @@ THEME_DARK = _palette(True)
 THEME = dict(THEME_DARK)
 
 _is_dark = True
+_active_theme_name = "dark"
+
+theme_registry._set_required_keys(LIGHT.keys())
+
+# light/dark go through register_built_theme: their palettes are already
+# built above (THEME_LIGHT/THEME_DARK), so re-validating and rebuilding them
+# from the same JSON a second time would be redundant work for no benefit.
+# Every other built-in theme goes through the same register_theme() path a
+# user's own uniui.register_theme() call would use, proving a bundled theme
+# gets no special treatment beyond being listed in _BUILTIN_THEMES.
+theme_registry.register_built_theme("light", THEME_LIGHT, dark=False)
+theme_registry.register_built_theme("dark", THEME_DARK, dark=True)
+for _name, _filename, _dark in _BUILTIN_THEMES:
+    if _name in ("light", "dark"):
+        continue
+    theme_registry.register_theme(
+        _name, _load_bundled_colors(_filename), dark=_dark, _build=_build_palette
+    )
+del _name, _filename, _dark
+
+
+def set_active_theme(name: str) -> str:
+    """Switch the active palette to the named theme. Returns ``name``.
+
+    THEME is updated in place, same as ``set_theme`` — modules holding a
+    reference to it see the new values immediately.  ``is_dark()`` is
+    updated from the theme's own registered ``dark`` flag, so it stays
+    truthful for any theme, not just the built-in light/dark pair; this is
+    also what lets the Web backend's ``ui.dark_mode()`` call stay correct
+    for a custom theme without any Web-specific code change.
+    """
+    global _is_dark, _active_theme_name
+    palette = theme_registry.get_theme(name)
+    THEME.update(palette)
+    _active_theme_name = name
+    _is_dark = theme_registry.is_theme_dark(name)
+    return _active_theme_name
+
+
+def get_active_theme_name() -> str:
+    """Return the name of the currently active theme."""
+    return _active_theme_name
+
+
+def register_theme(
+    name: str, palette: Any, *, dark: bool, metrics: Dict[str, Any] = None
+) -> None:
+    """Register a named theme so it can be passed to ``set_active_theme``.
+
+    ``palette`` is a dict of color tokens (the same shape as ``LIGHT``/
+    ``DARK``) or a path to a JSON file holding that shape.  Raises
+    ``ValueError`` naming any missing required tokens.
+    """
+    theme_registry.register_theme(name, palette, dark=dark, metrics=metrics, _build=_build_palette)
+
+
+def list_themes() -> List[str]:
+    """Return every registered theme name, sorted."""
+    return theme_registry.list_themes()
 
 
 def set_theme(dark: bool) -> bool:
-    """Switch the active palette. Returns True if now dark.
+    """Switch between the built-in light and dark themes. Returns True if now dark.
 
     THEME is updated in place; modules holding a reference to it see the new
-    values immediately.
+    values immediately.  A special case of ``set_active_theme`` — the
+    boolean API and the named API can never disagree about what ended up in
+    THEME because they are the same code path.
     """
-    global _is_dark
-    _is_dark = bool(dark)
-    THEME.update(THEME_DARK if _is_dark else THEME_LIGHT)
+    set_active_theme("dark" if dark else "light")
     return _is_dark
 
 
@@ -256,11 +271,15 @@ __all__ = [
     "THEME",
     "THEME_DARK",
     "THEME_LIGHT",
+    "get_active_theme_name",
     "get_admin_metrics",
     "get_admin_tokens",
     "get_metrics",
     "get_tokens",
     "is_dark",
+    "list_themes",
+    "register_theme",
+    "set_active_theme",
     "set_theme",
     "toggle_theme",
 ]

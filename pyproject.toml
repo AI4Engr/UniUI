@@ -55,6 +55,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 uniui = ["py.typed"]
+"uniui.themes" = ["*.json"]
 
 # ============================================================================
 # Ruff Configuration (Linting + Formatting)

@@ -83,6 +83,33 @@ def test_web_theme_refresh_updates_root():
         refresh_theme(native)
 
 
+def test_web_dark_mode_flag_follows_a_custom_registered_theme():
+    """ui.dark_mode() is inherently boolean, but is_dark() must stay correct
+    for any registered theme, not just the built-in light/dark pair -- this
+    is what lets refresh_theme_web need zero Web-specific code to support
+    named themes."""
+    from uniui import is_dark, list_themes, register_theme, set_active_theme
+    from uniui.backends.web.primitives import state as web_state
+    from uniui.theme import LIGHT
+
+    use("web")
+    register_theme("dusk-web-test", dict(LIGHT, accent="#222222"), dark=True)
+    try:
+        assert "dusk-web-test" in list_themes()
+        set_active_theme("dusk-web-test")
+        assert is_dark() is True
+
+        layout = VBox(Label("Theme"))
+        refresh_theme(layout.get_native())
+        assert web_state._dark_mode.value is True
+    finally:
+        set_active_theme("dark")
+        refresh_theme(layout.get_native())
+        from uniui import theme_registry
+        theme_registry._REGISTRY.pop("dusk-web-test", None)
+        theme_registry._DARK_FLAGS.pop("dusk-web-test", None)
+
+
 @pytest.mark.web
 def test_web_factory_admin_surface_and_theme():
     factory = create_factory("web")

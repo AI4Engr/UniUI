@@ -157,7 +157,13 @@ QComboBox {
 }
 QComboBox:hover { border-color: %(text_muted)s; }
 QComboBox:focus { border: 2px solid %(accent)s; padding: 6px 10px; }
-QComboBox::drop-down { border: none; width: 26px; }
+/* Deliberately no ::drop-down / ::down-arrow rules: styling ::drop-down at
+   all (even just border/width) makes Qt stop drawing its native platform
+   arrow there, and Qt's QSS engine does not render the CSS border-triangle
+   trick as a triangle (confirmed empirically -- it paints a solid block
+   instead) or support data: URIs for ::down-arrow's image property. Leaving
+   both sub-controls unstyled keeps Qt's native arrow, which respects the
+   platform theme and is always visible. */
 QComboBox QAbstractItemView {
     background: %(surface)s;
     color: %(text)s;

@@ -539,8 +539,13 @@ solid.export_stl("part.stl")
 
 ### Configuration and Persistence
 
+- [x] Named, JSON-loadable themes beyond the built-in light/dark pair
+      (`register_theme`/`set_active_theme`/`list_themes` in `theme.py`,
+      backed by `theme_registry.py`)
 - [ ] Add a `Settings` API for unified preferences across Qt desktop and Jupyter environments
 - [ ] Persist theme, sidebar state, window size, recent routes, and table column configuration
+      — the active theme *name* is not persisted across runs yet; it depends
+      on the `Settings` API above
 - [ ] Settings file includes a schema version with migration and default-restore support
 - [ ] Do not store tokens, passwords, or other sensitive data in regular settings
 - [ ] Sensitive data uses the system credential store or is provided by the host application

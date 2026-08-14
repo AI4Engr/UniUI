@@ -56,16 +56,44 @@ def toggle_theme() -> bool:
     return set_theme(not _theme.is_dark())
 
 
+def set_active_theme(name: str) -> str:
+    """Switch to a named theme and refresh every registered backend.
+
+    The named-theme counterpart of :func:`set_theme` — same refresh-firing
+    behavior, so a theme picker calling this has every backend follow along
+    exactly the way flipping dark/light already does.
+    """
+    _theme.set_active_theme(name)
+    for refresh in list(_refreshers):
+        try:
+            refresh()
+        except RuntimeError as exc:
+            if "already deleted" not in str(exc):
+                raise
+    return _theme.get_active_theme_name()
+
+
+def get_active_theme_name() -> str:
+    return _theme.get_active_theme_name()
+
+
+def list_themes() -> List[str]:
+    return _theme.list_themes()
+
+
 def native(widget):
     """Unwrap a UniUI widget to its toolkit object."""
     return widget.get_native() if hasattr(widget, "get_native") else widget
 
 
 __all__ = [
+    "get_active_theme_name",
     "get_palette",
     "is_dark",
+    "list_themes",
     "native",
     "register_refresh",
+    "set_active_theme",
     "set_theme",
     "toggle_theme",
 ]

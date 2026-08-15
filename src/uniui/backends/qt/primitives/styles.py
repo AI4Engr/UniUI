@@ -23,6 +23,7 @@ from ..styles import scrollbar_rules as _scrollbar_rules
 
 _STYLED_ROOTS: "weakref.WeakSet[QtWidgets.QWidget]" = weakref.WeakSet()
 _STYLED_APPS: "weakref.WeakSet[QtWidgets.QApplication]" = weakref.WeakSet()
+_STYLED_COMBOS: "weakref.WeakSet[QtWidgets.QComboBox]" = weakref.WeakSet()
 
 
 def apply_app_style(app=None) -> None:
@@ -72,6 +73,55 @@ def refresh_styled_widgets() -> None:
             if "already deleted" not in str(exc):
                 raise
             registry.discard(target)
+    refresh_combo_popups()
+
+
+def _combo_popup_stylesheet() -> str:
+    """QSS for just the dropdown popup, applied directly to each QComboBox.
+
+    A QComboBox's popup (QComboBox::item view) is a separate top-level
+    window. Qt does not reliably cascade an application-wide stylesheet down
+    to it once any ancestor between the combo box and the app sets its own
+    local stylesheet (Card and every other Admin component do exactly that)
+    -- the popup silently falls back to the platform's native palette
+    (confirmed empirically: QListView.palette().color(Base) reads pure black
+    under a dark Windows theme even though the app stylesheet's `background`
+    value is correct). Setting this directly on the QComboBox, as close to
+    the popup as possible, sidesteps that cascade instead of relying on it.
+    """
+    return _COMBO_POPUP_QSS % get_admin_palette()
+
+
+def apply_combo_popup_style(combo) -> None:
+    """Style one QComboBox's dropdown popup and track it for theme refresh."""
+    combo.setStyleSheet(_combo_popup_stylesheet())
+    _STYLED_COMBOS.add(combo)
+
+
+def refresh_combo_popups() -> None:
+    """Re-apply the popup stylesheet to every live QComboBox."""
+    qss = _combo_popup_stylesheet()
+    for combo in list(_STYLED_COMBOS):
+        try:
+            combo.setStyleSheet(qss)
+        except RuntimeError as exc:
+            if "already deleted" not in str(exc):
+                raise
+            _STYLED_COMBOS.discard(combo)
+
+
+_COMBO_POPUP_QSS = """
+QComboBox QAbstractItemView {
+    background: %(surface)s;
+    color: %(text)s;
+    border: 1px solid %(border)s;
+    border-radius: 9px;
+    outline: none;
+    selection-background-color: %(accent)s;
+    selection-color: white;
+    padding: 4px;
+}
+"""
 
 
 # Kept as a module constant so the palette is substituted per call rather than
@@ -221,7 +271,9 @@ def scrollbar_stylesheet() -> str:
 __all__ = [
     "apply_app_style",
     "apply_base_style",
+    "apply_combo_popup_style",
     "base_stylesheet",
+    "refresh_combo_popups",
     "refresh_styled_widgets",
     "scrollbar_stylesheet",
 ]

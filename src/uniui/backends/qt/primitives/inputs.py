@@ -25,6 +25,11 @@ class QTComboBox(QtWidgets.QComboBox):
     def __init__(self):
         super().__init__()
         super().setEditable(True)
+        # The popup can't reliably inherit the app-wide stylesheet once any
+        # ancestor (every Admin component sets one) has a local stylesheet
+        # of its own -- see the comment on apply_combo_popup_style.
+        from .styles import apply_combo_popup_style
+        apply_combo_popup_style(self)
 
     def addItem(self, item):
         super().addItem(item)
@@ -58,6 +63,9 @@ class QTDropdown(QtWidgets.QComboBox):
     def __init__(self):
         super().__init__()
         super().setEditable(False)
+        # See the matching comment on QTComboBox.__init__.
+        from .styles import apply_combo_popup_style
+        apply_combo_popup_style(self)
 
     def addItem(self, item):
         super().addItem(item)

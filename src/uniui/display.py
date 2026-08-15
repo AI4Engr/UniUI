@@ -178,7 +178,16 @@ class UniversalDisplay:
 
     @staticmethod
     def _show_web(native, title, width, height, _set_refresh_root=None):
-        """Run a NiceGUI-backed layout as a standalone Web application."""
+        """Run a NiceGUI-backed layout as a standalone Web application.
+
+        Checked before importing anything (same guard as refresh_theme()
+        above): backends/web/display.py imports nicegui at module level via
+        its primitives package, so importing it just to let show() decide
+        "not mine" would make every non-Web show_ui() call fail hard in any
+        environment that hasn't installed the optional Web extra.
+        """
+        if not native.__class__.__module__.startswith("nicegui."):
+            return False
         from .backends.web.display import show
         return show(native, title, width, height, _set_refresh_root)
 

@@ -8,6 +8,7 @@ from nicegui import ui
 from ....components import ITable
 from ....models.status import status_class_expression_js
 from ....models.table import TableModel
+from ....state import Handle
 from ..primitives import _WebAdapter
 from ..styles import install_admin_css
 
@@ -54,7 +55,12 @@ class WebTableAdapter(_WebAdapter, ITable):
         self._table.set_visibility(not overlay)
         self._message.set_text(self._model.overlay_text())
         self._message.set_visibility(overlay)
-    def on_row_click(self, fn: Callable[[Dict], None]) -> None: self._row_click_cb = fn
+    def on_row_click(self, fn: Callable[[Dict], None]) -> Handle:
+        self._row_click_cb = fn
+        def cancel():
+            if self._row_click_cb is fn:
+                self._row_click_cb = None
+        return Handle(cancel)
     def _on_row_event(self, event) -> None:
         args = getattr(event, "args", None)
         row = args.get("row") if isinstance(args, dict) else None

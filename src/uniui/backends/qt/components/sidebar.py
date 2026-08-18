@@ -9,6 +9,7 @@ from ....components import ISidebar
 from ....models.navigation import (
     SIDEBAR_COLLAPSED, SIDEBAR_MAX, SIDEBAR_MIN, NavigationModel,
 )
+from ....state import Handle
 from ..runtime import C, M, nav_icon, track_themed
 
 def _sidebar_style() -> str:
@@ -93,8 +94,12 @@ class QtSidebarAdapter(ISidebar):
             self._list.setCurrentRow(self._model.index_of(key))
             self._list.blockSignals(False)
 
-    def on_select(self, fn: Callable[[str], None]) -> None:
+    def on_select(self, fn: Callable[[str], None]) -> Handle:
         self._select_cb = fn
+        def cancel():
+            if self._select_cb is fn:
+                self._select_cb = None
+        return Handle(cancel)
 
     def set_collapsed(self, collapsed: bool) -> None:
         self._model.set_collapsed(collapsed)

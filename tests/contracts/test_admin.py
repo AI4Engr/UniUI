@@ -191,6 +191,13 @@ class TestTableContract(WidgetContractTest):
         tbl = self.create_widget(factory)
         tbl.on_row_click(lambda row: None)
 
+    @pytest.mark.contract
+    def test_on_row_click_dispose_clears_callback(self, factory):
+        tbl = self.create_widget(factory)
+        handle = tbl.on_row_click(lambda row: None)
+        handle.dispose()
+        assert tbl._row_click_cb is None
+
 
 class TestSidebarContract(WidgetContractTest):
     widget_kind = SIDEBAR
@@ -222,6 +229,14 @@ class TestSidebarContract(WidgetContractTest):
         sb = self.create_widget(factory)
         sb.add_item("dashboard", "Dashboard")
         sb.on_select(lambda key: None)
+
+    @pytest.mark.contract
+    def test_on_select_dispose_clears_callback(self, factory):
+        sb = self.create_widget(factory)
+        sb.add_item("dashboard", "Dashboard")
+        handle = sb.on_select(lambda key: None)
+        handle.dispose()
+        assert sb._select_cb is None
 
     @pytest.mark.contract
     def test_set_collapsed_true(self, factory):
@@ -327,6 +342,13 @@ class TestBreadcrumbContract(WidgetContractTest):
     def test_on_click_registers(self, factory):
         bc = self.create_widget(factory)
         bc.on_click(lambda path: None)
+
+    @pytest.mark.contract
+    def test_on_click_dispose_clears_callback(self, factory):
+        bc = self.create_widget(factory)
+        handle = bc.on_click(lambda path: None)
+        handle.dispose()
+        assert bc._click_cb is None
 
 
 class TestGaugeContract(WidgetContractTest):

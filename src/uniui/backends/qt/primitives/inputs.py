@@ -16,6 +16,7 @@ from ...._adapter_mixins import (
     ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
+from ....state import Handle
 from ....strategies import normalize_text, parse_float
 from .helpers import convert_control_text
 
@@ -36,6 +37,11 @@ class QTComboBox(QtWidgets.QComboBox):
 
     def connect(self, function):
         QtCore.QObject.connect(
+            self, QtCore.SIGNAL("currentIndexChanged(QString)"),
+            function)
+
+    def disconnect(self, function):
+        QtCore.QObject.disconnect(
             self, QtCore.SIGNAL("currentIndexChanged(QString)"),
             function)
 
@@ -72,6 +78,11 @@ class QTDropdown(QtWidgets.QComboBox):
 
     def connect(self, function):
         QtCore.QObject.connect(
+            self, QtCore.SIGNAL("currentIndexChanged(QString)"),
+            function)
+
+    def disconnect(self, function):
+        QtCore.QObject.disconnect(
             self, QtCore.SIGNAL("currentIndexChanged(QString)"),
             function)
 
@@ -123,6 +134,10 @@ class QTPushButton(QtWidgets.QPushButton):
 
     def connect(self, function):
         QtCore.QObject.connect(
+            self, QtCore.SIGNAL("pressed()"), function)
+
+    def disconnect(self, function):
+        QtCore.QObject.disconnect(
             self, QtCore.SIGNAL("pressed()"), function)
 
     def getText(self):
@@ -177,6 +192,9 @@ class QTLineEdit(QtWidgets.QLineEdit):
     def textChanged(self, function):
         super().textChanged.connect(function)
 
+    def textChangedDisconnect(self, function):
+        super().textChanged.disconnect(function)
+
     def setFixedWidth(self, width):
         super().setFixedWidth(width)
 
@@ -192,8 +210,9 @@ class QtButtonAdapter(NativeMixin, TextMixin, EnableMixin, SizeMixin, IButton):
     """Qt Button adapter - implements snake_case interface convention"""
 
     # IEventCapable
-    def connect(self, callback):
+    def connect(self, callback) -> Handle:
         self._native.connect(callback)
+        return Handle(lambda: self._native.disconnect(callback))
 class QtLineEditAdapter(ILineEdit):
     """Qt LineEdit adapter - implements snake_case interface convention"""
 
@@ -222,8 +241,10 @@ class QtLineEditAdapter(ILineEdit):
             raise InvalidValueError(f"Invalid numeric value: {text}")
 
     # IChangeEventCapable
-    def on_change(self, callback):
-        self._native.textChanged(lambda: callback())
+    def on_change(self, callback) -> Handle:
+        wrapper = lambda: callback()
+        self._native.textChanged(wrapper)
+        return Handle(lambda: self._native.textChangedDisconnect(wrapper))
 
     # IVisibilityCapable
     def show(self):
@@ -290,8 +311,9 @@ class QtTextAreaAdapter(ITextArea):
         self._native.setMaximumHeight(height)
 
     # IChangeEventCapable
-    def on_change(self, callback):
+    def on_change(self, callback) -> Handle:
         self._native.textChanged.connect(callback)
+        return Handle(lambda: self._native.textChanged.disconnect(callback))
 
     # ISizeCapable
     def set_fixed_width(self, width: int):
@@ -310,8 +332,9 @@ class QtComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, EnableMixin,
     """Qt ComboBox adapter - implements snake_case interface convention"""
 
     # IChangeEventCapable
-    def on_change(self, callback):
+    def on_change(self, callback) -> Handle:
         self._native.connect(callback)
+        return Handle(lambda: self._native.disconnect(callback))
 class QtDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin, VisibilityMixin,
                        EnableMixin, SizeMixin, IDropdown):
     """Qt Dropdown adapter - implements snake_case interface convention"""
@@ -322,5 +345,6 @@ class QtDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin, VisibilityMixin
         self._native.setValue(value_list)
 
     # IChangeEventCapable
-    def on_change(self, callback):
+    def on_change(self, callback) -> Handle:
         self._native.connect(callback)
+        return Handle(lambda: self._native.disconnect(callback))

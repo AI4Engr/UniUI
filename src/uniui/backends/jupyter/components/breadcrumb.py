@@ -8,6 +8,7 @@ import ipywidgets as widgets
 
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
+from ....state import Handle
 from ..runtime import html
 
 class JupyterBreadcrumbAdapter(IBreadcrumb):
@@ -40,8 +41,12 @@ class JupyterBreadcrumbAdapter(IBreadcrumb):
                 ))
         self._native.children = tuple(children)
 
-    def on_click(self, fn: Callable[[str], None]) -> None:
+    def on_click(self, fn: Callable[[str], None]) -> Handle:
         self._click_cb = fn
+        def cancel():
+            if self._click_cb is fn:
+                self._click_cb = None
+        return Handle(cancel)
 
     def _on_click(self, path: str) -> None:
         if self._click_cb:

@@ -7,6 +7,7 @@ from nicegui import ui
 
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
+from ....state import Handle
 from ..primitives import _WebAdapter
 from ..runtime import clear
 from ..styles import install_admin_css
@@ -23,7 +24,12 @@ class WebBreadcrumbAdapter(_WebAdapter, IBreadcrumb):
                 if crumb.is_link:
                     ui.button(crumb.label, color=None, on_click=lambda _e, p=crumb.path: self._emit(p)).props("flat dense no-caps")
                 else: ui.label(crumb.label).style("color:var(--uniui-text);font-weight:650")
-    def on_click(self, fn: Callable[[str], None]) -> None: self._click_cb = fn
+    def on_click(self, fn: Callable[[str], None]) -> Handle:
+        self._click_cb = fn
+        def cancel():
+            if self._click_cb is fn:
+                self._click_cb = None
+        return Handle(cancel)
     def _emit(self, path: str) -> None:
         if self._click_cb: self._click_cb(path)
 

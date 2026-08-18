@@ -85,3 +85,25 @@ class TestButtonContract(WidgetContractTest):
             pytest.skip("Cannot trigger click on this backend's native widget")
 
         assert called == [1]
+
+    @pytest.mark.contract
+    def test_connect_dispose_stops_callback(self, factory):
+        """Disposing the Handle returned by connect() unregisters the callback."""
+        button = self.create_widget(factory)
+        called = []
+
+        handle = button.connect(lambda: called.append(1))
+        handle.dispose()
+
+        native = button.get_native()
+        if hasattr(native, "animateClick"):
+            native.animateClick(0)
+        elif hasattr(native, "_callback") and callable(native._callback):
+            native._callback()
+        elif hasattr(native, "_click_handlers"):
+            for h in native._click_handlers.callbacks:
+                h(native, None)
+        else:
+            pytest.skip("Cannot trigger click on this backend's native widget")
+
+        assert called == []

@@ -9,6 +9,7 @@ from abc import abstractmethod
 from typing import Any, Callable, Dict, List, Optional
 
 from uniui.core import IWidget
+from uniui.state import Handle
 
 
 class ICard(IWidget):
@@ -89,7 +90,7 @@ class ITable(IWidget):
         ...
 
     @abstractmethod
-    def on_row_click(self, fn: Callable[[Dict], None]) -> None:
+    def on_row_click(self, fn: Callable[[Dict], None]) -> Handle:
         """Register a callback fired when the user clicks a row."""
         ...
 
@@ -108,7 +109,7 @@ class ISidebar(IWidget):
         ...
 
     @abstractmethod
-    def on_select(self, fn: Callable[[str], None]) -> None:
+    def on_select(self, fn: Callable[[str], None]) -> Handle:
         """Register a callback fired when the user selects an item (passes key)."""
         ...
 
@@ -147,7 +148,7 @@ class IBreadcrumb(IWidget):
         ...
 
     @abstractmethod
-    def on_click(self, fn: Callable[[str], None]) -> None:
+    def on_click(self, fn: Callable[[str], None]) -> Handle:
         """Register callback fired when the user clicks a crumb (passes path)."""
         ...
 

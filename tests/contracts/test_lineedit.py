@@ -137,3 +137,17 @@ class TestLineEditContract(
         # Change text programmatically
         line_edit.set_text("Hello")
         assert called, "expected on_change callback to fire"
+
+    @pytest.mark.contract
+    def test_on_change_dispose_stops_callback(self, factory):
+        """Disposing the Handle returned by on_change() unregisters the callback."""
+        line_edit = self.create_widget(factory)
+        called = []
+
+        handle = line_edit.on_change(lambda: called.append(1))
+        line_edit.set_text("Hello")
+        assert called == [1]
+
+        handle.dispose()
+        line_edit.set_text("World")
+        assert called == [1]

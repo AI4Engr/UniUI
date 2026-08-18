@@ -5,6 +5,7 @@ from PySide2 import QtCore, QtWidgets
 
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
+from ....state import Handle
 from ..runtime import C, clear_layout, track_themed
 
 def _breadcrumb_button_style() -> str:
@@ -73,8 +74,12 @@ class QtBreadcrumbAdapter(IBreadcrumb):
 
         self._layout.addStretch()
 
-    def on_click(self, fn) -> None:
+    def on_click(self, fn) -> Handle:
         self._click_cb = fn
+        def cancel():
+            if self._click_cb is fn:
+                self._click_cb = None
+        return Handle(cancel)
 
     def _on_click(self, path: str) -> None:
         if self._click_cb:

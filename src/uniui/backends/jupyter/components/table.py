@@ -8,6 +8,7 @@ import ipywidgets as widgets
 
 from ....components import ITable
 from ....models.table import CELL_NUMBER, CELL_STATUS, TableModel
+from ....state import Handle
 from ..runtime import M, html
 
 class JupyterTableAdapter(ITable):
@@ -84,8 +85,12 @@ class JupyterTableAdapter(ITable):
             self._message.layout.display = "none"
             self._table.layout.display = None
 
-    def on_row_click(self, fn: Callable[[Dict], None]) -> None:
+    def on_row_click(self, fn: Callable[[Dict], None]) -> Handle:
         self._row_click_cb = fn
+        def cancel():
+            if self._row_click_cb is fn:
+                self._row_click_cb = None
+        return Handle(cancel)
 
     def _on_bridge(self, change) -> None:
         index = int(change["new"])

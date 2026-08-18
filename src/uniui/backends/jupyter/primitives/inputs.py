@@ -11,6 +11,7 @@ from ...._adapter_mixins import (
     ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
+from ....state import Handle
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
 
@@ -54,7 +55,13 @@ class JupyterPushButton(widgets.Button):
         return self.description
 
     def connect(self, function):
-        self.on_click(lambda btn: function())
+        def wrapper(btn):
+            function()
+        self.on_click(wrapper)
+        return wrapper
+
+    def disconnect(self, wrapper):
+        self.on_click(wrapper, remove=True)
 
     def setEnabled(self, flag):
         self.disabled = not flag
@@ -102,6 +109,9 @@ class JupyterLineEdit(widgets.Text):
 
     def textChanged(self, function):
         self.observe(function, 'value')
+
+    def textChangedDisconnect(self, function):
+        self.unobserve(function, 'value')
 
     def setFixedWidth(self, width):
         self.layout.width = str(width) + 'px'
@@ -200,7 +210,13 @@ class JupyterComboBox(widgets.Combobox):
             self.value = "Unnamed"
 
     def connect(self, function):
-        self.observe(lambda change: function(), 'value')
+        def wrapper(change):
+            function()
+        self.observe(wrapper, 'value')
+        return wrapper
+
+    def disconnect(self, wrapper):
+        self.unobserve(wrapper, 'value')
 
     def currentText(self):
         return self.value
@@ -265,7 +281,13 @@ class JupyterDropdown(widgets.Dropdown):
         self.options = tuple([])
 
     def connect(self, function):
-        self.observe(lambda change: function(), 'value')
+        def wrapper(change):
+            function()
+        self.observe(wrapper, 'value')
+        return wrapper
+
+    def disconnect(self, wrapper):
+        self.unobserve(wrapper, 'value')
 
     def currentText(self):
         if len(self.options) > 0 and self.index is not None:
@@ -323,8 +345,9 @@ class JupyterButtonAdapter(NativeMixin, TextMixin, EnableMixin, SizeMixin, IButt
     """Jupyter Button adapter - implements snake_case interface convention"""
 
     # IEventCapable
-    def connect(self, callback: Callable[[], None]):
-        self._native.connect(callback)
+    def connect(self, callback: Callable[[], None]) -> Handle:
+        wrapper = self._native.connect(callback)
+        return Handle(lambda: self._native.disconnect(wrapper))
 class JupyterLineEditAdapter(ILineEdit):
     """Jupyter LineEdit adapter - implements snake_case interface convention"""
 
@@ -353,8 +376,10 @@ class JupyterLineEditAdapter(ILineEdit):
             raise InvalidValueError(f"Invalid numeric value: {text}")
 
     # IChangeEventCapable
-    def on_change(self, callback: Callable[[], None]):
-        self._native.textChanged(lambda change: callback())
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        wrapper = lambda change: callback()
+        self._native.textChanged(wrapper)
+        return Handle(lambda: self._native.textChangedDisconnect(wrapper))
 
     # IVisibilityCapable
     def show(self):
@@ -421,8 +446,10 @@ class JupyterTextAreaAdapter(ITextArea):
         self._native.setMaximumHeight(height)
 
     # IChangeEventCapable
-    def on_change(self, callback: Callable[[], None]):
-        self._native.observe(lambda change: callback(), 'value')
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        wrapper = lambda change: callback()
+        self._native.observe(wrapper, 'value')
+        return Handle(lambda: self._native.unobserve(wrapper, 'value'))
 
     # ISizeCapable
     def set_fixed_width(self, width: int):
@@ -441,8 +468,9 @@ class JupyterComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, EnableMixi
     """Jupyter ComboBox adapter - implements snake_case interface convention"""
 
     # IChangeEventCapable
-    def on_change(self, callback: Callable[[], None]):
-        self._native.connect(callback)
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        wrapper = self._native.connect(callback)
+        return Handle(lambda: self._native.disconnect(wrapper))
 class JupyterDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin,
                             VisibilityMixin, EnableMixin, SizeMixin, IDropdown):
     """Jupyter Dropdown adapter - implements snake_case interface convention"""
@@ -453,5 +481,6 @@ class JupyterDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin,
         self._native.setValue(value_list)
 
     # IChangeEventCapable
-    def on_change(self, callback: Callable[[], None]):
-        self._native.connect(callback)
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        wrapper = self._native.connect(callback)
+        return Handle(lambda: self._native.disconnect(wrapper))

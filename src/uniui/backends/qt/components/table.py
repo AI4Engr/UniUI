@@ -8,6 +8,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from ....components import ITable
 from ....models.status import classify_status, status_token_names
 from ....models.table import ALIGN_RIGHT, TableModel
+from ....state import Handle
 from ..runtime import C, M, track_themed
 from ..styles import scrollbar_rules
 
@@ -204,8 +205,12 @@ class QtTableAdapter(ITable):
             self._overlay.hide()
             self._table.show()
 
-    def on_row_click(self, fn: Callable[[Dict], None]) -> None:
+    def on_row_click(self, fn: Callable[[Dict], None]) -> Handle:
         self._row_click_cb = fn
+        def cancel():
+            if self._row_click_cb is fn:
+                self._row_click_cb = None
+        return Handle(cancel)
 
     def _on_cell_clicked(self, row: int, col: int) -> None:
         clicked = self._model.row_at(row)

@@ -10,6 +10,7 @@ from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import (
     SIDEBAR_MAX, SIDEBAR_MIN, NavigationModel, clamp_width,
 )
+from ....state import Handle
 from ..runtime import M
 
 class JupyterSidebarAdapter(ISidebar):
@@ -42,8 +43,12 @@ class JupyterSidebarAdapter(ISidebar):
             else:
                 button.remove_class("uniui-active")
 
-    def on_select(self, fn: Callable[[str], None]) -> None:
+    def on_select(self, fn: Callable[[str], None]) -> Handle:
         self._select_cb = fn
+        def cancel():
+            if self._select_cb is fn:
+                self._select_cb = None
+        return Handle(cancel)
 
     def set_collapsed(self, collapsed: bool) -> None:
         self._model.set_collapsed(collapsed)

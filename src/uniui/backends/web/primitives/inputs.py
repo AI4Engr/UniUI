@@ -8,12 +8,20 @@ from typing import Any, Callable, List, Optional
 from nicegui import ui
 
 from ....core import *
+from ....state import Handle
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
 from .state import T, register_adapter
 
 from .base import _WebAdapter
 from .helpers import _plain_html, _set_enabled, _style_size
+
+
+def _list_handle(callbacks: List[Callable], callback: Callable) -> Handle:
+    def cancel():
+        if callback in callbacks:
+            callbacks.remove(callback)
+    return Handle(cancel)
 
 class WebButtonAdapter(_WebAdapter, IButton):
     _BUTTON_KEYS = {
@@ -49,8 +57,9 @@ class WebButtonAdapter(_WebAdapter, IButton):
     def get_text(self) -> str:
         return normalize_text(self._native.text)
 
-    def connect(self, callback: Callable[[], None]) -> None:
+    def connect(self, callback: Callable[[], None]) -> Handle:
         self._callbacks.append(callback)
+        return _list_handle(self._callbacks, callback)
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)
@@ -103,8 +112,9 @@ class WebLineEditAdapter(_WebAdapter, ILineEdit):
         except ValueError as exc:
             raise InvalidValueError(f"Invalid numeric value: {text}") from exc
 
-    def on_change(self, callback: Callable[[], None]) -> None:
+    def on_change(self, callback: Callable[[], None]) -> Handle:
         self._callbacks.append(callback)
+        return _list_handle(self._callbacks, callback)
 
     def on_finish_edit(self, callback: Callable[[], None]) -> None:
         self._native.on("blur", lambda _event: callback())
@@ -157,8 +167,9 @@ class WebTextAreaAdapter(_WebAdapter, ITextArea):
     def clear(self) -> None:
         self.set_text("")
 
-    def on_change(self, callback: Callable[[], None]) -> None:
+    def on_change(self, callback: Callable[[], None]) -> Handle:
         self._callbacks.append(callback)
+        return _list_handle(self._callbacks, callback)
 
     def set_maximum_height(self, height: int) -> None:
         _style_size(self._native, "max-height", height)
@@ -212,8 +223,9 @@ class _WebSelectAdapter(_WebAdapter):
     def get_text(self) -> str:
         return normalize_text(self._native.value)
 
-    def on_change(self, callback: Callable[[], None]) -> None:
+    def on_change(self, callback: Callable[[], None]) -> Handle:
         self._callbacks.append(callback)
+        return _list_handle(self._callbacks, callback)
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = bool(enabled)

@@ -35,7 +35,9 @@ Position UniUI as a "Python engineering data application framework": the same bu
   - [ ] `set_enabled()` / `is_enabled()`
   - [ ] `set_width()` / `set_height()` / `set_min_size()`
   - [ ] `add_class()` or unified style attributes
-- [ ] Event subscriptions return a disposable handle and auto-unsubscribe on `dispose()`
+- [x] Event subscriptions return a disposable handle and auto-unsubscribe on `dispose()`
+  - Done (2026-08-18), scoped: every `on_*` registration method (`on_change`, `connect`, `on_select`, `on_click`, `on_row_click`, `on_resize`) across all three backends now returns a `uniui.state.Handle` whose `.dispose()` actually unregisters the callback (native Qt signal `.disconnect()`, ipywidgets `.unobserve()`/`Button.on_click(remove=True)`, or list/attribute removal) — verified per backend by subscribing twice, disposing one, and confirming only the surviving callback still fires. "Auto-unsubscribe on `dispose()`" for the *component itself* is deferred — no widget/component has a `dispose()` method today, and adding one to every component belongs to the separate, not-yet-designed "universal component lifecycle" item above; callers hold and dispose the `Handle` themselves for now, same as `State.subscribe()`/`Router.on_navigate()`.
+  - Known gap, not fixed here: `LineEdit.on_finish_edit` (Web-only) has no abstract contract declaration and doesn't exist on Qt/Jupyter.
 - [ ] Unify event signatures; clarify callback parameters and exception handling
 - [ ] Unify data update principle: update existing native controls, avoid rebuilding the entire UI tree on each refresh
 - [ ] Forbid backends from silently swallowing exceptions; errors must include backend, component type, and the original exception

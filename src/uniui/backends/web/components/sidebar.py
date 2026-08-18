@@ -9,6 +9,7 @@ from nicegui import ui
 from ....components import ISidebar
 from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import NavigationModel
+from ....state import Handle
 from ..primitives import _WebAdapter
 from ..styles import install_admin_css
 
@@ -38,7 +39,12 @@ class WebSidebarAdapter(_WebAdapter, ISidebar):
         for item, button in zip(self._model, self._buttons):
             is_active = self._model.is_active(item.key)
             button.classes(add="uniui-active" if is_active else "", remove="" if is_active else "uniui-active")
-    def on_select(self, fn: Callable[[str], None]) -> None: self._select_cb = fn
+    def on_select(self, fn: Callable[[str], None]) -> Handle:
+        self._select_cb = fn
+        def cancel():
+            if self._select_cb is fn:
+                self._select_cb = None
+        return Handle(cancel)
     def set_collapsed(self, collapsed: bool) -> None:
         self._model.set_collapsed(collapsed)
         for button in self._buttons:

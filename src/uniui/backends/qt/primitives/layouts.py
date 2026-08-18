@@ -16,6 +16,7 @@ from ...._adapter_mixins import (
     ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
+from ....state import Handle
 from ....strategies import normalize_text, parse_float
 from .helpers import has_method
 
@@ -332,7 +333,7 @@ class QtGridAdapter(IGrid):
         self._auto_row = 0
         self._auto_col = 0
 
-    def on_resize(self, callback, breakpoints=None):
+    def on_resize(self, callback, breakpoints=None) -> Handle:
         from ....core import DEFAULT_BREAKPOINTS
         bp = breakpoints or DEFAULT_BREAKPOINTS
         self._breakpoints = bp
@@ -349,6 +350,11 @@ class QtGridAdapter(IGrid):
             self._notifier = _ResizeNotifier(_on_width)
             self._native.addWidget(self._notifier, 0, 0, 1, 1)
             self._notifier.hide()
+
+        def cancel():
+            if callback in self._resize_callbacks:
+                self._resize_callbacks.remove(callback)
+        return Handle(cancel)
 class QtWrapAdapter(IWrap):
     """Qt Wrap adapter using _QFlowLayout."""
 

@@ -13,6 +13,7 @@ from typing import Any, Callable, Optional
 
 from .exceptions import NotSupportedError
 from .layout import Breakpoints, DEFAULT_BREAKPOINTS, LayoutItem, LayoutSpec
+from ..state import Handle
 
 
 class IWidget(ABC):
@@ -60,7 +61,7 @@ class IButton(IWidget):
         pass
 
     @abstractmethod
-    def connect(self, callback: Callable[[], None]) -> None:
+    def connect(self, callback: Callable[[], None]) -> Handle:
         pass
 
     @abstractmethod
@@ -90,7 +91,7 @@ class ILineEdit(IWidget):
         pass
 
     @abstractmethod
-    def on_change(self, callback: Callable[[], None]) -> None:
+    def on_change(self, callback: Callable[[], None]) -> Handle:
         pass
 
     @abstractmethod
@@ -136,7 +137,7 @@ class ITextArea(IWidget):
         pass
 
     @abstractmethod
-    def on_change(self, callback: Callable[[], None]) -> None:
+    def on_change(self, callback: Callable[[], None]) -> Handle:
         pass
 
     @abstractmethod
@@ -171,7 +172,7 @@ class IComboBox(IWidget):
         pass
 
     @abstractmethod
-    def on_change(self, callback: Callable[[], None]) -> None:
+    def on_change(self, callback: Callable[[], None]) -> Handle:
         pass
 
     @abstractmethod
@@ -205,7 +206,7 @@ class IDropdown(IWidget):
         pass
 
     @abstractmethod
-    def on_change(self, callback: Callable[[], None]) -> None:
+    def on_change(self, callback: Callable[[], None]) -> Handle:
         pass
 
     @abstractmethod
@@ -358,12 +359,12 @@ class IGrid(IWidget):
         raise NotSupportedError("clear() not supported on this Grid")
 
     def on_resize(self, callback: Callable[[str], None],
-                  breakpoints: "Breakpoints" = None) -> None:
+                  breakpoints: "Breakpoints" = None) -> Handle:
         """Register a callback fired when the container crosses a breakpoint.
         callback receives "compact" | "medium" | "wide".
         Default: no-op (backends that support it override this).
         """
-        pass
+        return Handle(lambda: None)
 class IWrap(IWidget):
     """Wrapping flow layout — children wrap to next row when they overflow."""
 

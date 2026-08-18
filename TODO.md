@@ -28,6 +28,7 @@ Position UniUI as a "Python engineering data application framework": the same bu
 - [ ] Design a universal component lifecycle: create, mount, update, destroy
 - [ ] Add an explicit `App` / `Window` lifecycle supporting run, embed, and multi-window modes
 - [ ] Gradually replace the global `_factory` and `_root_widget` to avoid cross-contamination between Notebooks, multiple apps, and tests
+  - Shelved (2026-08-17): designed an additive `contextvars.ContextVar`-based `using(framework)` scope (fallback-only, `use()`/`_get_factory()` unchanged) but no real usage today runs two backends in one process, so it was dropped as unnecessary complexity. Revisit if that changes.
 - [ ] Clearly distinguish `Widget`, `Layout`, `Window`, and `Application` — stop treating all objects as Widgets
 - [ ] Fill in common capabilities for all components:
   - [ ] `show()` / `hide()`
@@ -320,6 +321,7 @@ The first version uses "in-process routing": UniUI maintains the current path an
 - [ ] Support navigation guards: confirm before leaving unsaved forms, redirect on missing permissions
 - [ ] Pages are lazily created by default; allow configuring whether page instances are cached
 - [ ] Cancel timers, data subscriptions, and background tasks when a page is left, to avoid resource leaks
+  - [x] Widget-tree leak fixed (2026-08-17): `RouterView` no longer accumulates an unbounded `IOverlay` layer per uncached navigation. `IOverlay` gained `remove_layer(index)`/`layer_count()`; `RouterView` tracks the single currently-mounted disposable (non-cached) layer and removes it right before the next layer is added, remapping cached-page indices. Cached pages are never touched. Verified across Qt/Jupyter/Web. Still open: timers/subscriptions/background tasks *inside* a page are not auto-cancelled on navigation away — that's a separate mechanism from this fix.
 - [ ] Route callbacks and page factories receive a unified `RouteContext`
 
 Proposed API draft:

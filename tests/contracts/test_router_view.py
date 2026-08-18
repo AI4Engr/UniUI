@@ -76,3 +76,34 @@ class TestRouterViewContract:
         router.push("/home")
         rv.dispose()
         router.push("/home")   # subsequent navigation must not re-trigger the view
+
+    @pytest.mark.contract
+    def test_uncached_pages_do_not_accumulate_layers(self, factory):
+        """Navigating through uncached routes keeps exactly one mounted layer."""
+        router = Router(
+            Route("/a", _make_page("A"), name="a"),
+            Route("/b", _make_page("B"), name="b"),
+            Route("/c", _make_page("C"), name="c"),
+        )
+        rv = RouterView(router, factory)
+        router.push("/a")
+        router.push("/b")
+        router.push("/c")
+        assert rv._overlay.layer_count() == 1
+
+    @pytest.mark.contract
+    def test_cached_pages_are_never_removed_across_navigation(self, factory):
+        """A cached route's layer survives intervening uncached navigation."""
+        router = Router(
+            Route("/cached", _make_page("Cached"), name="cached", cache=True),
+            Route("/a", _make_page("A"), name="a"),
+            Route("/b", _make_page("B"), name="b"),
+        )
+        rv = RouterView(router, factory)
+        router.push("/cached")
+        router.push("/a")
+        router.push("/b")
+        router.push("/cached")   # cache hit — must still be alive
+        assert rv._overlay.layer_count() == 2   # cached page + last disposable page
+        router.push("/a")
+        assert rv._overlay.layer_count() == 2

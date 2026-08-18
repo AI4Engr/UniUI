@@ -231,6 +231,16 @@ class WebOverlayAdapter(_WebAdapter, IOverlay):
         self._active = index
         self._apply_visibility()
 
+    def remove_layer(self, index: int) -> None:
+        layer = self._layers.pop(index)
+        layer.delete()
+        if index <= self._active:
+            self._active = max(0, self._active - 1)
+        self._apply_visibility()
+
+    def layer_count(self) -> int:
+        return len(self._layers)
+
     def _apply_visibility(self) -> None:
         for i, layer in enumerate(self._layers):
             if i == self._active:

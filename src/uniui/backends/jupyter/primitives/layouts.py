@@ -538,6 +538,18 @@ class JupyterOverlayAdapter(IOverlay):
         self._active = int(index)
         self._apply_active()
 
+    def remove_layer(self, index: int) -> None:
+        del self._layers[index]
+        del self._render_layers[index]
+        self._native._layers = self._layers
+        self._native._render_layers = self._render_layers
+        if index <= self._active:
+            self._active = max(0, self._active - 1)
+        self._apply_active()
+
+    def layer_count(self) -> int:
+        return len(self._layers)
+
     def _apply_active(self) -> None:
         if not self._layers:
             self._native.children = ()

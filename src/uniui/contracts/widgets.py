@@ -417,6 +417,15 @@ class IOverlay(IWidget):
     @abstractmethod
     def set_active_index(self, index: int) -> None:
         pass
+
+    @abstractmethod
+    def remove_layer(self, index: int) -> None:
+        """Remove and dispose the layer at index, shifting later indices down."""
+        pass
+
+    @abstractmethod
+    def layer_count(self) -> int:
+        pass
 class IWidgetFactory(ABC):
     """Widget factory interface"""
 

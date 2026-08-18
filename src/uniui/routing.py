@@ -243,6 +243,10 @@ class RouterView:
         self._page_cache: Dict[str, Any] = {}
         self._layer_index: Dict[str, int] = {}
         self._next_index: int = 0
+        # The single currently-mounted, no-longer-reachable non-cached layer.
+        # Removed right before the next layer is added, so uncached pages
+        # never accumulate — cached pages are never tracked here.
+        self._disposable_index: Optional[int] = None
         self._handle = router.on_navigate(self._on_navigate)
 
     def get_native(self):
@@ -270,6 +274,17 @@ class RouterView:
         if factory_fn is None:
             return
 
+        # We're about to mount a new layer — drop the previous disposable
+        # (non-cached) one first so uncached pages never accumulate.
+        if self._disposable_index is not None:
+            old_index = self._disposable_index
+            self._overlay.remove_layer(old_index)
+            self._disposable_index = None
+            for key, idx in self._layer_index.items():
+                if idx > old_index:
+                    self._layer_index[key] = idx - 1
+            self._next_index -= 1
+
         page_widget = factory_fn(ctx)
         self._overlay.add_layer(page_widget)
         self._overlay.set_active_index(self._next_index)
@@ -277,6 +292,8 @@ class RouterView:
         if cache_key:
             self._page_cache[cache_key] = page_widget
             self._layer_index[cache_key] = self._next_index
+        else:
+            self._disposable_index = self._next_index
 
         self._next_index += 1
 

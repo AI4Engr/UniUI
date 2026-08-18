@@ -472,3 +472,12 @@ class QtOverlayAdapter(IOverlay):
 
     def set_active_index(self, index: int) -> None:
         self._native.setCurrentIndex(index)
+
+    def remove_layer(self, index: int) -> None:
+        widget = self._native.widget(index)
+        if widget is not None:
+            self._native.removeWidget(widget)
+            widget.deleteLater()
+
+    def layer_count(self) -> int:
+        return self._native.count()

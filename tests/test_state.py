@@ -77,6 +77,24 @@ def test_state_retains_remaining_subscribers_after_dispose():
     assert b == [7]
 
 
+def test_state_subscriber_exception_does_not_stop_siblings(caplog):
+    s = State(0)
+    good = []
+
+    def bad(_value):
+        raise ValueError("boom")
+
+    s.subscribe(bad)
+    s.subscribe(good.append)
+
+    with caplog.at_level("ERROR", logger="uniui.events"):
+        s.set(1)  # must not raise
+
+    assert good == [1]
+    assert "State.subscribe" in caplog.text
+    assert "boom" in caplog.text
+
+
 # ---------------------------------------------------------------------------
 # Computed[T]
 # ---------------------------------------------------------------------------
@@ -142,3 +160,21 @@ def test_computed_dispose_stops_dep_tracking():
     s.set(42)
     assert received == []
     assert c.value == 1  # frozen at disposal time
+
+
+def test_computed_subscriber_exception_does_not_stop_siblings(caplog):
+    s = State(1)
+    c = Computed(lambda: s.value * 10, s)
+    good = []
+
+    def bad(_value):
+        raise ValueError("boom")
+
+    c.subscribe(bad)
+    c.subscribe(good.append)
+
+    with caplog.at_level("ERROR", logger="uniui.events"):
+        s.set(3)  # must not raise
+
+    assert good == [30]
+    assert "Computed.subscribe" in caplog.text

@@ -151,3 +151,18 @@ class TestLineEditContract(
         handle.dispose()
         line_edit.set_text("World")
         assert called == [1]
+
+    @pytest.mark.contract
+    def test_on_change_callback_exception_does_not_propagate(self, factory):
+        """A raising on_change callback must not stop sibling callbacks or crash set_text()."""
+        line_edit = self.create_widget(factory)
+        called = []
+
+        def bad():
+            raise ValueError("boom")
+
+        line_edit.on_change(bad)
+        line_edit.on_change(lambda: called.append(1))
+
+        line_edit.set_text("Hello")  # must not raise
+        assert called == [1]

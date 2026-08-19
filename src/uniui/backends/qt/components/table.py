@@ -8,7 +8,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from ....components import ITable
 from ....models.status import classify_status, status_token_names
 from ....models.table import ALIGN_RIGHT, TableModel
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..runtime import C, M, track_themed
 from ..styles import scrollbar_rules
 
@@ -215,4 +215,4 @@ class QtTableAdapter(ITable):
     def _on_cell_clicked(self, row: int, col: int) -> None:
         clicked = self._model.row_at(row)
         if self._row_click_cb and clicked is not None:
-            self._row_click_cb(clicked)
+            safe_call(self._row_click_cb, clicked, backend="qt", component="Table", method="on_row_click")

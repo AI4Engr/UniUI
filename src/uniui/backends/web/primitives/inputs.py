@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Optional
 from nicegui import ui
 
 from ....core import *
-from ....state import Handle
+from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
 from .state import T, register_adapter
@@ -45,7 +45,7 @@ class WebButtonAdapter(_WebAdapter, IButton):
     def _emit_click(self) -> None:
         if self._enabled:
             for callback in list(self._callbacks):
-                callback()
+                safe_call(callback, backend="web", component="Button", method="connect")
 
     def set_btntype(self, button_type) -> None:
         self._button_type = button_type
@@ -89,7 +89,7 @@ class WebLineEditAdapter(_WebAdapter, ILineEdit):
         if self._suppress_change:
             return
         for callback in list(self._callbacks):
-            callback()
+            safe_call(callback, backend="web", component="LineEdit", method="on_change")
 
     def set_text(self, text: str) -> None:
         self._suppress_change = True
@@ -144,7 +144,7 @@ class WebTextAreaAdapter(_WebAdapter, ITextArea):
 
     def _emit_change(self) -> None:
         for callback in list(self._callbacks):
-            callback()
+            safe_call(callback, backend="web", component="TextArea", method="on_change")
 
     def _plain_content(self) -> str:
         escaped = html_lib.escape(self._text)
@@ -195,7 +195,7 @@ class _WebSelectAdapter(_WebAdapter):
         if self._suppress_change:
             return
         for callback in list(self._callbacks):
-            callback()
+            safe_call(callback, backend="web", component=type(self).__name__, method="on_change")
 
     def add_item(self, item: str) -> None:
         item = normalize_text(item)

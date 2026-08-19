@@ -8,7 +8,7 @@ import ipywidgets as widgets
 
 from ....components import ITable
 from ....models.table import CELL_NUMBER, CELL_STATUS, TableModel
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..runtime import M, html
 
 class JupyterTableAdapter(ITable):
@@ -96,7 +96,7 @@ class JupyterTableAdapter(ITable):
         index = int(change["new"])
         clicked = self._model.row_at(index)
         if clicked is not None and self._row_click_cb:
-            self._row_click_cb(clicked)
+            safe_call(self._row_click_cb, clicked, backend="jupyter", component="Table", method="on_row_click")
         if index != -1:
             self._bridge.value = -1
 

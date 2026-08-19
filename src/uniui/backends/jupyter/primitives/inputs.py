@@ -11,7 +11,7 @@ from ...._adapter_mixins import (
     ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
-from ....state import Handle
+from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
 
@@ -56,7 +56,7 @@ class JupyterPushButton(widgets.Button):
 
     def connect(self, function):
         def wrapper(btn):
-            function()
+            safe_call(function, backend="jupyter", component="Button", method="connect")
         self.on_click(wrapper)
         return wrapper
 
@@ -211,7 +211,7 @@ class JupyterComboBox(widgets.Combobox):
 
     def connect(self, function):
         def wrapper(change):
-            function()
+            safe_call(function, backend="jupyter", component="ComboBox", method="on_change")
         self.observe(wrapper, 'value')
         return wrapper
 
@@ -282,7 +282,7 @@ class JupyterDropdown(widgets.Dropdown):
 
     def connect(self, function):
         def wrapper(change):
-            function()
+            safe_call(function, backend="jupyter", component="Dropdown", method="on_change")
         self.observe(wrapper, 'value')
         return wrapper
 
@@ -377,7 +377,7 @@ class JupyterLineEditAdapter(ILineEdit):
 
     # IChangeEventCapable
     def on_change(self, callback: Callable[[], None]) -> Handle:
-        wrapper = lambda change: callback()
+        wrapper = lambda change: safe_call(callback, backend="jupyter", component="LineEdit", method="on_change")
         self._native.textChanged(wrapper)
         return Handle(lambda: self._native.textChangedDisconnect(wrapper))
 
@@ -447,7 +447,7 @@ class JupyterTextAreaAdapter(ITextArea):
 
     # IChangeEventCapable
     def on_change(self, callback: Callable[[], None]) -> Handle:
-        wrapper = lambda change: callback()
+        wrapper = lambda change: safe_call(callback, backend="jupyter", component="TextArea", method="on_change")
         self._native.observe(wrapper, 'value')
         return Handle(lambda: self._native.unobserve(wrapper, 'value'))
 

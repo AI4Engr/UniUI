@@ -239,6 +239,23 @@ def test_router_on_navigate_handle_dispose_idempotent():
     h.dispose()  # must not raise
 
 
+def test_router_on_navigate_subscriber_exception_does_not_stop_siblings(caplog):
+    router = Router(Route("/home", _dummy_page, name="home"))
+    good = []
+
+    def bad(ctx):
+        raise ValueError("boom")
+
+    router.on_navigate(bad)
+    router.on_navigate(good.append)
+
+    with caplog.at_level("ERROR", logger="uniui.events"):
+        router.push("/home")  # must not raise
+
+    assert len(good) == 1
+    assert "Router.on_navigate" in caplog.text
+
+
 # ---------------------------------------------------------------------------
 # current_path before any navigation
 # ---------------------------------------------------------------------------

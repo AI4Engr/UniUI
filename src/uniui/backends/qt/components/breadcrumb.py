@@ -5,7 +5,7 @@ from PySide2 import QtCore, QtWidgets
 
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..runtime import C, clear_layout, track_themed
 
 def _breadcrumb_button_style() -> str:
@@ -83,7 +83,7 @@ class QtBreadcrumbAdapter(IBreadcrumb):
 
     def _on_click(self, path: str) -> None:
         if self._click_cb:
-            self._click_cb(path)
+            safe_call(self._click_cb, path, backend="qt", component="Breadcrumb", method="on_click")
 
     def apply_theme(self) -> None:
         self._widget.setStyleSheet("background: transparent;")

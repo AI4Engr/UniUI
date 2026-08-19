@@ -16,7 +16,7 @@ from ...._adapter_mixins import (
     ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
-from ....state import Handle
+from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
 from .helpers import has_method
 
@@ -344,7 +344,7 @@ class QtGridAdapter(IGrid):
             if mode != self._last_mode:
                 self._last_mode = mode
                 for cb in self._resize_callbacks:
-                    cb(mode)
+                    safe_call(cb, mode, backend="qt", component="Grid", method="on_resize")
 
         if self._notifier is None:
             self._notifier = _ResizeNotifier(_on_width)

@@ -9,7 +9,7 @@ from ....components import ISidebar
 from ....models.navigation import (
     SIDEBAR_COLLAPSED, SIDEBAR_MAX, SIDEBAR_MIN, NavigationModel,
 )
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..runtime import C, M, nav_icon, track_themed
 
 def _sidebar_style() -> str:
@@ -142,4 +142,4 @@ class QtSidebarAdapter(ISidebar):
     def _on_row_changed(self, row: int) -> None:
         nav_item = self._model.item_at(row)
         if self._select_cb and nav_item is not None:
-            self._select_cb(nav_item.key)
+            safe_call(self._select_cb, nav_item.key, backend="qt", component="Sidebar", method="on_select")

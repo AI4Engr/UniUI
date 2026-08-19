@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
-from uniui.state import Handle
+from uniui.state import Handle, safe_call
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ class Router:
 
     def _notify(self, ctx: RouteContext) -> None:
         for fn in list(self._subscribers):
-            fn(ctx)
+            safe_call(fn, ctx, backend="core", component="Router", method="on_navigate")
 
 
 # ---------------------------------------------------------------------------

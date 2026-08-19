@@ -16,7 +16,7 @@ from ...._adapter_mixins import (
     ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
-from ....state import Handle
+from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
 from .helpers import convert_control_text
 
@@ -211,8 +211,9 @@ class QtButtonAdapter(NativeMixin, TextMixin, EnableMixin, SizeMixin, IButton):
 
     # IEventCapable
     def connect(self, callback) -> Handle:
-        self._native.connect(callback)
-        return Handle(lambda: self._native.disconnect(callback))
+        wrapper = lambda: safe_call(callback, backend="qt", component="Button", method="connect")
+        self._native.connect(wrapper)
+        return Handle(lambda: self._native.disconnect(wrapper))
 class QtLineEditAdapter(ILineEdit):
     """Qt LineEdit adapter - implements snake_case interface convention"""
 
@@ -242,7 +243,7 @@ class QtLineEditAdapter(ILineEdit):
 
     # IChangeEventCapable
     def on_change(self, callback) -> Handle:
-        wrapper = lambda: callback()
+        wrapper = lambda: safe_call(callback, backend="qt", component="LineEdit", method="on_change")
         self._native.textChanged(wrapper)
         return Handle(lambda: self._native.textChangedDisconnect(wrapper))
 
@@ -312,8 +313,9 @@ class QtTextAreaAdapter(ITextArea):
 
     # IChangeEventCapable
     def on_change(self, callback) -> Handle:
-        self._native.textChanged.connect(callback)
-        return Handle(lambda: self._native.textChanged.disconnect(callback))
+        wrapper = lambda: safe_call(callback, backend="qt", component="TextArea", method="on_change")
+        self._native.textChanged.connect(wrapper)
+        return Handle(lambda: self._native.textChanged.disconnect(wrapper))
 
     # ISizeCapable
     def set_fixed_width(self, width: int):
@@ -333,8 +335,9 @@ class QtComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, EnableMixin,
 
     # IChangeEventCapable
     def on_change(self, callback) -> Handle:
-        self._native.connect(callback)
-        return Handle(lambda: self._native.disconnect(callback))
+        wrapper = lambda: safe_call(callback, backend="qt", component="ComboBox", method="on_change")
+        self._native.connect(wrapper)
+        return Handle(lambda: self._native.disconnect(wrapper))
 class QtDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin, VisibilityMixin,
                        EnableMixin, SizeMixin, IDropdown):
     """Qt Dropdown adapter - implements snake_case interface convention"""
@@ -346,5 +349,6 @@ class QtDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin, VisibilityMixin
 
     # IChangeEventCapable
     def on_change(self, callback) -> Handle:
-        self._native.connect(callback)
-        return Handle(lambda: self._native.disconnect(callback))
+        wrapper = lambda: safe_call(callback, backend="qt", component="Dropdown", method="on_change")
+        self._native.connect(wrapper)
+        return Handle(lambda: self._native.disconnect(wrapper))

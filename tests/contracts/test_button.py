@@ -78,9 +78,8 @@ class TestButtonContract(WidgetContractTest):
             native.animateClick(0)
         elif hasattr(native, "_callback") and callable(native._callback):
             native._callback()
-        elif hasattr(native, "_click_handlers"):
-            for h in native._click_handlers.callbacks:
-                h(native, None)
+        elif hasattr(native, "click") and callable(native.click):
+            native.click()  # ipywidgets Button: calls registered handlers as handler(self)
         else:
             pytest.skip("Cannot trigger click on this backend's native widget")
 
@@ -100,10 +99,33 @@ class TestButtonContract(WidgetContractTest):
             native.animateClick(0)
         elif hasattr(native, "_callback") and callable(native._callback):
             native._callback()
-        elif hasattr(native, "_click_handlers"):
-            for h in native._click_handlers.callbacks:
-                h(native, None)
+        elif hasattr(native, "click") and callable(native.click):
+            native.click()  # ipywidgets Button: calls registered handlers as handler(self)
         else:
             pytest.skip("Cannot trigger click on this backend's native widget")
 
         assert called == []
+
+    @pytest.mark.contract
+    def test_connect_callback_exception_does_not_propagate(self, factory):
+        """A raising connect() callback must not stop sibling callbacks or crash the trigger."""
+        button = self.create_widget(factory)
+        called = []
+
+        def bad():
+            raise ValueError("boom")
+
+        button.connect(bad)
+        button.connect(lambda: called.append(1))
+
+        native = button.get_native()
+        if hasattr(native, "animateClick"):
+            native.animateClick(0)
+        elif hasattr(native, "_callback") and callable(native._callback):
+            native._callback()
+        elif hasattr(native, "click") and callable(native.click):
+            native.click()  # ipywidgets Button: calls registered handlers as handler(self)
+        else:
+            pytest.skip("Cannot trigger click on this backend's native widget")
+
+        assert called == [1]

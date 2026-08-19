@@ -8,7 +8,7 @@ import ipywidgets as widgets
 
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..runtime import html
 
 class JupyterBreadcrumbAdapter(IBreadcrumb):
@@ -50,7 +50,7 @@ class JupyterBreadcrumbAdapter(IBreadcrumb):
 
     def _on_click(self, path: str) -> None:
         if self._click_cb:
-            self._click_cb(path)
+            safe_call(self._click_cb, path, backend="jupyter", component="Breadcrumb", method="on_click")
 
 
 def breadcrumb_css() -> str:

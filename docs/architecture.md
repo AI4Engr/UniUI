@@ -217,3 +217,33 @@ App code:  button.connect(my_callback)
 ```
 
 The callback signature is always `() -> None` — no event object reaches app code.
+Re-read the new value yourself via `get_text()` / `get_value()` inside the
+callback; the native event's payload (Qt's `textChanged(str)`, ipywidgets'
+`change` dict, NiceGUI's `ValueChangeEventArguments`) is deliberately
+discarded at the adapter boundary rather than forwarded.
+
+A second family of callbacks is deliberately **payload-carrying** instead —
+they tell you *what* happened, not just *that* something changed, because
+there's no single native widget to re-query for the answer:
+
+```python
+sidebar.on_select(lambda key: router.push_named(key))     # selected item's key
+breadcrumb.on_click(lambda path: router.push(path))        # clicked crumb's path
+table.on_row_click(lambda row: open_detail(row))            # the clicked row dict
+grid.on_resize(lambda mode: layout.set_mode(mode))           # "compact"|"medium"|"wide"
+router.on_navigate(lambda ctx: breadcrumb.set_items(...))    # the RouteContext
+state.subscribe(lambda value: label.set_text(str(value)))    # the new value
+```
+
+Both conventions are consistent across Qt, Jupyter, and Web — pick the shape
+based on which family the method belongs to, not the backend.
+
+**Exception safety**: every dispatch site (native-signal wrappers and
+hand-rolled multi-subscriber loops alike) routes through
+`uniui.state.safe_call()`, which invokes the callback, and on an exception
+logs it (via the standard `logging` module, logger name `"uniui.events"`,
+message includes the backend, component type, and method name, full
+traceback) instead of letting it propagate. A callback that raises does not
+stop sibling subscribers in the same dispatch from running, and does not
+propagate into unrelated caller code such as `state.set()` or
+`router.push()`.

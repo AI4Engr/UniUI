@@ -8,7 +8,7 @@ from nicegui import ui
 from ....components import ITable
 from ....models.status import status_class_expression_js
 from ....models.table import TableModel
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..primitives import _WebAdapter
 from ..styles import install_admin_css
 
@@ -66,7 +66,8 @@ class WebTableAdapter(_WebAdapter, ITable):
         row = args.get("row") if isinstance(args, dict) else None
         if row is None and isinstance(args, (list, tuple)) and args:
             row = args[-1]
-        if self._row_click_cb and isinstance(row, dict): self._row_click_cb(row)
+        if self._row_click_cb and isinstance(row, dict):
+            safe_call(self._row_click_cb, row, backend="web", component="Table", method="on_row_click")
 
 
 def table_css() -> str:

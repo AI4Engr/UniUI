@@ -9,7 +9,7 @@ from nicegui import ui
 from ....components import ISidebar
 from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import NavigationModel
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..primitives import _WebAdapter
 from ..styles import install_admin_css
 
@@ -53,7 +53,8 @@ class WebSidebarAdapter(_WebAdapter, ISidebar):
                 remove="" if collapsed else "uniui-collapsed",
             )
     def _emit(self, key: str) -> None:
-        if self._select_cb: self._select_cb(key)
+        if self._select_cb:
+            safe_call(self._select_cb, key, backend="web", component="Sidebar", method="on_select")
 
 
 def sidebar_css() -> str:

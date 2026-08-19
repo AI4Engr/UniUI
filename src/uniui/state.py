@@ -4,9 +4,31 @@ Reactive state layer for UniUI.
 Pure Python — no backend dependencies. Works with Qt, Jupyter, and Web.
 """
 from typing import TypeVar, Generic, Callable, List, Optional
+import logging
 import threading
 
 T = TypeVar("T")
+
+_logger = logging.getLogger("uniui.events")
+
+
+def safe_call(callback: Callable, *args, backend: str, component: str, method: str, **kwargs):
+    """Invoke a user callback, logging (not propagating) any exception it raises.
+
+    Keeps one failing subscriber from aborting sibling subscribers in a
+    multi-subscriber dispatch loop, and from propagating into unrelated
+    caller code (state.set(), router.push(), a Qt signal emission). Logged
+    at ERROR with the full traceback, so it surfaces on stderr by default
+    (Python's "handler of last resort") without forcing a project-wide
+    logging setup.
+    """
+    try:
+        return callback(*args, **kwargs)
+    except Exception:
+        _logger.exception(
+            "Unhandled exception in %s.%s callback (%s)", component, method, backend
+        )
+        return None
 
 
 class Handle:
@@ -38,7 +60,7 @@ class State(Generic[T]):
             return
         self._value = value
         for fn in list(self._subscribers):
-            fn(value)
+            safe_call(fn, value, backend="core", component="State", method="subscribe")
 
     def subscribe(self, fn: Callable[[T], None]) -> Handle:
         self._subscribers.append(fn)
@@ -82,7 +104,7 @@ class Computed(Generic[T]):
         if new_val != self._value:
             self._value = new_val
             for fn in list(self._subscribers):
-                fn(new_val)
+                safe_call(fn, new_val, backend="core", component="Computed", method="subscribe")
 
 
 # ---------------------------------------------------------------------------

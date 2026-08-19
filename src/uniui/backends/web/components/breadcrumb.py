@@ -7,7 +7,7 @@ from nicegui import ui
 
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..primitives import _WebAdapter
 from ..runtime import clear
 from ..styles import install_admin_css
@@ -31,7 +31,8 @@ class WebBreadcrumbAdapter(_WebAdapter, IBreadcrumb):
                 self._click_cb = None
         return Handle(cancel)
     def _emit(self, path: str) -> None:
-        if self._click_cb: self._click_cb(path)
+        if self._click_cb:
+            safe_call(self._click_cb, path, backend="web", component="Breadcrumb", method="on_click")
 
 
 def breadcrumb_css() -> str:

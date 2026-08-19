@@ -10,7 +10,7 @@ from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import (
     SIDEBAR_MAX, SIDEBAR_MIN, NavigationModel, clamp_width,
 )
-from ....state import Handle
+from ....state import Handle, safe_call
 from ..runtime import M
 
 class JupyterSidebarAdapter(ISidebar):
@@ -69,7 +69,7 @@ class JupyterSidebarAdapter(ISidebar):
 
     def _on_select(self, key: str) -> None:
         if self._select_cb:
-            self._select_cb(key)
+            safe_call(self._select_cb, key, backend="jupyter", component="Sidebar", method="on_select")
 
 
 def sidebar_css() -> str:

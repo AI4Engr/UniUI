@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from PySide2 import QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IStatCard
 from ....models.stat_card import (
     TREND_DOWN, TREND_FLAT, TREND_UP, normalize_card_status, trend_presentation,
@@ -29,7 +30,7 @@ def _unit_qss() -> str:
     return f"color: {C['text_muted']}; font-size: 11px; background: transparent;"
 
 
-class QtStatCardAdapter(IStatCard):
+class QtStatCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, IStatCard):
     def __init__(self):
         self._frame = QtWidgets.QFrame()
         self._frame.setProperty("card", "1")

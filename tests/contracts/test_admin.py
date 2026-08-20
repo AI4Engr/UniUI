@@ -3,14 +3,14 @@ Contract tests for Admin components: Card, StatCard, Table, Sidebar, AppShell, B
 """
 import pytest
 
-from tests.contract_framework import WidgetContractTest
+from tests.contract_framework import CommonCapabilitiesContractTest as _Common
 from uniui import (
     APP_SHELL, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
     METRIC_LIST, SIDEBAR, STAT_CARD, TABLE,
 )
 
 
-class TestCardContract(WidgetContractTest):
+class TestCardContract(_Common):
     widget_kind = CARD
 
     def create_widget(self, factory):
@@ -57,7 +57,7 @@ class TestCardContract(WidgetContractTest):
         card.set_action(btn)
 
 
-class TestStatCardContract(WidgetContractTest):
+class TestStatCardContract(_Common):
     widget_kind = STAT_CARD
 
     def create_widget(self, factory):
@@ -109,7 +109,7 @@ class TestStatCardContract(WidgetContractTest):
         sc.set_status("error")
 
 
-class TestMetricListContract(WidgetContractTest):
+class TestMetricListContract(_Common):
     widget_kind = METRIC_LIST
 
     def create_widget(self, factory):
@@ -135,7 +135,7 @@ class TestMetricListContract(WidgetContractTest):
         ml.set_items([{"label": "B", "value": "2"}])
 
 
-class TestTableContract(WidgetContractTest):
+class TestTableContract(_Common):
     widget_kind = TABLE
 
     def create_widget(self, factory):
@@ -199,7 +199,7 @@ class TestTableContract(WidgetContractTest):
         assert tbl._row_click_cb is None
 
 
-class TestSidebarContract(WidgetContractTest):
+class TestSidebarContract(_Common):
     widget_kind = SIDEBAR
 
     def create_widget(self, factory):
@@ -250,7 +250,7 @@ class TestSidebarContract(WidgetContractTest):
         sb.set_collapsed(False)
 
 
-class TestAppShellContract(WidgetContractTest):
+class TestAppShellContract(_Common):
     widget_kind = APP_SHELL
 
     def create_widget(self, factory):
@@ -306,7 +306,7 @@ class TestAppShellContract(WidgetContractTest):
         shell.set_footer(footer)
 
 
-class TestBreadcrumbContract(WidgetContractTest):
+class TestBreadcrumbContract(_Common):
     widget_kind = BREADCRUMB
 
     def create_widget(self, factory):
@@ -351,7 +351,7 @@ class TestBreadcrumbContract(WidgetContractTest):
         assert bc._click_cb is None
 
 
-class TestGaugeContract(WidgetContractTest):
+class TestGaugeContract(_Common):
     widget_kind = GAUGE
 
     def create_widget(self, factory):
@@ -367,7 +367,7 @@ class TestGaugeContract(WidgetContractTest):
         gauge.set_value(88)
 
 
-class TestChartContract(WidgetContractTest):
+class TestChartContract(_Common):
     widget_kind = CHART
 
     def create_widget(self, factory):
@@ -384,7 +384,7 @@ class TestChartContract(WidgetContractTest):
         chart.append_data(4, [23])
 
 
-class TestDrawerContract(WidgetContractTest):
+class TestDrawerContract(_Common):
     widget_kind = DRAWER
 
     def create_widget(self, factory):

@@ -3,12 +3,13 @@ from __future__ import annotations
 
 from typing import Dict, List
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IChart
 from ....models.chart import ChartModel
 from ....visuals import render_chart_svg
 from ..runtime import get_palette, html, track_themed
 
-class JupyterChartAdapter(IChart):
+class JupyterChartAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IChart):
     def __init__(self):
         self._model = ChartModel()
         self._native = html("", "uniui-admin-chart")

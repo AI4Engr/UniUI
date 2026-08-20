@@ -5,10 +5,11 @@ from html import escape
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IDrawer
 from ..runtime import html, native
 
-class JupyterDrawerAdapter(IDrawer):
+class JupyterDrawerAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IDrawer):
     def __init__(self):
         self._title = html("", "uniui-drawer-title")
         close = widgets.Button(description="", tooltip="Close drawer", layout=widgets.Layout(width="36px"))

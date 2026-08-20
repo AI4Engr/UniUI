@@ -5,11 +5,11 @@ These tests ensure that ComboBox behaves consistently across all platforms.
 """
 import pytest
 
-from tests.contract_framework import WidgetContractTest
+from tests.contract_framework import CommonCapabilitiesContractTest
 from uniui import COMBO_BOX
 
 
-class TestComboBoxContract(WidgetContractTest):
+class TestComboBoxContract(CommonCapabilitiesContractTest):
     """Contract tests for ComboBox widget."""
 
     widget_kind = COMBO_BOX

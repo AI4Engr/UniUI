@@ -23,6 +23,36 @@ class IWidget(ABC):
     def get_native(self):
         """Get the underlying native widget"""
         pass
+
+    # Common capabilities. Non-abstract so a backend that hasn't wired one up
+    # yet doesn't fail ABC instantiation; adapters shadow these with a real
+    # implementation (typically via a shared mixin operating on get_native()).
+    def show(self) -> None:
+        pass
+
+    def hide(self) -> None:
+        pass
+
+    def is_visible(self) -> bool:
+        return True
+
+    def set_enabled(self, enabled: bool) -> None:
+        pass
+
+    def is_enabled(self) -> bool:
+        return True
+
+    def set_fixed_width(self, width: int) -> None:
+        pass
+
+    def set_fixed_height(self, height: int) -> None:
+        pass
+
+    def set_minimum_width(self, width: int) -> None:
+        pass
+
+    def set_minimum_height(self, height: int) -> None:
+        pass
 class ILabel(IWidget):
     """Label widget interface"""
 
@@ -254,6 +284,37 @@ class IVBoxLayout(IWidget):
     def clear(self) -> None:
         """Remove all children. Default: not supported."""
         raise NotSupportedError("clear() not supported on this layout")
+
+    # A box layout's native object is a plain layout manager, not a widget
+    # (see Qt's QVBoxLayout) — no show/hide/enabled/size surface to forward
+    # to. Backends whose native IS a real widget (Jupyter, Web) override
+    # these with a real implementation; Qt does not.
+    def show(self) -> None:
+        raise NotSupportedError("show() not supported on this layout")
+
+    def hide(self) -> None:
+        raise NotSupportedError("hide() not supported on this layout")
+
+    def is_visible(self) -> bool:
+        raise NotSupportedError("is_visible() not supported on this layout")
+
+    def set_enabled(self, enabled: bool) -> None:
+        raise NotSupportedError("set_enabled() not supported on this layout")
+
+    def is_enabled(self) -> bool:
+        raise NotSupportedError("is_enabled() not supported on this layout")
+
+    def set_fixed_width(self, width: int) -> None:
+        raise NotSupportedError("set_fixed_width() not supported on this layout")
+
+    def set_fixed_height(self, height: int) -> None:
+        raise NotSupportedError("set_fixed_height() not supported on this layout")
+
+    def set_minimum_width(self, width: int) -> None:
+        raise NotSupportedError("set_minimum_width() not supported on this layout")
+
+    def set_minimum_height(self, height: int) -> None:
+        raise NotSupportedError("set_minimum_height() not supported on this layout")
 class IHBoxLayout(IWidget):
     """Horizontal box layout interface"""
 
@@ -290,6 +351,35 @@ class IHBoxLayout(IWidget):
     def clear(self) -> None:
         """Remove all children. Default: not supported."""
         raise NotSupportedError("clear() not supported on this layout")
+
+    # See IVBoxLayout's identical block: a box layout's native object has no
+    # show/hide/enabled/size surface (Qt's QHBoxLayout is not a widget).
+    def show(self) -> None:
+        raise NotSupportedError("show() not supported on this layout")
+
+    def hide(self) -> None:
+        raise NotSupportedError("hide() not supported on this layout")
+
+    def is_visible(self) -> bool:
+        raise NotSupportedError("is_visible() not supported on this layout")
+
+    def set_enabled(self, enabled: bool) -> None:
+        raise NotSupportedError("set_enabled() not supported on this layout")
+
+    def is_enabled(self) -> bool:
+        raise NotSupportedError("is_enabled() not supported on this layout")
+
+    def set_fixed_width(self, width: int) -> None:
+        raise NotSupportedError("set_fixed_width() not supported on this layout")
+
+    def set_fixed_height(self, height: int) -> None:
+        raise NotSupportedError("set_fixed_height() not supported on this layout")
+
+    def set_minimum_width(self, width: int) -> None:
+        raise NotSupportedError("set_minimum_width() not supported on this layout")
+
+    def set_minimum_height(self, height: int) -> None:
+        raise NotSupportedError("set_minimum_height() not supported on this layout")
 class ITabWidget(IWidget):
     """Tab widget interface"""
 
@@ -365,6 +455,35 @@ class IGrid(IWidget):
         Default: no-op (backends that support it override this).
         """
         return Handle(lambda: None)
+
+    # See IVBoxLayout's identical block: a grid layout's native object has no
+    # show/hide/enabled/size surface (Qt's QGridLayout is not a widget).
+    def show(self) -> None:
+        raise NotSupportedError("show() not supported on this Grid")
+
+    def hide(self) -> None:
+        raise NotSupportedError("hide() not supported on this Grid")
+
+    def is_visible(self) -> bool:
+        raise NotSupportedError("is_visible() not supported on this Grid")
+
+    def set_enabled(self, enabled: bool) -> None:
+        raise NotSupportedError("set_enabled() not supported on this Grid")
+
+    def is_enabled(self) -> bool:
+        raise NotSupportedError("is_enabled() not supported on this Grid")
+
+    def set_fixed_width(self, width: int) -> None:
+        raise NotSupportedError("set_fixed_width() not supported on this Grid")
+
+    def set_fixed_height(self, height: int) -> None:
+        raise NotSupportedError("set_fixed_height() not supported on this Grid")
+
+    def set_minimum_width(self, width: int) -> None:
+        raise NotSupportedError("set_minimum_width() not supported on this Grid")
+
+    def set_minimum_height(self, height: int) -> None:
+        raise NotSupportedError("set_minimum_height() not supported on this Grid")
 class IWrap(IWidget):
     """Wrapping flow layout — children wrap to next row when they overflow."""
 

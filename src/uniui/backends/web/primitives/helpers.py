@@ -7,6 +7,12 @@ import re
 def _style_size(native, name: str, value: int) -> None:
     native.style(f"{name}: {int(value)}px")
 def _set_enabled(native, enabled: bool) -> None:
+    # enable()/disable() come from NiceGUI's DisableableElement mixin, which
+    # only form controls (Button, Input, Select, ...) opt into — plain
+    # containers (Card, Row, Column, ...) don't have it. Nothing meaningful
+    # to do visually for those; just don't crash.
+    if not hasattr(native, "enable"):
+        return
     if enabled:
         native.enable()
     else:

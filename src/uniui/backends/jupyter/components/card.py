@@ -5,10 +5,11 @@ from html import escape
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import ICard
 from ..runtime import M, html, native
 
-class JupyterCardAdapter(ICard):
+class JupyterCardAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, ICard):
     def __init__(self):
         self._title = html("", "uniui-card-title")
         self._subtitle = html("", "uniui-card-subtitle")

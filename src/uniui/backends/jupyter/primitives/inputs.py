@@ -8,8 +8,8 @@ from IPython.display import display
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
-    VisibilityMixin,
+    ClearMixin, EnableMixin, JupyterEnableMixin, JupyterVisibilityMixin,
+    NativeMixin, SelectionMixin, SizeMixin, TextMixin, VisibilityMixin,
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
@@ -341,7 +341,7 @@ class JupyterDropdown(widgets.Dropdown):
         old_content = list(self.options)
         old_content.sort()
         self.options = tuple(old_content)
-class JupyterButtonAdapter(NativeMixin, TextMixin, EnableMixin, SizeMixin, IButton):
+class JupyterButtonAdapter(NativeMixin, TextMixin, JupyterVisibilityMixin, EnableMixin, SizeMixin, IButton):
     """Jupyter Button adapter - implements snake_case interface convention"""
 
     # IEventCapable
@@ -410,7 +410,7 @@ class JupyterLineEditAdapter(ILineEdit):
 
     def set_minimum_height(self, height: int):
         self._native.setMinimumHeight(height)
-class JupyterTextAreaAdapter(ITextArea):
+class JupyterTextAreaAdapter(JupyterVisibilityMixin, JupyterEnableMixin, ITextArea):
     """Jupyter TextArea adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: JupyterTextarea):
@@ -463,8 +463,8 @@ class JupyterTextAreaAdapter(ITextArea):
 
     def set_minimum_height(self, height: int):
         self._native.setMinimumHeight(height)
-class JupyterComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, EnableMixin,
-                             SizeMixin, IComboBox):
+class JupyterComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, JupyterVisibilityMixin,
+                             EnableMixin, SizeMixin, IComboBox):
     """Jupyter ComboBox adapter - implements snake_case interface convention"""
 
     # IChangeEventCapable

@@ -5,11 +5,11 @@ These tests ensure that Button behaves consistently across all platforms.
 """
 import pytest
 
-from tests.contract_framework import WidgetContractTest
+from tests.contract_framework import CommonCapabilitiesContractTest
 from uniui import BUTTON
 
 
-class TestButtonContract(WidgetContractTest):
+class TestButtonContract(CommonCapabilitiesContractTest):
     """Contract tests for Button widget."""
 
     widget_kind = BUTTON

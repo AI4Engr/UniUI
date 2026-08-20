@@ -5,6 +5,7 @@ from typing import Optional
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IAppShell
 from ....models.navigation import clamp_width
 from ..styles import css
@@ -12,7 +13,7 @@ from .app_shell_assets import DEBUG_MEASURE_JS, SPLITTER_HTML, debug_html
 from .sidebar import JupyterSidebarAdapter
 from ..runtime import M, native_of, track_themed
 
-class JupyterAppShellAdapter(IAppShell):
+class JupyterAppShellAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IAppShell):
     def __init__(self):
         self._style = widgets.HTML(value=css())
         self._header = widgets.HBox()

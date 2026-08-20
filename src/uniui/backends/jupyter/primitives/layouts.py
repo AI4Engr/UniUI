@@ -8,7 +8,8 @@ from IPython.display import display
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
+    ClearMixin, EnableMixin, JupyterEnableMixin, JupyterSizeMixin,
+    JupyterVisibilityMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
 from ....strategies import normalize_text, parse_float
@@ -331,7 +332,7 @@ class JupyterOverlay(widgets.VBox):
         if hasattr(active, 'layout'):
             active.layout.display = None
         self.children = (active,)
-class JupyterVBoxAdapter(IVBoxLayout):
+class JupyterVBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IVBoxLayout):
     """Jupyter VBox adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: widgets.VBox):
@@ -362,7 +363,7 @@ class JupyterVBoxAdapter(IVBoxLayout):
 
     def clear(self):
         self._native.children = ()
-class JupyterHBoxAdapter(IHBoxLayout):
+class JupyterHBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IHBoxLayout):
     """Jupyter HBox adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: widgets.HBox):
@@ -411,7 +412,7 @@ class JupyterHBoxAdapter(IHBoxLayout):
 
     def clear(self):
         self._native.children = ()
-class JupyterTabWidgetAdapter(NativeMixin, VisibilityMixin, ITabWidget):
+class JupyterTabWidgetAdapter(NativeMixin, VisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, ITabWidget):
     """Jupyter TabWidget adapter - implements snake_case interface convention"""
 
     # ITabCapable
@@ -423,7 +424,7 @@ class JupyterTabWidgetAdapter(NativeMixin, VisibilityMixin, ITabWidget):
 
     def get_current_index(self) -> int:
         return self._native.currentIndex()
-class JupyterGridAdapter(IGrid):
+class JupyterGridAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IGrid):
     """Jupyter Grid adapter."""
 
     def __init__(self, columns: int = 12):
@@ -444,7 +445,7 @@ class JupyterGridAdapter(IGrid):
 
     def clear(self) -> None:
         self._native.clear()
-class JupyterWrapAdapter(IWrap):
+class JupyterWrapAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IWrap):
     """Jupyter Wrap adapter backed by a stock ipywidgets Box."""
 
     def __init__(self):
@@ -464,7 +465,7 @@ class JupyterWrapAdapter(IWrap):
 
     def clear(self) -> None:
         self._native.children = ()
-class JupyterScrollViewAdapter(IScrollView):
+class JupyterScrollViewAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IScrollView):
     """Jupyter ScrollView adapter."""
 
     def __init__(self):
@@ -481,7 +482,7 @@ class JupyterScrollViewAdapter(IScrollView):
 
     def set_max_width(self, width: int) -> None:
         self._native.setMaxWidth(width)
-class JupyterSplitPaneAdapter(ISplitPane):
+class JupyterSplitPaneAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, ISplitPane):
     """Jupyter SplitPane adapter."""
 
     def __init__(self, orientation: str = "horizontal"):
@@ -501,7 +502,7 @@ class JupyterSplitPaneAdapter(ISplitPane):
 
     def set_sizes(self, ratio: float) -> None:
         self._native.setSizes(ratio)
-class JupyterOverlayAdapter(IOverlay):
+class JupyterOverlayAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IOverlay):
     """Jupyter Overlay adapter backed by a stock ipywidgets VBox.
 
     Keeping the routing state in the adapter avoids asking notebook

@@ -8,7 +8,7 @@ from nicegui import ui
 from ....core import *
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
-from .helpers import _style_size
+from .helpers import _set_enabled, _style_size
 from .state import T, _install_css, register_adapter
 
 
@@ -16,6 +16,7 @@ class _WebAdapter:
     def __init__(self, native):
         _install_css()
         self._native = native
+        self._enabled = True
         register_adapter(self)
 
     def get_native(self):
@@ -23,6 +24,13 @@ class _WebAdapter:
 
     def _apply_theme(self) -> None:
         pass
+
+    def set_enabled(self, enabled: bool) -> None:
+        self._enabled = bool(enabled)
+        _set_enabled(self._native, self._enabled)
+
+    def is_enabled(self) -> bool:
+        return self._enabled
 
     def set_fixed_width(self, width: int) -> None:
         _style_size(self._native, "width", width)

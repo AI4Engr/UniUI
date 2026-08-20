@@ -5,11 +5,11 @@ These tests ensure that TextArea behaves consistently across all platforms.
 """
 import pytest
 
-from tests.contract_framework import WidgetContractTest
+from tests.contract_framework import CommonCapabilitiesContractTest
 from uniui import TEXT_AREA
 
 
-class TestTextAreaContract(WidgetContractTest):
+class TestTextAreaContract(CommonCapabilitiesContractTest):
     """Contract tests for TextArea widget."""
 
     widget_kind = TEXT_AREA

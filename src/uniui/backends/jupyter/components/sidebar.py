@@ -5,6 +5,7 @@ from typing import Callable, List, Optional
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import ISidebar
 from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import (
@@ -13,7 +14,7 @@ from ....models.navigation import (
 from ....state import Handle, safe_call
 from ..runtime import M
 
-class JupyterSidebarAdapter(ISidebar):
+class JupyterSidebarAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, ISidebar):
     def __init__(self):
         self._native = widgets.VBox()
         self._native.add_class("uniui-admin-sidebar")

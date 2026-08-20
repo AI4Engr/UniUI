@@ -6,12 +6,13 @@ from typing import Callable, Dict, List, Optional
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
 from ....state import Handle, safe_call
 from ..runtime import html
 
-class JupyterBreadcrumbAdapter(IBreadcrumb):
+class JupyterBreadcrumbAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IBreadcrumb):
     def __init__(self):
         self._native = widgets.HBox()
         self._native.add_class("uniui-breadcrumb")

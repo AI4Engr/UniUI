@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IGauge
 from ....models.gauge import GaugeModel
 from ....visuals import render_gauge_svg
 from ..runtime import get_palette, html, track_themed
 
-class JupyterGaugeAdapter(IGauge):
+class JupyterGaugeAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IGauge):
     def __init__(self):
         self._model = GaugeModel()
         self._native = html("", "uniui-admin-gauge")

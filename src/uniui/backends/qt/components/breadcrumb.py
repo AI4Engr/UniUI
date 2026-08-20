@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from PySide2 import QtCore, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IBreadcrumb
 from ....models.navigation import BreadcrumbModel
 from ....state import Handle, safe_call
@@ -24,7 +25,7 @@ def _breadcrumb_button_style() -> str:
 """
 
 
-class QtBreadcrumbAdapter(IBreadcrumb):
+class QtBreadcrumbAdapter(VisibilityMixin, EnableMixin, SizeMixin, IBreadcrumb):
     def __init__(self):
         self._widget = QtWidgets.QWidget()
         self._widget.setStyleSheet("background: transparent;")

@@ -206,7 +206,7 @@ class QTLineEdit(QtWidgets.QLineEdit):
 
     def setEnabled(self, flag):
         super().setEnabled(flag)
-class QtButtonAdapter(NativeMixin, TextMixin, EnableMixin, SizeMixin, IButton):
+class QtButtonAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, IButton):
     """Qt Button adapter - implements snake_case interface convention"""
 
     # IEventCapable
@@ -276,7 +276,7 @@ class QtLineEditAdapter(ILineEdit):
 
     def set_minimum_height(self, height: int):
         self._native.setMinimumHeight(height)
-class QtTextAreaAdapter(ITextArea):
+class QtTextAreaAdapter(VisibilityMixin, EnableMixin, ITextArea):
     """Qt TextArea adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: QTTextarea):
@@ -329,8 +329,8 @@ class QtTextAreaAdapter(ITextArea):
 
     def set_minimum_height(self, height: int):
         self._native.setMinimumHeight(height)
-class QtComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, EnableMixin,
-                        SizeMixin, IComboBox):
+class QtComboBoxAdapter(NativeMixin, SelectionMixin, ClearMixin, VisibilityMixin,
+                        EnableMixin, SizeMixin, IComboBox):
     """Qt ComboBox adapter - implements snake_case interface convention"""
 
     # IChangeEventCapable

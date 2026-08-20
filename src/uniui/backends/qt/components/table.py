@@ -5,6 +5,7 @@ from typing import Callable, Dict, List, Tuple
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import ITable
 from ....models.status import classify_status, status_token_names
 from ....models.table import ALIGN_RIGHT, TableModel
@@ -94,7 +95,7 @@ class _StatusPillDelegate(QtWidgets.QStyledItemDelegate):
         painter.restore()
 
 
-class QtTableAdapter(ITable):
+class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
     def __init__(self):
         self._container = QtWidgets.QWidget()
         self._container.setMinimumWidth(0)

@@ -5,10 +5,11 @@ from typing import Dict, List, Tuple
 
 from PySide2 import QtCore, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IMetricList
 from ..runtime import C, M, clear_layout, track_themed
 
-class QtMetricListAdapter(IMetricList):
+class QtMetricListAdapter(VisibilityMixin, EnableMixin, SizeMixin, IMetricList):
     """Dense two-column key/value list for secondary metrics."""
 
     def __init__(self):

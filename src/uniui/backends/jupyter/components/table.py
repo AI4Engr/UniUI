@@ -6,12 +6,13 @@ from typing import Callable, Dict, List, Optional
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import ITable
 from ....models.table import CELL_NUMBER, CELL_STATUS, TableModel
 from ....state import Handle, safe_call
 from ..runtime import M, html
 
-class JupyterTableAdapter(ITable):
+class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, ITable):
     def __init__(self):
         self._model = TableModel()
         self._row_click_cb: Optional[Callable[[Dict], None]] = None

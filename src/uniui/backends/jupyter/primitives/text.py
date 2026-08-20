@@ -8,7 +8,8 @@ from IPython.display import display
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
+    ClearMixin, EnableMixin, JupyterEnableMixin, JupyterSizeMixin,
+    JupyterVisibilityMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
     VisibilityMixin,
 )
 from ....strategies import normalize_text, parse_float
@@ -100,9 +101,9 @@ class JupyterImage(widgets.Image):
             "Image URL loading is not supported in the Jupyter backend. "
             "Use setImage with a local file path."
         )
-class JupyterLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, SizeMixin, ILabel):
+class JupyterLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, JupyterEnableMixin, SizeMixin, ILabel):
     """Jupyter Label adapter - implements snake_case interface convention"""
-class JupyterGroupBoxAdapter(IGroupBox):
+class JupyterGroupBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IGroupBox):
     """Jupyter GroupBox adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: JupyterGroupBox):
@@ -121,7 +122,7 @@ class JupyterGroupBoxAdapter(IGroupBox):
             self._native.setLayout(layout.get_native())
         else:
             self._native.setLayout(layout)
-class JupyterImageAdapter(IImage):
+class JupyterImageAdapter(JupyterVisibilityMixin, JupyterEnableMixin, IImage):
     """Jupyter Image adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: JupyterImage):

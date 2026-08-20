@@ -5,6 +5,7 @@ from typing import Optional
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IAppShell
 from ....models.navigation import (
     SIDEBAR_COLLAPSED, SIDEBAR_EXPANDED, SIDEBAR_MIN, SIDEBAR_MAX, clamp_width,
@@ -21,7 +22,7 @@ class _ResponsiveShellWidget(QtWidgets.QWidget):
         self._on_resize(event.size().width())
 
 
-class QtAppShellAdapter(IAppShell):
+class QtAppShellAdapter(VisibilityMixin, EnableMixin, SizeMixin, IAppShell):
     def __init__(self):
         self._root = _ResponsiveShellWidget(self._on_resize)
         self._root.setProperty("appShell", "1")

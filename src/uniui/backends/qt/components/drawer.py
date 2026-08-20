@@ -3,12 +3,13 @@ from __future__ import annotations
 
 from PySide2 import QtCore, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IDrawer
 from ..effects import motion_duration
 from ..icons import admin_icon
 from ..runtime import C, as_widget, clear_layout, track_themed
 
-class QtDrawerAdapter(IDrawer):
+class QtDrawerAdapter(VisibilityMixin, EnableMixin, SizeMixin, IDrawer):
     def __init__(self):
         self._dialog = QtWidgets.QDialog()
         self._dialog.setWindowFlags(QtCore.Qt.Tool | QtCore.Qt.FramelessWindowHint)

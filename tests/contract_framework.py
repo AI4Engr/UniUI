@@ -46,6 +46,48 @@ class VisibilityContractTest(WidgetContractTest):
         widget.show()
 
 
+class CommonCapabilitiesContractTest(WidgetContractTest):
+    """Contract for show/hide/is_visible, set_enabled/is_enabled, and fixed/
+    minimum sizing — every widget interface now provides these (see
+    IWidget's defaults in contracts/widgets.py), except the Qt QLayout-backed
+    IVBoxLayout/IHBoxLayout/IGrid, which raise NotSupportedError instead and
+    are exercised separately in test_layout.py.
+    """
+
+    @pytest.mark.contract
+    def test_visibility(self, factory):
+        """hide()/show() must toggle is_visible(). Not asserting the initial
+        state: Qt widgets report is_visible() == False until actually shown
+        in a window (real Qt windowing behavior), while Jupyter/Web widgets
+        are visible from construction — both are correct for their platform.
+        """
+        widget = self.create_widget(factory)
+        widget.show()
+        assert widget.is_visible() is True
+        widget.hide()
+        assert widget.is_visible() is False
+        widget.show()
+        assert widget.is_visible() is True
+
+    @pytest.mark.contract
+    def test_enabled(self, factory):
+        widget = self.create_widget(factory)
+        assert widget.is_enabled() is True
+        widget.set_enabled(False)
+        assert widget.is_enabled() is False
+        widget.set_enabled(True)
+        assert widget.is_enabled() is True
+
+    @pytest.mark.contract
+    def test_sizing(self, factory):
+        """Fixed/minimum sizing must not raise."""
+        widget = self.create_widget(factory)
+        widget.set_fixed_width(200)
+        widget.set_fixed_height(100)
+        widget.set_minimum_width(50)
+        widget.set_minimum_height(30)
+
+
 class ValueWidgetContractTest(WidgetContractTest):
     """Contract for widgets that expose a numeric value via get_value()."""
 

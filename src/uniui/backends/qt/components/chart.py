@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IChart
 from ....models.chart import ChartModel
 from ..runtime import C, track_themed
@@ -92,7 +93,7 @@ class _ChartWidget(QtWidgets.QWidget):
             painter.setPen(pen); painter.setBrush(QtCore.Qt.NoBrush); painter.drawPath(path)
 
 
-class QtChartAdapter(IChart):
+class QtChartAdapter(VisibilityMixin, EnableMixin, SizeMixin, IChart):
     def __init__(self):
         self._widget = _ChartWidget()
         track_themed(self, self._widget)

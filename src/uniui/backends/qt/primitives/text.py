@@ -83,9 +83,9 @@ class QTGroupBox(QtWidgets.QGroupBox):
 
     def setLayout(self, layout):
         super().setLayout(layout)
-class QtLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, SizeMixin, ILabel):
+class QtLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, ILabel):
     """Qt Label adapter - implements snake_case interface convention"""
-class QtImageAdapter(IImage):
+class QtImageAdapter(VisibilityMixin, EnableMixin, IImage):
     """Qt Image adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: QTImage):
@@ -113,7 +113,7 @@ class QtImageAdapter(IImage):
 
     def set_minimum_height(self, height: int):
         self._native.setMinimumHeight(height)
-class QtGroupBoxAdapter(IGroupBox):
+class QtGroupBoxAdapter(VisibilityMixin, EnableMixin, SizeMixin, IGroupBox):
     """Qt GroupBox adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: QTGroupBox):

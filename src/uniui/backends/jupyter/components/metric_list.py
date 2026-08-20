@@ -6,10 +6,11 @@ from typing import Dict, List
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IMetricList
 from ..runtime import M, html
 
-class JupyterMetricListAdapter(IMetricList):
+class JupyterMetricListAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IMetricList):
     """Dense two-column key/value list for secondary metrics."""
 
     def __init__(self):

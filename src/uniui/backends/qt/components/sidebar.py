@@ -5,6 +5,7 @@ from typing import Callable, Optional
 
 from PySide2 import QtCore, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import ISidebar
 from ....models.navigation import (
     SIDEBAR_COLLAPSED, SIDEBAR_MAX, SIDEBAR_MIN, NavigationModel,
@@ -56,7 +57,7 @@ def _sidebar_style() -> str:
 """
 
 
-class QtSidebarAdapter(ISidebar):
+class QtSidebarAdapter(VisibilityMixin, EnableMixin, SizeMixin, ISidebar):
     def __init__(self):
         self._list = QtWidgets.QListWidget()
         self._list.setAccessibleName("Primary navigation")

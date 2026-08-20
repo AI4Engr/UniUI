@@ -30,11 +30,13 @@ Position UniUI as a "Python engineering data application framework": the same bu
 - [ ] Gradually replace the global `_factory` and `_root_widget` to avoid cross-contamination between Notebooks, multiple apps, and tests
   - Shelved (2026-08-17): designed an additive `contextvars.ContextVar`-based `using(framework)` scope (fallback-only, `use()`/`_get_factory()` unchanged) but no real usage today runs two backends in one process, so it was dropped as unnecessary complexity. Revisit if that changes.
 - [ ] Clearly distinguish `Widget`, `Layout`, `Window`, and `Application` — stop treating all objects as Widgets
-- [ ] Fill in common capabilities for all components:
-  - [ ] `show()` / `hide()`
-  - [ ] `set_enabled()` / `is_enabled()`
-  - [ ] `set_width()` / `set_height()` / `set_min_size()`
-  - [ ] `add_class()` or unified style attributes
+- [x] Fill in common capabilities for all components:
+  - [x] `show()` / `hide()` / `is_visible()`
+  - [x] `set_enabled()` / `is_enabled()`
+  - [x] `set_fixed_width()` / `set_fixed_height()` / `set_minimum_width()` / `set_minimum_height()`
+  - [ ] `add_class()` or unified style attributes — deferred, needs its own design (Web has real CSS classes, Qt/Jupyter don't)
+  - Done (2026-08-19): all 17 primitive interfaces (`contracts/widgets.py`) and all 10 Admin interfaces (`components.py`) now provide these via non-abstract defaults on `IWidget`, so every existing interface inherits them for free. Real per-backend behavior: Qt via the existing shared `VisibilityMixin`/`EnableMixin`/`SizeMixin` (`_adapter_mixins.py`, generalized to call `get_native()` instead of hardcoding `self._native` — zero behavior change for existing users, but now also works for Qt Admin components, which store their native widget under other attribute names); Jupyter via a new parallel `JupyterVisibilityMixin`/`JupyterEnableMixin`/`JupyterSizeMixin` set operating on `ipywidgets.Widget.layout`/`.disabled` directly (raw ipywidgets containers don't have the camelCase protocol the Qt-style mixins expect); Web via one addition to `_WebAdapter` (`backends/web/primitives/base.py`), which every Web adapter already inherits (also fixed a wrong assumption along the way: NiceGUI's `enable()`/`disable()` are opt-in per element type, not universal — `_set_enabled()` now guards with `hasattr`). Verified per backend via manual smoke scripts for all 27 interfaces and a new shared `CommonCapabilitiesContractTest` mixin (`tests/contract_framework.py`) applied to all 10 Admin component test classes plus a few primitives.
+  - Known exception: Qt's `IVBoxLayout`/`IHBoxLayout`/`IGrid` raise `NotSupportedError` for all of these instead — their native object is a raw `QVBoxLayout`/`QHBoxLayout`/`QGridLayout` (a `QLayout`, not a `QWidget`), which has no show/hide/enabled/size surface at all. This is a concrete instance of the separate, larger "distinguish Widget from Layout" item above. Jupyter and Web don't have this problem (their VBox/HBox/Grid wrap real widgets) and implement these normally.
 - [x] Event subscriptions return a disposable handle and auto-unsubscribe on `dispose()`
   - Done (2026-08-18), scoped: every `on_*` registration method (`on_change`, `connect`, `on_select`, `on_click`, `on_row_click`, `on_resize`) across all three backends now returns a `uniui.state.Handle` whose `.dispose()` actually unregisters the callback (native Qt signal `.disconnect()`, ipywidgets `.unobserve()`/`Button.on_click(remove=True)`, or list/attribute removal) — verified per backend by subscribing twice, disposing one, and confirming only the surviving callback still fires. "Auto-unsubscribe on `dispose()`" for the *component itself* is deferred — no widget/component has a `dispose()` method today, and adding one to every component belongs to the separate, not-yet-designed "universal component lifecycle" item above; callers hold and dispose the `Handle` themselves for now, same as `State.subscribe()`/`Router.on_navigate()`.
   - Known gap, not fixed here: `LineEdit.on_finish_edit` (Web-only) has no abstract contract declaration and doesn't exist on Qt/Jupyter.
@@ -45,8 +47,10 @@ Position UniUI as a "Python engineering data application framework": the same bu
   - Known gap, not fixed here: `on_select`/`on_click`/`on_row_click` are single-slot ("last registration wins") on all three backends, while Web's `on_change`/`connect` are list-based (multi-subscriber) — asymmetry already flagged during the Handle-return pass, deliberately left alone to avoid an unscoped behavior change.
 - [ ] Unify data update principle: update existing native controls, avoid rebuilding the entire UI tree on each refresh
 - [ ] Use `Protocol`, generics, and dataclasses to improve type-checking of the public API
-- [ ] Write ADR: decide on the chart implementation approach and optional dependencies
-- [ ] Write ADR: decide on reactive state, async tasks, and UI thread scheduling model
+- [x] Write ADR: decide on the chart implementation approach and optional dependencies
+  - Done (2026-08-18): [docs/adr/0001-chart-rendering.md](docs/adr/0001-chart-rendering.md) — documents the shipped decision (hand-rolled QPainter/SVG rendering via `uniui.visuals.render_chart_svg`, no charting dependency), since `Chart` was already fully implemented before this ADR was written.
+- [x] Write ADR: decide on reactive state, async tasks, and UI thread scheduling model
+  - Done (2026-08-18): [docs/adr/0002-reactive-state-and-scheduling.md](docs/adr/0002-reactive-state-and-scheduling.md) — documents the shipped decision (`State`/`Computed` as plain Python objects, `TaskRunner` as a single daemon thread with results posted back via `schedule_after`, backend-probed UI-thread scheduling with an `asyncio` fallback for Jupyter).
 
 Proposed API draft:
 

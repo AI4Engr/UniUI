@@ -156,7 +156,7 @@ class QtHBoxAdapter(IHBoxLayout):
             item = self._native.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-class QtTabWidgetAdapter(NativeMixin, VisibilityMixin, ITabWidget):
+class QtTabWidgetAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, ITabWidget):
     """Qt TabWidget adapter - implements snake_case interface convention"""
 
     # ITabCapable
@@ -355,7 +355,7 @@ class QtGridAdapter(IGrid):
             if callback in self._resize_callbacks:
                 self._resize_callbacks.remove(callback)
         return Handle(cancel)
-class QtWrapAdapter(IWrap):
+class QtWrapAdapter(VisibilityMixin, EnableMixin, SizeMixin, IWrap):
     """Qt Wrap adapter using _QFlowLayout."""
 
     def __init__(self):
@@ -387,7 +387,7 @@ class QtWrapAdapter(IWrap):
             item = self._flow.takeAt(0)
             if item and item.widget():
                 item.widget().deleteLater()
-class QtScrollViewAdapter(IScrollView):
+class QtScrollViewAdapter(VisibilityMixin, EnableMixin, SizeMixin, IScrollView):
     """Qt ScrollView adapter using QScrollArea."""
 
     def __init__(self):
@@ -411,7 +411,7 @@ class QtScrollViewAdapter(IScrollView):
 
     def set_max_width(self, width: int) -> None:
         self._native.setMaximumWidth(width)
-class QtSplitPaneAdapter(ISplitPane):
+class QtSplitPaneAdapter(VisibilityMixin, EnableMixin, SizeMixin, ISplitPane):
     """Qt SplitPane adapter using QSplitter."""
 
     def __init__(self, orientation: str = "horizontal"):
@@ -454,7 +454,7 @@ class QtSplitPaneAdapter(ISplitPane):
         first = int(total * max(0.0, min(1.0, ratio)))
         second = total - first
         self._native.setSizes([first, second])
-class QtOverlayAdapter(IOverlay):
+class QtOverlayAdapter(VisibilityMixin, EnableMixin, SizeMixin, IOverlay):
     """Qt Overlay adapter using QStackedWidget."""
 
     def __init__(self):

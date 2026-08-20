@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IGauge
 from ....models.gauge import GaugeModel
 from ..effects import animate_value
@@ -90,7 +91,7 @@ class _GaugeWidget(QtWidgets.QWidget):
         )
 
 
-class QtGaugeAdapter(IGauge):
+class QtGaugeAdapter(VisibilityMixin, EnableMixin, SizeMixin, IGauge):
     def __init__(self):
         self._widget = _GaugeWidget()
         self._target_value = 0.0

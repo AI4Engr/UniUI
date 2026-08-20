@@ -5,6 +5,7 @@ from html import escape
 
 import ipywidgets as widgets
 
+from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IStatCard
 from ....models.stat_card import (
     TREND_DOWN, TREND_UP, normalize_card_status, trend_presentation,
@@ -12,7 +13,7 @@ from ....models.stat_card import (
 from ....models.status import STATUS_ERROR, STATUS_WARN
 from ..runtime import M, html
 
-class JupyterStatCardAdapter(IStatCard):
+class JupyterStatCardAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IStatCard):
     def __init__(self):
         self._label = html("", "uniui-stat-label")
         self._value = html("<p>—</p>", "uniui-stat-value")

@@ -36,42 +36,48 @@ class TextMixin:
 
 
 class VisibilityMixin:
-    """show / hide / is_visible."""
+    """show / hide / is_visible.
+
+    Calls through ``get_native()`` rather than ``self._native`` directly, so
+    it works both for adapters that pair it with ``NativeMixin`` and for
+    adapters that store their native widget under a different attribute name
+    but still implement ``get_native()`` (e.g. every Qt Admin component).
+    """
 
     def show(self) -> None:
-        self._native.show()
+        self.get_native().show()
 
     def hide(self) -> None:
-        self._native.hide()
+        self.get_native().hide()
 
     def is_visible(self) -> bool:
-        return self._native.isVisible()
+        return self.get_native().isVisible()
 
 
 class SizeMixin:
-    """Fixed and minimum sizing."""
+    """Fixed and minimum sizing. See :class:`VisibilityMixin` on ``get_native()``."""
 
     def set_fixed_width(self, width: int) -> None:
-        self._native.setFixedWidth(width)
+        self.get_native().setFixedWidth(width)
 
     def set_fixed_height(self, height: int) -> None:
-        self._native.setFixedHeight(height)
+        self.get_native().setFixedHeight(height)
 
     def set_minimum_width(self, width: int) -> None:
-        self._native.setMinimumWidth(width)
+        self.get_native().setMinimumWidth(width)
 
     def set_minimum_height(self, height: int) -> None:
-        self._native.setMinimumHeight(height)
+        self.get_native().setMinimumHeight(height)
 
 
 class EnableMixin:
-    """set_enabled / is_enabled."""
+    """set_enabled / is_enabled. See :class:`VisibilityMixin` on ``get_native()``."""
 
     def set_enabled(self, enabled: bool) -> None:
-        self._native.setEnabled(enabled)
+        self.get_native().setEnabled(enabled)
 
     def is_enabled(self) -> bool:
-        return self._native.isEnabled()
+        return self.get_native().isEnabled()
 
 
 class ClearMixin:
@@ -94,9 +100,65 @@ class SelectionMixin:
         return self._native.currentText()
 
 
+class JupyterVisibilityMixin:
+    """show / hide / is_visible via ``ipywidgets.Widget.layout`` directly.
+
+    Unlike Qt's native wrapper classes, raw ``ipywidgets`` widgets (a plain
+    ``widgets.VBox``, as every Jupyter Admin component's native widget is)
+    have no camelCase show/hide protocol — but every ``ipywidgets.Widget``
+    has a ``.layout``, so this works uniformly for custom wrapper classes
+    and stock ipywidgets containers alike.
+    """
+
+    def show(self) -> None:
+        self.get_native().layout.display = None
+
+    def hide(self) -> None:
+        self.get_native().layout.display = 'none'
+
+    def is_visible(self) -> bool:
+        return self.get_native().layout.display != 'none'
+
+
+class JupyterSizeMixin:
+    """Fixed and minimum sizing via ``ipywidgets.Widget.layout``."""
+
+    def set_fixed_width(self, width: int) -> None:
+        self.get_native().layout.width = f'{width}px'
+
+    def set_fixed_height(self, height: int) -> None:
+        self.get_native().layout.height = f'{height}px'
+
+    def set_minimum_width(self, width: int) -> None:
+        self.get_native().layout.min_width = f'{width}px'
+
+    def set_minimum_height(self, height: int) -> None:
+        self.get_native().layout.min_height = f'{height}px'
+
+
+class JupyterEnableMixin:
+    """set_enabled / is_enabled via ``ipywidgets.Widget.disabled``.
+
+    ``disabled`` is a real trait on interactive controls but not on plain
+    containers (``VBox``/``HBox``/``Box``) — setting it there still succeeds
+    (traitlets allows a plain attribute write) but has no visual effect, and
+    reading it before ever being set raises ``AttributeError``, hence the
+    ``getattr`` default below.
+    """
+
+    def set_enabled(self, enabled: bool) -> None:
+        self.get_native().disabled = not bool(enabled)
+
+    def is_enabled(self) -> bool:
+        return not getattr(self.get_native(), 'disabled', False)
+
+
 __all__ = [
     "ClearMixin",
     "EnableMixin",
+    "JupyterEnableMixin",
+    "JupyterSizeMixin",
+    "JupyterVisibilityMixin",
     "NativeMixin",
     "SelectionMixin",
     "SizeMixin",

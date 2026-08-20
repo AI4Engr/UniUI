@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from PySide2 import QtCore, QtWidgets
 
+from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import ICard
 from ..runtime import C, as_widget, clear_layout, label_widget, track_themed
 from ..styles import card_style
 
-class QtCardAdapter(ICard):
+class QtCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, ICard):
     def __init__(self):
         self._frame = QtWidgets.QFrame()
         self._frame.setProperty("card", "1")

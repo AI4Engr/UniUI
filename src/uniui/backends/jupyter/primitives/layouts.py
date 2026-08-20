@@ -502,6 +502,35 @@ class JupyterSplitPaneAdapter(JupyterVisibilityMixin, JupyterEnableMixin, Jupyte
 
     def set_sizes(self, ratio: float) -> None:
         self._native.setSizes(ratio)
+def _close_widget_tree(widget) -> None:
+    """Close ``widget`` and every descendant reachable via ``.children``,
+    ``.layout``, or ``.style``.
+
+    ipywidgets keeps a permanent strong reference to every un-closed widget
+    in its global ``Widget.widgets`` registry (populated when its comm
+    opens, popped only by ``close()``) — dropping every Python reference to
+    a widget does NOT make it collectible, so this is a real, unbounded
+    per-navigation leak, not just untidy state. ``Widget.close()`` itself is
+    not recursive (``Box``/``VBox``/``HBox`` don't override it) and doesn't
+    touch trait values, so a composite widget — any page with nested
+    layouts, or an Admin component like Sidebar or Table — needs every
+    descendant closed individually, including the ``Layout``/``Style``
+    objects every widget carries (both are ``Widget`` subclasses with their
+    own comm, registered in the same registry, and not closed by their
+    owner). ``close()`` is idempotent (a no-op once ``self.comm`` is already
+    None), so visiting the same widget twice (e.g. once via
+    ``JupyterOverlayAdapter``'s original container and once via its
+    synthetic render-wrapper, which shares the same child objects) is safe.
+    """
+    if not isinstance(widget, widgets.Widget):
+        return
+    for child in getattr(widget, "children", None) or ():
+        _close_widget_tree(child)
+    _close_widget_tree(getattr(widget, "layout", None))
+    _close_widget_tree(getattr(widget, "style", None))
+    widget.close()
+
+
 class JupyterOverlayAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IOverlay):
     """Jupyter Overlay adapter backed by a stock ipywidgets VBox.
 
@@ -540,6 +569,8 @@ class JupyterOverlayAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterS
         self._apply_active()
 
     def remove_layer(self, index: int) -> None:
+        native = self._layers[index]
+        wrapper = self._render_layers[index]
         del self._layers[index]
         del self._render_layers[index]
         self._native._layers = self._layers
@@ -547,6 +578,12 @@ class JupyterOverlayAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterS
         if index <= self._active:
             self._active = max(0, self._active - 1)
         self._apply_active()
+        # Close the original container (recursively closes every real
+        # descendant widget) and the render wrapper (see _make_render_layer
+        # — a distinct object when native.children exists, the same object
+        # otherwise; _close_widget_tree/close() are idempotent either way).
+        _close_widget_tree(native)
+        _close_widget_tree(wrapper)
 
     def layer_count(self) -> int:
         return len(self._layers)

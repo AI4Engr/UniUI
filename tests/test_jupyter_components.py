@@ -214,3 +214,51 @@ def test_jupyter_router_rewraps_composite_page_in_clean_stock_vbox():
     extra.set_text("Added later")
     page.add_item(extra)
     assert rendered.children == source.children
+
+
+def test_jupyter_router_view_closes_removed_pages_widgets():
+    """Navigating away from an uncached page must close its native widgets.
+
+    ipywidgets keeps a permanent strong reference to every un-closed widget
+    in its global registry — dropping every Python reference (what
+    RouterView's own bookkeeping already did) is not enough to make a
+    removed page's widgets collectible, so the registry grows without bound
+    across navigation unless each widget (and its Layout/Style sub-widgets)
+    is explicitly closed.
+    """
+    import ipywidgets as widgets
+
+    factory = create_factory("jupyter")
+
+    def make_page(name):
+        def build(_ctx):
+            page = factory.create_vbox()
+            for i in range(3):
+                label = factory.create_label()
+                label.set_text(f"{name}-{i}")
+                page.add_item(label)
+            return page
+        return build
+
+    router = Router(
+        Route("/a", make_page("a"), name="a"),
+        Route("/b", make_page("b"), name="b"),
+    )
+    view = RouterView(router, factory)
+
+    before = len(widgets.Widget.widgets)
+    navigations = 20
+    for _ in range(navigations // 2):
+        router.push("/a")
+        router.push("/b")
+    after = len(widgets.Widget.widgets)
+
+    # Only the currently-displayed page's widgets should remain registered.
+    # Without closing removed pages, each navigation leaks ~8 widgets (the
+    # container + 3 labels + each one's Layout/Style sub-widgets), so growth
+    # scales with navigation count; well below that here just confirms
+    # bounded steady-state overhead, not proportional growth.
+    assert after - before < navigations, (
+        f"widget registry grew by {after - before} over {navigations} navigations; "
+        "removed pages' widgets are not being closed"
+    )

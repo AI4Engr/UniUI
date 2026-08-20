@@ -155,24 +155,33 @@ class UniversalDisplay:
             height: window height
             stylesheet: optional Qt CSS string. None = use default theme stylesheet.
                         Pass "" to apply no stylesheet at all.
+
+        Returns:
+            The native root widget that was built and shown (a QWidget,
+            ipywidgets Widget, or NiceGUI element) — the same object stored
+            for refresh_theme(). Useful for embedding: a host application can
+            take this widget and place it inside its own window instead of
+            relying on show_ui() to own the whole app lifecycle.
         """
         native = container.get_native()
+        built = {}
 
         # Store root widget reference at module level for theme refresh
         def _set_refresh_root(root_widget):
             global _root_widget
             _root_widget = root_widget
+            built["widget"] = root_widget
 
         # Try each display method in order (order matters)
         if UniversalDisplay._show_web(native, title, width, height, _set_refresh_root):
-            return
+            return built.get("widget")
 
         if UniversalDisplay._show_qt(native, title, width, height, _set_refresh_root,
                                      stylesheet=stylesheet):
-            return
+            return built.get("widget")
 
         if UniversalDisplay._show_jupyter(native, _set_refresh_root):
-            return
+            return built.get("widget")
 
         raise RuntimeError("Unrecognized UI framework!")
 
@@ -267,8 +276,17 @@ def show_ui(container, title="App", width=500, height=400, stylesheet=None):
         height: window height
         stylesheet: optional Qt CSS override. None = default theme.
                     Pass "" to apply no stylesheet.
+
+    Returns:
+        The native root widget that was built and shown. On Qt, if no
+        QApplication already existed, this call blocks in app.exec_() until
+        the window closes, same as before — the return value only matters
+        once that returns. If a QApplication already existed (embedding into
+        a host app), show_ui() does not block or start a nested event loop;
+        it builds and shows the widget and returns immediately, so the host
+        can place the returned widget into its own window.
     """
-    UniversalDisplay.show(container, title, width, height, stylesheet=stylesheet)
+    return UniversalDisplay.show(container, title, width, height, stylesheet=stylesheet)
 
 
 # ============================================================================

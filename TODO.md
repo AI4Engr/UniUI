@@ -70,7 +70,8 @@ app.run(page)
 
 - [ ] Migrate the primary Qt backend from PySide2 to PySide6
 - [ ] If needed, provide a thin compatibility layer for temporary PySide2 support
-- [ ] `show_ui()` must not call `sys.exit()` directly; allow embedding in existing Qt applications
+- [x] `show_ui()` must not call `sys.exit()` directly; allow embedding in existing Qt applications
+  - Done (2026-08-19): the literal `sys.exit()` this line names was already gone (removed in an earlier refactor), but the real bug remained — `backends/qt/display.py`'s `show()` (the path `show_ui()` uses) decided whether to enter the blocking `app.exec_()` loop based on "am I running under pytest," not "did I create this `QApplication`." Embedding a UniUI-built widget into a host app that already owns a `QApplication` would still call `app.exec_()` again, starting a second nested event loop and blocking the host. Fixed by adding the same ownership check (`_app_is_ours = app is None`) that `show_forced()`/`show_qt()` in the same file already used correctly, ANDed with the existing pytest guard (both still needed — pytest guard alone doesn't distinguish embedding from "first QApplication in this test process"; ownership check alone doesn't stop tests from entering a real event loop the first time they create one). Also `show_ui()`/`UniversalDisplay.show()` now return the native root widget they built (previously `None` — the widget was only reachable via the private `display._root_widget` global), so embedding is actually usable. Verified with a monkeypatch-based regression test (`tests/test_display.py`) and manual smoke scripts for both the embedding and standalone cases; confirmed the regression test fails without the fix by temporarily reverting it.
 - [ ] Support high DPI, system scaling, keyboard navigation, and basic accessibility attributes
 - [x] Fix the primary supported backends to Qt, Jupyter, and Web
 - [x] Remove wxPython/Tkinter from auto-detection, default tests, and main CI

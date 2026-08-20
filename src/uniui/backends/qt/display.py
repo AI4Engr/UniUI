@@ -184,7 +184,8 @@ def show(native, title, width, height, set_refresh_root=None, stylesheet=None) -
         # Accept either a QLayout or a QWidget as the root container
         if isinstance(native, (QLayout, QWidget)):
             app = QApplication.instance()
-            if app is None:
+            _app_is_ours = app is None
+            if _app_is_ours:
                 app = QApplication(sys.argv)
 
             # Set application-wide font
@@ -217,15 +218,15 @@ def show(native, title, width, height, set_refresh_root=None, stylesheet=None) -
 
             widget.show()
 
-            # Always run the event loop — QtWidgetFactory may have already
-            # created the QApplication, but the loop hasn't started yet.
-            # Guard: in test environments exec_() may already be running
-            # (detected by checking if any top-level window is visible and
-            # the call stack is inside pytest).  The safest heuristic is to
-            # check whether we are inside a pytest session.
+            # Only enter the blocking event loop if we created the
+            # QApplication ourselves. A host application embedding a
+            # UniUI-built widget already owns a running QApplication/event
+            # loop; calling exec_() here would start a second, nested loop
+            # and block the host until this window closes. Mirrors
+            # show_forced()'s ownership check below.
             import sys as _sys
             _in_pytest = "pytest" in _sys.modules or hasattr(_sys, "_called_from_test")
-            if not _in_pytest:
+            if _app_is_ours and not _in_pytest:
                 app.exec_()
             return True
 

@@ -95,15 +95,23 @@ def track_themed(adapter, native_widget) -> None:
 
 
 def as_widget(widget) -> QtWidgets.QWidget:
-    """Like ``native`` but wraps a QLayout in a container QWidget if needed."""
+    """Like ``native`` but wraps a QLayout in a container QWidget if needed.
+
+    Uses the shared ``ensure_qwidget`` (also used by every primitive
+    composition point) for the wrap-if-needed logic itself, then layers on
+    the transparent styling every Admin container needs — without it, the
+    wrapper's opaque default background would paint over the Card/AppShell/
+    Drawer theming it sits inside.
+    """
+    from .primitives.helpers import ensure_qwidget, is_qlayout
+
     obj = native(widget)
-    if isinstance(obj, QtWidgets.QLayout):
-        container = QtWidgets.QWidget()
-        container.setAttribute(QtCore.Qt.WA_StyledBackground, True)
-        container.setStyleSheet("background: transparent;")
-        container.setLayout(obj)
-        return container
-    return obj
+    was_layout = is_qlayout(obj)
+    result = ensure_qwidget(obj)
+    if was_layout:
+        result.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+        result.setStyleSheet("background: transparent;")
+    return result
 
 
 def clear_layout(layout: QtWidgets.QLayout) -> None:

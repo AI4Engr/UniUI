@@ -180,6 +180,7 @@ def show(native, title, width, height, set_refresh_root=None, stylesheet=None) -
     try:
         from PySide2.QtWidgets import QWidget, QApplication, QLayout
         from PySide2.QtGui import QFont
+        from .primitives.helpers import ensure_qwidget
 
         # Accept either a QLayout or a QWidget as the root container
         if isinstance(native, (QLayout, QWidget)):
@@ -193,11 +194,7 @@ def show(native, title, width, height, set_refresh_root=None, stylesheet=None) -
             app.setFont(font)
 
             # Build the top-level window
-            if isinstance(native, QLayout):
-                widget = QWidget()
-                widget.setLayout(native)
-            else:
-                widget = native
+            widget = ensure_qwidget(native)
 
             widget.setWindowTitle(title)
             # width/height describe the initial window size, not a hard

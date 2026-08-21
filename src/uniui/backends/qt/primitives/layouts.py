@@ -18,7 +18,7 @@ from ...._adapter_mixins import (
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
-from .helpers import has_method
+from .helpers import ensure_qwidget, is_qlayout
 
 
 class QTVBoxLayout(QtWidgets.QVBoxLayout):
@@ -30,7 +30,7 @@ class QTVBoxLayout(QtWidgets.QVBoxLayout):
         super().setAlignment(QtCore.Qt.AlignTop)
 
     def addItem(self, item):
-        if has_method(item, "addLayout"):
+        if is_qlayout(item):
             super().addLayout(item)
         else:
             super().addWidget(item)
@@ -46,7 +46,7 @@ class QTHBoxLayout(QtWidgets.QHBoxLayout):
         super().setAlignment(QtCore.Qt.AlignTop)
 
     def addItem(self, item):
-        if has_method(item, "addLayout"):
+        if is_qlayout(item):
             super().addLayout(item)
         else:
             super().addWidget(item)
@@ -59,12 +59,7 @@ class QTTabWidget(QtWidgets.QTabWidget):
         super().__init__()
 
     def addTab(self, item, tab_name):
-        if has_method(item, "addLayout"):
-            w = QtWidgets.QWidget()
-            w.setLayout(item)
-            super().addTab(w, tab_name)
-        else:
-            super().addTab(item, tab_name)
+        super().addTab(ensure_qwidget(item), tab_name)
 
     def removeTabs(self):
         while True:
@@ -104,7 +99,7 @@ class QtVBoxAdapter(IVBoxLayout):
     def add_item_with_spec(self, widget: IWidget, item):
         native = widget.get_native()
         stretch = int(item.grow) if item.grow > 0 else 0
-        if has_method(native, "addLayout"):
+        if is_qlayout(native):
             self._native.addLayout(native, stretch)
         else:
             self._native.addWidget(native, stretch)
@@ -141,7 +136,7 @@ class QtHBoxAdapter(IHBoxLayout):
     def add_item_with_spec(self, widget: IWidget, item):
         native = widget.get_native()
         stretch = int(item.grow) if item.grow > 0 else 0
-        if has_method(native, "addLayout"):
+        if is_qlayout(native):
             self._native.addLayout(native, stretch)
         else:
             self._native.addWidget(native, stretch)
@@ -306,13 +301,7 @@ class QtGridAdapter(IGrid):
             self._auto_col += col_span
         else:
             r, c = row, col
-        if has_method(native, "addLayout"):
-            # nested layout — wrap in a widget
-            wrapper = QtWidgets.QWidget()
-            wrapper.setLayout(native)
-            self._native.addWidget(wrapper, r, c, row_span, col_span)
-        else:
-            self._native.addWidget(native, r, c, row_span, col_span)
+        self._native.addWidget(ensure_qwidget(native), r, c, row_span, col_span)
 
     def set_columns(self, count: int) -> None:
         self._columns = count
@@ -368,13 +357,7 @@ class QtWrapAdapter(VisibilityMixin, EnableMixin, SizeMixin, IWrap):
         return self._container
 
     def add_item(self, widget: IWidget) -> None:
-        native = widget.get_native()
-        if has_method(native, "addLayout"):
-            w = QtWidgets.QWidget()
-            w.setLayout(native)
-            self._flow.addWidget(w)
-        else:
-            self._flow.addWidget(native)
+        self._flow.addWidget(ensure_qwidget(widget.get_native()))
 
     def set_spec(self, spec: LayoutSpec) -> None:
         self._flow._h_space = spec.gap
@@ -398,13 +381,7 @@ class QtScrollViewAdapter(VisibilityMixin, EnableMixin, SizeMixin, IScrollView):
         return self._native
 
     def set_content(self, widget: IWidget) -> None:
-        native = widget.get_native()
-        if has_method(native, "addLayout"):
-            wrapper = QtWidgets.QWidget()
-            wrapper.setLayout(native)
-            self._native.setWidget(wrapper)
-        else:
-            self._native.setWidget(native)
+        self._native.setWidget(ensure_qwidget(widget.get_native()))
 
     def set_max_height(self, height: int) -> None:
         self._native.setMaximumHeight(height)
@@ -424,22 +401,10 @@ class QtSplitPaneAdapter(VisibilityMixin, EnableMixin, SizeMixin, ISplitPane):
         return self._native
 
     def set_first(self, widget: IWidget) -> None:
-        native = widget.get_native()
-        if has_method(native, "addLayout"):
-            w = QtWidgets.QWidget()
-            w.setLayout(native)
-            self._native.insertWidget(0, w)
-        else:
-            self._native.insertWidget(0, native)
+        self._native.insertWidget(0, ensure_qwidget(widget.get_native()))
 
     def set_second(self, widget: IWidget) -> None:
-        native = widget.get_native()
-        if has_method(native, "addLayout"):
-            w = QtWidgets.QWidget()
-            w.setLayout(native)
-            self._native.addWidget(w)
-        else:
-            self._native.addWidget(native)
+        self._native.addWidget(ensure_qwidget(widget.get_native()))
 
     def set_orientation(self, orientation: str) -> None:
         from PySide2.QtCore import Qt
@@ -468,13 +433,7 @@ class QtOverlayAdapter(VisibilityMixin, EnableMixin, SizeMixin, IOverlay):
         return self._native
 
     def add_layer(self, widget: IWidget) -> None:
-        native = widget.get_native()
-        if has_method(native, "addLayout"):
-            w = QtWidgets.QWidget()
-            w.setLayout(native)
-            self._native.addWidget(w)
-        else:
-            self._native.addWidget(native)
+        self._native.addWidget(ensure_qwidget(widget.get_native()))
 
     def set_active_index(self, index: int) -> None:
         self._native.setCurrentIndex(index)

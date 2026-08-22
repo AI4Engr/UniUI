@@ -161,14 +161,31 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
                 )
 
     def set_rows(self, rows: List[Dict]) -> None:
+        """Update existing ``QTableWidgetItem``s in place instead of
+        rebuilding every cell. Rows have no stable identity in the model
+        (see ``TableModel``), so this diffs positionally: a row index that
+        existed before and still exists keeps its items, only its text is
+        touched (and only when it actually changed); rows beyond the
+        previous count are created fresh; ``setRowCount`` shrinking handles
+        removed trailing rows (Qt deletes their items automatically).
+        """
+        old_row_count = len(self._model.rows)
         self._model.set_rows(rows)
-        self._table.setRowCount(len(self._model.rows))
-        for r_idx, row in enumerate(self._model.rows):
-            for c_idx, col in enumerate(self._model.columns):
-                item = QtWidgets.QTableWidgetItem(col.text_of(row))
-                item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+        new_rows = self._model.rows
+        columns = self._model.columns
+
+        self._table.setRowCount(len(new_rows))
+        for r_idx, row in enumerate(new_rows):
+            for c_idx, col in enumerate(columns):
+                text = col.text_of(row)
+                item = self._table.item(r_idx, c_idx) if r_idx < old_row_count else None
+                if item is None:
+                    item = QtWidgets.QTableWidgetItem(text)
+                    item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                    self._table.setItem(r_idx, c_idx, item)
+                elif item.text() != text:
+                    item.setText(text)
                 self._style_item(item, col)
-                self._table.setItem(r_idx, c_idx, item)
 
     def _style_item(self, item, col) -> None:
         horizontal = (

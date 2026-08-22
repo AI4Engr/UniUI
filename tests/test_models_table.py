@@ -238,6 +238,35 @@ class TestBackendsAgree:
             QtCore.Qt.AlignLeft, QtCore.Qt.AlignRight, QtCore.Qt.AlignLeft
         ]
 
+    def test_qt_set_rows_reuses_unchanged_cell_items(self):
+        """set_rows() must update existing QTableWidgetItems in place rather
+        than rebuilding every cell — this is what makes it "update existing
+        native controls" instead of "rebuild the whole tree" on every call.
+        """
+        table = self._qt()
+        unchanged_item = table._table.item(0, 0)
+        changed_item = table._table.item(1, 1)
+
+        new_rows = [
+            dict(self.ROWS[0]),                          # row 0: identical
+            {**self.ROWS[1], "amount": 999},              # row 1: amount changed
+            {"id": 3, "amount": 30, "status": "Pending"},  # row 2: new
+        ]
+        table.set_rows(new_rows)
+
+        assert table._table.item(0, 0) is unchanged_item, (
+            "a cell whose text didn't change must keep the same item object"
+        )
+        assert table._table.item(1, 1) is changed_item, (
+            "a changed cell must still reuse the same item object, just with new text"
+        )
+        assert table._table.item(1, 1).text() == "999"
+        assert table._table.item(2, 0).text() == "3"
+        assert table._table.rowCount() == 3
+
+        table.set_rows(new_rows[:1])
+        assert table._table.rowCount() == 1
+
     def test_jupyter_marks_only_the_amount_column_numeric(self):
         html = self._jupyter()._table.value
         assert html.count("uniui-number") == len(self.ROWS)

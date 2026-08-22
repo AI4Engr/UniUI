@@ -7,7 +7,7 @@ import pytest
 
 from tests.contract_framework import WidgetContractTest
 from uniui import VBOX, HBOX, GRID, WRAP, SCROLL_VIEW, SPLIT_PANE, OVERLAY
-from uniui.core import LayoutSpec, LayoutItem
+from uniui.core import ILayoutOnly, LayoutSpec, LayoutItem
 
 
 class TestVBoxContract(WidgetContractTest):
@@ -83,6 +83,12 @@ class TestVBoxContract(WidgetContractTest):
         inner.add_item(label)
         outer.add_item(inner)
 
+    @pytest.mark.contract
+    def test_is_layout_only(self, factory):
+        """VBox's native object may be a pure layout manager (no widget-level
+        show/hide/enabled surface on Qt) — the type system must say so."""
+        assert isinstance(self.create_widget(factory), ILayoutOnly)
+
 
 class TestHBoxContract(WidgetContractTest):
     """Contract tests for HBoxLayout."""
@@ -91,6 +97,11 @@ class TestHBoxContract(WidgetContractTest):
 
     def create_widget(self, factory):
         return factory.create_hbox()
+
+    @pytest.mark.contract
+    def test_is_layout_only(self, factory):
+        """See TestVBoxContract.test_is_layout_only."""
+        assert isinstance(self.create_widget(factory), ILayoutOnly)
 
     @pytest.mark.contract
     def test_add_label(self, factory):
@@ -224,6 +235,11 @@ class TestGridContract(WidgetContractTest):
         grid.add_item(lbl)
         grid.clear()
 
+    @pytest.mark.contract
+    def test_is_layout_only(self, factory):
+        """See TestVBoxContract.test_is_layout_only."""
+        assert isinstance(self.create_widget(factory), ILayoutOnly)
+
 
 class TestWrapContract(WidgetContractTest):
     """Contract tests for Wrap layout."""
@@ -232,6 +248,13 @@ class TestWrapContract(WidgetContractTest):
 
     def create_widget(self, factory):
         return factory.create_wrap()
+
+    @pytest.mark.contract
+    def test_is_not_layout_only(self, factory):
+        """Unlike VBox/HBox/Grid, Wrap always wraps a real widget on every
+        backend (Qt's QtWrapAdapter wraps its flow layout in a QWidget
+        immediately) — it never has the no-show/hide-surface problem."""
+        assert not isinstance(self.create_widget(factory), ILayoutOnly)
 
     @pytest.mark.contract
     def test_add_items(self, factory):

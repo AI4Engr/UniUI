@@ -46,6 +46,7 @@ from .contracts.widgets import (
     IHBoxLayout,
     IImage,
     ILabel,
+    ILayoutOnly,
     ILineEdit,
     IOverlay,
     IScrollView,

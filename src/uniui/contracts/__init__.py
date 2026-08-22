@@ -16,6 +16,6 @@ from .layout import (
 )
 from .widgets import (
     IButton, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout, IImage,
-    ILabel, ILineEdit, IOverlay, IScrollView, ISplitPane, ITabWidget,
-    ITextArea, IVBoxLayout, IWidget, IWidgetFactory, IWrap,
+    ILabel, ILayoutOnly, ILineEdit, IOverlay, IScrollView, ISplitPane,
+    ITabWidget, ITextArea, IVBoxLayout, IWidget, IWidgetFactory, IWrap,
 )

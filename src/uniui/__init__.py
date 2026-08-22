@@ -43,6 +43,7 @@ from .core import (
 
     # Advanced layout interfaces
     IGrid,
+    ILayoutOnly,
     IWrap,
     IScrollView,
     ISplitPane,
@@ -236,6 +237,7 @@ __all__ = [
     'IVBoxLayout',
     'IHBoxLayout',
     'IGrid',
+    'ILayoutOnly',
     'IWrap',
     'IScrollView',
     'ISplitPane',

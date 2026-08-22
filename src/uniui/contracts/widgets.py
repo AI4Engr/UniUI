@@ -53,6 +53,24 @@ class IWidget(ABC):
 
     def set_minimum_height(self, height: int) -> None:
         pass
+
+
+class ILayoutOnly(IWidget):
+    """Marker for widgets whose native object is a pure layout manager, not
+    a widget — additive documentation, not a behavior change.
+
+    On Qt, `IVBoxLayout`/`IHBoxLayout`/`IGrid`'s native object is a raw
+    `QVBoxLayout`/`QHBoxLayout`/`QGridLayout` (a `QLayout`): it has no
+    show/hide/enabled/size surface at all, which is why those three
+    interfaces override every "common capability" with a `NotSupportedError`
+    default instead of inheriting `IWidget`'s real one. Jupyter and Web don't
+    have this problem — their VBox/HBox/Grid wrap a real widget — so this
+    marker only describes what's true on the *worst-case* backend, not every
+    backend; it exists so a reader (or a future static check) can tell "this
+    interface's `IWidget` capability methods are not guaranteed to work" at
+    a glance, without re-deriving it from the Qt-specific comments on each
+    `NotSupportedError` override.
+    """
 class ILabel(IWidget):
     """Label widget interface"""
 
@@ -258,7 +276,7 @@ class IDropdown(IWidget):
     @abstractmethod
     def is_enabled(self) -> bool:
         pass
-class IVBoxLayout(IWidget):
+class IVBoxLayout(ILayoutOnly):
     """Vertical box layout interface"""
 
     @abstractmethod
@@ -315,7 +333,7 @@ class IVBoxLayout(IWidget):
 
     def set_minimum_height(self, height: int) -> None:
         raise NotSupportedError("set_minimum_height() not supported on this layout")
-class IHBoxLayout(IWidget):
+class IHBoxLayout(ILayoutOnly):
     """Horizontal box layout interface"""
 
     @abstractmethod
@@ -430,7 +448,7 @@ class IImage(IWidget):
     @abstractmethod
     def set_fixed_width(self, width: int) -> None:
         pass
-class IGrid(IWidget):
+class IGrid(ILayoutOnly):
     """Grid layout interface — maps to QGridLayout / CSS Grid / ui.grid."""
 
     @abstractmethod

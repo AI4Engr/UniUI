@@ -121,6 +121,7 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html",
     "-ra",
+    "-n=auto",
 ]
 
 markers = [

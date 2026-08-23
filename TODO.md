@@ -1,6 +1,7 @@
 # UniUI TODO: Admin / Dashboard Capabilities
 
-> "Admin-like" is defined here as: using the same UniUI Python API to build usable admin backends and data dashboards in both Qt and Jupyter. The wxPython and Tkinter backends have since been removed entirely.
+> "Admin-like" is defined here as: using the same UniUI Python API to build usable admin backends and data dashboards across Qt, Jupyter, and Web. The wxPython and Tkinter backends have since been removed entirely.
+> Audited 2026-08-22 against the actual codebase (5 parallel research passes) — most checkboxes below predate a great deal of shipped work and were stale. Flipped to `[x]` where confirmed done, left `[ ]` with a short note where partially done, left unchanged where confirmed not started.
 
 ## Product Positioning
 
@@ -9,18 +10,18 @@ Position UniUI as a "Python engineering data application framework": the same bu
 - [ ] Define a clear target user and typical scenarios around engineering data applications
 - [ ] Admin, charts, 2D/3D, and CSG share a unified state, data, and task model
 - [ ] Keep the core package lightweight; Chart, 3D, and CSG use optional extras or plugins
-- [ ] Do not market ipywidgets as a standalone web deployment; if a real web app is needed, design a separate Web backend later
+- [x] Do not market ipywidgets as a standalone web deployment; if a real web app is needed, design a separate Web backend later — `src/uniui/backends/web/` (NiceGUI) is a fully separate backend from `backends/jupyter/` (ipywidgets)
 - [ ] Each release should prioritize delivering complete user workflows, not maximizing widget count
 
 ## Overall Goals
 
-- [ ] Support a standard admin shell: top bar, sidebar, content area, status bar
-- [ ] Display key metrics, data tables, filter forms, and action buttons
-- [ ] Display and dynamically update charts
-- [ ] Display and edit basic 2D/3D scenes, with a focus on 3D CSG modeling
-- [ ] The same business code runs in both Qt and Jupyter
-- [ ] Consistent dark/light theming with runtime toggle support
-- [ ] Provide a unified interface, backend contract tests, and complete examples for all new components
+- [x] Support a standard admin shell: top bar, sidebar, content area, status bar — `IAppShell` on all 3 backends, `backends/{qt,jupyter,web}/components/app_shell.py`
+- [x] Display key metrics, data tables, filter forms, and action buttons — StatCard/Table/filter `LineEdit`+`State` binding all live in `examples/admin_demo.py`
+- [x] Display and dynamically update charts — `IChart.set_data()`/`.append_data()`, exercised live in `admin_demo.py`
+- [ ] Display and edit basic 2D/3D scenes, with a focus on 3D CSG modeling — not started, see "P1: 2D / 3D Visualization" below
+- [ ] The same business code runs in both Qt and Jupyter — partially true: Jupyter and Web share one page implementation in `admin_demo.py` (`_browser_dashboard_page` etc.), but Qt has a wholly separate hand-written implementation (`dashboard_page` etc., direct PySide2) — Qt is not actually sharing code with Jupyter yet
+- [x] Consistent dark/light theming with runtime toggle support — `theme_runtime.set_active_theme`, toggle wired in `admin_demo.py`, tested in `tests/test_theme_unification.py`
+- [ ] Provide a unified interface, backend contract tests, and complete examples for all new components — strong for Admin/Chart (`tests/contracts/test_admin.py`), vacuous for 2D/3D/CSG since those don't exist yet
 
 ## P0: Establish the Common Model First
 
@@ -84,6 +85,7 @@ app.run(page)
 - [x] `show_ui()` must not call `sys.exit()` directly; allow embedding in existing Qt applications
   - Done (2026-08-19): the literal `sys.exit()` this line names was already gone (removed in an earlier refactor), but the real bug remained — `backends/qt/display.py`'s `show()` (the path `show_ui()` uses) decided whether to enter the blocking `app.exec_()` loop based on "am I running under pytest," not "did I create this `QApplication`." Embedding a UniUI-built widget into a host app that already owns a `QApplication` would still call `app.exec_()` again, starting a second nested event loop and blocking the host. Fixed by adding the same ownership check (`_app_is_ours = app is None`) that `show_forced()`/`show_qt()` in the same file already used correctly, ANDed with the existing pytest guard (both still needed — pytest guard alone doesn't distinguish embedding from "first QApplication in this test process"; ownership check alone doesn't stop tests from entering a real event loop the first time they create one). Also `show_ui()`/`UniversalDisplay.show()` now return the native root widget they built (previously `None` — the widget was only reachable via the private `display._root_widget` global), so embedding is actually usable. Verified with a monkeypatch-based regression test (`tests/test_display.py`) and manual smoke scripts for both the embedding and standalone cases; confirmed the regression test fails without the fix by temporarily reverting it.
 - [ ] Support high DPI, system scaling, keyboard navigation, and basic accessibility attributes
+  - Partial: high-DPI attrs are set (`AA_EnableHighDpiScaling`/`AA_UseHighDpiPixmaps`, `backends/qt/primitives/factory.py`); `setAccessibleName`/tooltips exist on several Qt Admin components. No dedicated keyboard-navigation logic or system-font-scaling handling found.
 - [x] Fix the primary supported backends to Qt, Jupyter, and Web
 - [x] Remove wxPython/Tkinter from auto-detection, default tests, and main CI
 - [x] Move wxPython/Tkinter to a legacy package, separate branch, or an explicitly frozen compatibility layer *(resolved by deleting both backends outright)*
@@ -103,22 +105,28 @@ app.run(page)
 - [x] Use one SVG icon set across Qt, Jupyter, and Web; remove text glyphs and operating-system-dependent icons
 - [x] Rebuild the Qt Header, Sidebar, Content, and Footer against the Web visual baseline
 - [ ] Match Web navigation states: normal, hover, active, disabled, collapsed, and keyboard focus
+  - Partial: hover/active/disabled/collapsed all present in Qt+Web sidebar QSS/CSS; keyboard-focus state missing on both backends.
 - [x] Match Web controls: primary/secondary/icon buttons, inputs, status pills, cards, and table chrome
 - [x] Keep the Sidebar draggable in wide mode and restore the last user-selected width
 - [ ] Support wide Sidebar, medium icon rail, and compact drawer modes without recreating route pages
+  - Confirmed still binary, not tri-modal: `app_shell.py`'s responsive sidebar only toggles expanded ↔ icon-rail; no compact drawer/overlay mode exists on any backend.
 - [ ] Verify light/dark switching updates existing widgets without losing route, selection, form, chart, or splitter state
+  - Architecturally true (every `apply_theme()` only restyles, never touches model/selection state) but unverified by any test that exercises the full combination.
 
 #### Phase 2: Native Dashboard Components
 
 - [x] Add a backend-neutral `Gauge` / `RadialProgress` interface
 - [x] Implement Qt Gauge using `QPainter` with antialiasing, semantic colors, units, and animated value transitions
 - [x] Add line, area, and bar charts with lightweight `QPainter` / SVG real-time renderers; keep `pyqtgraph` as a future optional high-throughput renderer
-- [ ] Keep chart dependencies optional, e.g. `uniui[charts]`
+- [ ] Keep chart dependencies optional, e.g. `uniui[charts]` — moot per ADR 0001: Chart has zero third-party dependency at all, nothing to gate behind an extra
 - [ ] Add chart theme switching, empty/loading/error states, and responsive resize handling
+  - Partial: theme switching and an empty-data placeholder both exist (`chart.py`); no `set_loading`/`set_error` on `IChart` at all, unlike `Table`.
 - [ ] Replace `QTableWidget` with `QTableView + QAbstractTableModel` for production DataGrid performance
 - [ ] Add delegates for status pills, numeric alignment, progress cells, and row action buttons
+  - Partial: status-pill delegate (`_StatusPillDelegate`) is real; numeric alignment is done via `setTextAlignment`, not a delegate; progress cells and row action buttons don't exist.
 - [ ] Add a themed Calendar component suitable for dashboard and scheduling pages
 - [ ] Create an IoT/engineering Dashboard example containing gauges, charts, calendar, table, and live status
+  - `admin_demo.py`'s dashboard page already combines Gauge+Chart+StatCards+a metrics list, just without a Calendar and not branded as "IoT."
 
 Proposed API:
 
@@ -144,8 +152,11 @@ Chart(
 - [ ] Add card hover/focus feedback without expensive full-widget repaints
 - [x] Add an animated settings drawer using `QStackedLayout.StackAll` or an equivalent overlay
 - [ ] Add smooth Gauge and metric-value transitions
+  - Gauge value transitions already ship (`animate_value()`, covered by the already-checked Phase 2 item above); StatCard's `set_value()` still does a plain, un-animated `setText`.
 - [ ] Add Toast, Dialog, loading overlay, and Skeleton feedback components
+  - Loading overlay exists, but only on `Table` (`_overlay`/`set_loading`/`set_error`); Toast/Dialog/Skeleton don't exist anywhere.
 - [ ] Use `QPropertyAnimation`, `QParallelAnimationGroup`, `QGraphicsOpacityEffect`, and `QEasingCurve` through reusable helpers
+  - `QPropertyAnimation`+`QEasingCurve` are in real use via `effects.py`'s `animate_value()` and the Drawer's slide animation; `QParallelAnimationGroup`/`QGraphicsOpacityEffect` are unused.
 - [ ] Keep ordinary animation and resize interaction at 60 FPS on a typical engineering workstation
 
 #### Phase 4: Responsive, DPI, and Production Quality
@@ -155,18 +166,25 @@ Chart(
 - [x] Ensure responsive reflow does not flicker or recreate gauges, charts, tables, or route pages
 - [ ] Debounce chart and viewport resizing by 50–100 ms
 - [ ] Ensure real-time charts and data refresh do not block the Qt UI thread
+  - `admin_demo.py` routes its one manual "Refresh" button through `TaskRunner` (non-blocking), but no sustained/polling real-time refresh scenario is demonstrated or stress-tested.
 - [ ] Support keyboard navigation, visible focus rings, tooltips, and accessible names
+  - Partial: accessible names and tooltips are widespread on Qt Admin components; focus rings exist for basic form inputs only; no dedicated keyboard-navigation logic anywhere.
 - [x] Add offscreen geometry/state and screenshot render checks for the Qt Admin example
 - [ ] Package SVG icons, fonts, and optional chart dependencies correctly for PyInstaller builds
 
 #### Qt Visual Parity Completion Criteria
 
 - [ ] Qt and Web use the same Admin theme tokens and semantic component states
+  - Closer to done than it looks: Qt and Web both derive colors from the identical `theme_runtime.get_palette()`/`get_admin_metrics()` source. The one real gap is the missing keyboard-focus state noted above.
 - [ ] Qt Dashboard reaches the same hierarchy, spacing, density, and clarity as the Web Dashboard
+  - Spacing/metrics are literally shared (`get_admin_metrics()` on both backends); "clarity"/"hierarchy" is a qualitative visual judgment not verifiable from source, left unchecked pending an actual side-by-side look.
 - [ ] Theme switching preserves loaded data, route, table selection, chart range, and Sidebar width
+  - Same as the Phase 1 item above — architecturally sound, not covered by a test that exercises the full combination.
 - [ ] Sidebar drag, responsive collapse, settings drawer, table interaction, and charts work without visible jank
 - [ ] The flagship Admin business/page code contains no direct `PySide2` / `PySide6` imports
+  - Confirmed false today: `examples/admin_demo.py` imports `PySide2` directly and builds Qt pages with raw `QWidget`/`QGridLayout`/etc.
 - [ ] The same flagship app runs with `--ui qt`, `--ui jupyter`, and `--ui web`
+  - The CLI flag works for all three today, but per the earlier "same business code" gap, Qt runs a separate hand-written page implementation rather than the one Jupyter/Web already share.
 
 ## P0: Adaptive Cross-Backend Layout (Highest Priority)
 
@@ -174,23 +192,32 @@ Chart(
 
 ### Layout Common Model
 
-- [ ] Add backend-agnostic `LayoutSpec`, `SizeSpec`, `LayoutItem`, and breakpoint models
-- [ ] Add `Row` and `Column`; keep `HBox` / `VBox` as compatibility aliases
+- [x] Add backend-agnostic `LayoutSpec`, `SizeSpec`, `LayoutItem`, and breakpoint models — `src/uniui/contracts/layout.py`, tested in `tests/test_layout_model.py`
+- [x] Add `Row` and `Column`; keep `HBox` / `VBox` as compatibility aliases — `src/uniui/facade.py` (`Row`/`Column` wrap `create_hbox`/`create_vbox`)
 - [ ] Add `Grid`, `Wrap`, `ScrollView`, `SplitPane`, `Overlay`, `Center`
-- [ ] Add `Container`, `Spacer`, `Divider`
+  - 5 of 6 exist on all three backends, contract-tested (`tests/contracts/test_layout.py`). `Center` doesn't exist.
+- [ ] Add `Container`, `Spacer`, `Divider` — none of the three exist as public widgets
 - [ ] Support dynamic `add()`, `insert()`, `remove()`, `replace()`, `clear()`, and reordering
+  - Only `add_item()`/`clear()` (and `IOverlay.remove_layer()`) exist; no `insert()`, single-item `remove()`, `replace()`, or reorder anywhere.
 - [ ] Child components use stable keys; layout reflows preserve input values, chart state, router pages, and 3D camera state
+  - `LayoutItem.key` is modeled but never read by any adapter — dead field. Router-page preservation is real, via a different mechanism (`RouterView._page_cache`). No 3D camera state exists.
 - [ ] Layout updates only adjust native layout relationships — do not destroy and recreate business components
+  - True only for `AppShell`'s hand-built sidebar-collapse path (resize/re-parent, no rebuild); every container's `clear()` is destructive (`deleteLater()` on every child) and there's no generic non-destructive reflow mechanism.
 
 ### Sizing and Flex
 
 - [ ] Unified support for `auto`, `fill`, fixed pixels, and percentage sizes
+  - `SizeSpec` models all four (`contracts/layout.py`) but no backend adapter ever reads it — `LayoutItem.grow/shrink/basis` is the actually-wired sizing path instead.
 - [ ] Support `min_width`, `max_width`, `min_height`, `max_height`
+  - Only the `min_*` pair exists on the base `IWidget` contract; `max_*` exists only on `IScrollView`, not generically.
 - [ ] Support `grow`, `shrink`, `basis`, and `aspect_ratio`
+  - `grow`/`shrink`/`basis` are fully wired (Qt stretch factor; Jupyter/Web flex CSS). `aspect_ratio` doesn't exist anywhere.
 - [ ] Support parent layout `gap`, `padding`, main-axis alignment, cross-axis alignment, and wrapping
+  - `gap`/`padding` are applied everywhere `set_spec()` runs. `LayoutSpec.align`/`cross_align`/`wrap` are modeled fields that no `set_spec()` implementation ever reads.
 - [ ] Support child `align_self`, Grid row/column/span, and order
-- [ ] Fixed sizes should only be used for clearly defined cases: icons, toolbars, collapsed Sidebar, etc.
-- [ ] Remove the Display layer's recursive enforcement of the same margin/spacing on all nested layouts
+  - Grid row/col/span is real and tested. `LayoutItem.align_self` is modeled but unused. There is no `order` field at all.
+- [ ] Fixed sizes should only be used for clearly defined cases: icons, toolbars, collapsed Sidebar, etc. — coding guideline, not independently checkable; no counter-evidence found
+- [x] Remove the Display layer's recursive enforcement of the same margin/spacing on all nested layouts — confirmed the described problem doesn't exist today: every container (AppShell, Card, ...) already sets its own distinct, purpose-specific margins
 
 Proposed API draft:
 
@@ -213,60 +240,74 @@ page = Column(
 
 ### Responsive Rules
 
-- [ ] Use container width, not screen width, to determine responsive mode
-- [ ] Define default breakpoints: `compact < 720`, `medium < 1200`, `wide >= 1200`
+- [x] Use container width, not screen width, to determine responsive mode — `_ResizeNotifier`/`_ResponsiveShellWidget` both hook the container's own `resizeEvent()`
+- [x] Define default breakpoints: `compact < 720`, `medium < 1200`, `wide >= 1200` — `contracts/layout.py`'s `Breakpoints`/`DEFAULT_BREAKPOINTS`, tested
 - [ ] Only reflow structure when crossing a breakpoint; delegate ordinary size changes to the native layout engine
+  - Real on Qt (`QtGridAdapter.on_resize` gates on `mode != self._last_mode`), but `on_resize` is Qt-only — Jupyter/Web `Grid` inherit the contract's no-op default and never fire it.
 - [ ] Sidebar supports: wide = expanded, medium = icon rail, compact = drawer/Overlay
-- [ ] Dashboard Grid supports: wide = four columns, medium = two columns, compact = one column
-- [ ] SplitPane can switch from horizontal to vertical in compact mode
+  - Confirmed binary in practice (expanded ↔ icon-rail only, verified by parametrized width test); no drawer/overlay compact mode exists.
+- [ ] Dashboard Grid supports: wide = four columns, medium = two columns, compact = one column — no such breakpoint-driven column count exists; `set_columns()` is a manual, unwired API
+- [ ] SplitPane can switch from horizontal to vertical in compact mode — `set_orientation()` exists and is callable, but nothing auto-wires it to a breakpoint
 - [ ] Responsive rules are overridable by the application; default breakpoints must not be hardcoded into components
+  - `Breakpoints` itself is overridable and tested, but real components don't use it: `AppShell` hardcodes its own `1020`/`1019` instead of reading `DEFAULT_BREAKPOINTS` (720/1200) — exactly the anti-pattern this line warns against.
 
 ### Qt Adaptive Renderer
 
 - [ ] Map `fill` / `auto` / fixed sizes to the correct `QSizePolicy`
-- [ ] Map `grow` to layout stretch factor
-- [ ] Map `Grid` to `QGridLayout`, correctly handling row/column span
+  - `QSizePolicy` is used, but ad hoc per-component, never systematically driven by `SizeSpec` (which no adapter reads — see Sizing and Flex above).
+- [x] Map `grow` to layout stretch factor — `qt/primitives/layouts.py` (`stretch = int(item.grow) ...`)
+- [x] Map `Grid` to `QGridLayout`, correctly handling row/column span — tested, `test_add_item_span`
 - [ ] Map `SplitPane` to `QSplitter`, supporting drag, minimum size, and ratio persistence
-- [ ] Map `ScrollView` to `QScrollArea` with `setWidgetResizable(True)`
-- [ ] Map `Overlay` to `QStackedLayout.StackAll` or equivalent
-- [ ] Implement `Wrap` using a tested FlowLayout
-- [ ] Responsive containers listen to their own `resizeEvent()`, not screen resolution
+  - Drag works natively; no minimum-size enforcement or ratio persistence implemented for the general-purpose `SplitPane` (AppShell's own internal splitter does set `setChildrenCollapsible(False)`, but `QtSplitPaneAdapter` doesn't).
+- [x] Map `ScrollView` to `QScrollArea` with `setWidgetResizable(True)`
+- [x] Map `Overlay` to `QStackedLayout.StackAll` or equivalent — `QStackedWidget`
+- [x] Implement `Wrap` using a tested FlowLayout — `_QFlowLayout`, explicitly based on Qt's official FlowLayout example, contract-tested
+- [x] Responsive containers listen to their own `resizeEvent()`, not screen resolution
 - [ ] Debounce chart and 3D Viewport resize events by 50–100 ms
-- [ ] Resize only updates the chart renderer, WebGL/OpenGL buffer, and camera aspect ratio — do not re-run data queries or CSG
+- [ ] Resize only updates the chart renderer, WebGL/OpenGL buffer, and camera aspect ratio — do not re-run data queries or CSG — N/A, no 3D/CSG exists
 - [ ] Use logical pixels by default; correctly support Qt high DPI and system font scaling
+  - High-DPI attrs are set (`AA_EnableHighDpiScaling`/`AA_UseHighDpiPixmaps`); system font scaling isn't separately confirmed.
 
 ### Jupyter Responsive Renderer
 
-- [ ] Map `Row` / `Column` to ipywidgets Flex layout
-- [ ] Map `Grid` to CSS Grid
+- [x] Map `Row` / `Column` to ipywidgets Flex layout
+- [x] Map `Grid` to CSS Grid — `widgets.GridBox`/`grid_template_columns`
 - [ ] Dashboards should prefer `repeat(auto-fit, minmax(..., 1fr))` for adaptation without Python round-trips
-- [ ] Map `Wrap` to `flex-flow: row wrap`
-- [ ] Map `fill` / `grow` / `shrink` / `basis` to corresponding CSS flex properties
-- [ ] All stretchable content must set `min-width: 0` to prevent charts and 3D canvases from overflowing their containers
-- [ ] Prefer CSS Grid/Flex for responsiveness; do not send every resize back to Python
+  - Actual implementation is the opposite: a fixed `repeat({columns}, 1fr)` driven by a Python `set_columns()` call — requires a round-trip.
+- [x] Map `Wrap` to `flex-flow: row wrap`
+- [x] Map `fill` / `grow` / `shrink` / `basis` to corresponding CSS flex properties
+- [x] All stretchable content must set `min-width: 0` to prevent charts and 3D canvases from overflowing their containers — applied extensively across Jupyter and Web primitives/components
+- [x] Prefer CSS Grid/Flex for responsiveness; do not send every resize back to Python — e.g. `SplitPane`'s drag handle keeps pointer tracking client-side, syncs only on pointer-up
 - [ ] For structural changes like Sidebar, prefer container queries; use media queries only as a fallback
-- [ ] Provide a thin `ResizeObserver`-based frontend bridge for Chart/Viewport that requires exact dimensions
-- [ ] Debounce `ResizeObserver` events; only sync to Python when a breakpoint changes or the size has stabilized
+  - Jupyter genuinely uses `@container`. Web declares `container-type: inline-size` but its actual Sidebar/AppShell collapse uses a plain `@media` query, not `@container`.
+- [ ] Provide a thin `ResizeObserver`-based frontend bridge for Chart/Viewport that requires exact dimensions — N/A, no Viewport exists; Chart has no such bridge
+- [ ] Debounce `ResizeObserver` events; only sync to Python when a breakpoint changes or the size has stabilized — moot, no `ResizeObserver` exists
 - [ ] Verify core layout behavior in JupyterLab, Classic Notebook, and VS Code Notebook
+  - JupyterLab and VS Code Notebook were both debugged and documented (`docs/jupyter-notebook.md`); Classic Notebook isn't confirmed, and there's no automated cross-frontend test matrix.
 
 ### Page Layout Spec
 
-- [ ] AppShell fills available area; Header, Sidebar, Content, and Footer have clear responsibilities
+- [x] AppShell fills available area; Header, Sidebar, Content, and Footer have clear responsibilities
 - [ ] Default page padding 24, card gap 16, form gap 12 — all overridable via theme
+  - The override-via-theme mechanism is real (`get_admin_metrics()`), but actual defaults differ: `content_padding=32`, `card_gap=12`, and there's no `form_gap` token at all.
 - [ ] Sidebar default width 240, collapsed width 64; Header default height 56
-- [ ] Each page has only one primary vertical scroll region
+  - Close but not exact: actual values are `sidebar_expanded=236`, `sidebar_collapsed=72`, `header_height=60`.
+- [x] Each page has only one primary vertical scroll region — AppShell's content area is a single `QScrollArea`/`overflow:auto` div
 - [ ] Sidebar, DataGrid, and Dialog body may have their own independent scroll regions
-- [ ] 3D Viewport does not participate in page scroll-wheel scrolling; scroll wheel is reserved for camera zoom
-- [ ] Parameter panel and Viewport use SplitPane; recommended parameter panel width 280–360
-- [ ] Regular pages may use Container to cap max content width; Dashboard/3D pages may go full width
+  - Sidebar/DataGrid are fine; `Drawer` (the closest "Dialog body" analog) has no scroll wrapper around its content at all.
+- [ ] 3D Viewport does not participate in page scroll-wheel scrolling; scroll wheel is reserved for camera zoom — N/A, no Viewport exists
+- [ ] Parameter panel and Viewport use SplitPane; recommended parameter panel width 280–360 — N/A, no Viewport exists
+- [ ] Regular pages may use Container to cap max content width; Dashboard/3D pages may go full width — N/A, no `Container` component exists
 
 ### Layout Completion Criteria
 
-- [ ] The same code completes Row, Column, Grid, Wrap, ScrollView, and SplitPane examples in both Qt and Jupyter
+- [x] The same code completes Row, Column, Grid, Wrap, ScrollView, and SplitPane examples in both Qt and Jupyter — `tests/contracts/test_layout.py` is backend-agnostic, runs unmodified against `--ui {qt,jupyter,web}`
 - [ ] Automatically forms compact, medium, and wide layouts at container widths of 640, 900, and 1440
+  - The existing parametrized width test (`tests/test_qt_components_production.py`) proves only a two-state (compact/expanded) system at those widths, not three distinct modes.
 - [ ] After a breakpoint switch, form values, routes, chart data, and 3D camera state are preserved
-- [ ] No visible flicker, component re-creation, or high-frequency Python communication during continuous window resize
-- [ ] Layout API does not require business code to access `QLayout`, `QSizePolicy`, or `widgets.Layout`
+  - Route preservation is real (`RouterView._page_cache`); form-value/chart-data preservation across an actual structural reflow has no test coverage; 3D camera state is N/A.
+- [x] No visible flicker, component re-creation, or high-frequency Python communication during continuous window resize — resize-heavy paths (SplitPane drag, breakpoint reflow) are native/CSS-driven, not per-pixel Python round-trips
+- [x] Layout API does not require business code to access `QLayout`, `QSizePolicy`, or `widgets.Layout` — `facade.py`'s layout constructors only ever return `IWidget`-family interfaces
 
 ## P0: State, Data, and Async Tasks
 
@@ -274,13 +315,15 @@ Admin pages, route parameters, dynamic charts, and parametric CSG need to share 
 
 ### Reactive State
 
-- [ ] Add a lightweight `State[T]` supporting read, write, and subscribe
-- [ ] Add a read-only `Computed[T]` that recalculates when its dependencies change
-- [ ] Support one-way binding for component properties and two-way binding for form values
+- [x] Add a lightweight `State[T]` supporting read, write, and subscribe — `src/uniui/state.py`
+- [x] Add a read-only `Computed[T]` that recalculates when its dependencies change — explicit dependency list, `Computed(fn, *deps)`, documented in ADR 0002
+- [x] Support one-way binding for component properties and two-way binding for form values — `bind_text`/`bind_items`/`bind_enabled`/`bind_visible` (one-way), `bind_value` (two-way, with feedback-loop suppression)
 - [ ] Support batched updates: one business operation triggers at most one necessary redraw
+  - `State.set()` is equality-gated (no-op on unchanged value) but there is no batching/transaction API — sequential `.set()` calls each fire subscribers independently.
 - [ ] Subscriptions return a disposable handle; auto-unsubscribe when the page is destroyed
-- [ ] Detect and prevent circular bindings and duplicate subscriptions with clear diagnostics
-- [ ] The state layer is pure Python — no dependency on Qt or ipywidgets
+  - `Handle` is real and used everywhere, but nothing automatically disposes a page's handles when `RouterView` navigates away from it — that wiring doesn't exist.
+- [ ] Detect and prevent circular bindings and duplicate subscriptions with clear diagnostics — no such detection exists; `subscribe()` just appends to a list
+- [x] The state layer is pure Python — no dependency on Qt or ipywidgets — confirmed via ADR 0002 and direct import inspection
 
 Proposed API draft:
 
@@ -306,44 +349,53 @@ stat_card.bind_value(active_count)
 
 ### Async and Thread Safety
 
-- [ ] Add `Task` / `TaskRunner` to wrap long-running functions and coroutines
+- [x] Add `Task` / `TaskRunner` to wrap long-running functions and coroutines — only `TaskRunner` exists (no separate `Task` class), `state.py`, tested in `tests/test_task_runner.py`
 - [ ] Provide unified `run_in_background()` and `run_on_ui_thread()`
-- [ ] Qt uses signal/slot or an event queue to return to the UI thread
-- [ ] Jupyter uses the asyncio/IPython event loop to safely update widgets
+  - The capability exists under different names: `TaskRunner.run()` (background) and `schedule_after()` (UI thread) — no functions literally named this.
+- [x] Qt uses signal/slot or an event queue to return to the UI thread — a `QObject`-relayed Qt signal, specifically because `QTimer.singleShot` from a non-Qt thread is silently ignored (ADR 0002)
+- [x] Jupyter uses the asyncio/IPython event loop to safely update widgets — `asyncio.get_event_loop()`/`loop.call_later` in `schedule_after()`
 - [ ] Support progress, cancellation, timeout, error callbacks, and completion callbacks
-- [ ] New tasks can cancel old tasks to prevent stale results from overwriting new ones during rapid filtering or CSG parameter changes
-- [ ] When a page route is left or a component is destroyed, its tasks are automatically cancelled
-- [ ] Reserve a process pool execution strategy for CPU-intensive CSG to avoid GIL contention and UI jank
+  - Cancellation, error, and completion callbacks all exist and are tested. No `progress` callback support and no built-in `timeout` parameter.
+- [x] New tasks can cancel old tasks to prevent stale results from overwriting new ones during rapid filtering or CSG parameter changes — `TaskRunner.run()` cancels any in-flight run at the top of every call, tested (`test_new_run_cancels_old`)
+- [ ] When a page route is left or a component is destroyed, its tasks are automatically cancelled — no wiring exists between `RouterView` and any `TaskRunner` instance
+- [ ] Reserve a process pool execution strategy for CPU-intensive CSG to avoid GIL contention and UI jank — N/A, no CSG exists
 
 ## P1: Admin Foundation Components
 
 ### Pages and Navigation
 
-- [ ] `AppShell`: top bar, sidebar, main content area, status bar
+- [x] `AppShell`: top bar, sidebar, main content area, status bar
 - [ ] `Sidebar` / `NavMenu`: icons, grouping, selected state, collapsed state
-- [ ] `Page` / `Router` / `RouterView`: page registration, matching, navigation, and content area rendering
-- [ ] `Breadcrumb`: breadcrumb navigation
-- [ ] `Toolbar`: page title, primary actions, secondary actions
+  - Icons/selected-state/collapsed-state all implemented and tested; item **grouping** (section headers) doesn't exist — `add_item` is a flat list on every backend.
+- [x] `Page` / `Router` / `RouterView`: page registration, matching, navigation, and content area rendering — `src/uniui/routing.py`
+- [x] `Breadcrumb`: breadcrumb navigation
+- [ ] `Toolbar`: page title, primary actions, secondary actions — doesn't exist as a component
 - [ ] `Spacer` / `Divider` / `ScrollArea`
-- [ ] Respond to window width changes: at minimum support Sidebar expand and collapse
+  - `ScrollArea`/`IScrollView` is real. `Spacer`/`Divider` are not public widgets (only exist as `add_stretch()` and a private CSS class inside `MetricList`).
+- [x] Respond to window width changes: at minimum support Sidebar expand and collapse — `AppShell`'s live resize callback reshapes the shell/sidebar at a breakpoint
 
 ### Router
 
 The first version uses "in-process routing": UniUI maintains the current path and history; business code does not touch native navigation APIs in Qt or Jupyter.
 
 - [ ] Add `Router`, `Route`, `RouterView`, and `Link` public interfaces
-- [ ] Support static paths: `/dashboard`, `/users`
-- [ ] Support path parameters: `/users/:id`
-- [ ] Support query parameters: `/users?page=2&status=active`
-- [ ] Support named routes to avoid hardcoded paths throughout business code
-- [ ] Support `push()`, `replace()`, `back()`, `forward()`
+  - `Router`/`Route`/`RouterView` all exist and are exported. `Link` doesn't exist anywhere.
+- [x] Support static paths: `/dashboard`, `/users`
+- [x] Support path parameters: `/users/:id`
+- [x] Support query parameters: `/users?page=2&status=active`
+- [x] Support named routes to avoid hardcoded paths throughout business code — `Route.name`, `push_named()`
+- [x] Support `push()`, `replace()`, `back()`, `forward()` — all four implemented with real history-index bookkeeping
 - [ ] Support default routes, 404 pages, and redirects
+  - 404 (`not_found` handler) is implemented. There is no "default route" concept and no redirect mechanism.
 - [ ] Sync Sidebar selected state, page title, and Breadcrumb on route changes
-- [ ] Support navigation guards: confirm before leaving unsaved forms, redirect on missing permissions
-- [ ] Pages are lazily created by default; allow configuring whether page instances are cached
+  - Sidebar sync (`NavMenu.from_router`) and Breadcrumb sync (`sync_breadcrumb`) both exist. No page-title sync helper exists.
+- [ ] Support navigation guards: confirm before leaving unsaved forms, redirect on missing permissions — no guard/beforeEach concept exists anywhere
+- [x] Pages are lazily created by default; allow configuring whether page instances are cached — `Route.cache: bool`, `RouterView` only reuses `_page_cache` when set
 - [ ] Cancel timers, data subscriptions, and background tasks when a page is left, to avoid resource leaks
-  - [x] Widget-tree leak fixed (2026-08-17): `RouterView` no longer accumulates an unbounded `IOverlay` layer per uncached navigation. `IOverlay` gained `remove_layer(index)`/`layer_count()`; `RouterView` tracks the single currently-mounted disposable (non-cached) layer and removes it right before the next layer is added, remapping cached-page indices. Cached pages are never touched. Verified across Qt/Jupyter/Web. Still open: timers/subscriptions/background tasks *inside* a page are not auto-cancelled on navigation away — that's a separate mechanism from this fix.
-- [ ] Route callbacks and page factories receive a unified `RouteContext`
+  - [x] Widget-tree leak fixed (2026-08-17): `RouterView` no longer accumulates an unbounded `IOverlay` layer per uncached navigation. `IOverlay` gained `remove_layer(index)`/`layer_count()`; `RouterView` tracks the single currently-mounted disposable (non-cached) layer and removes it right before the next layer is added, remapping cached-page indices. Cached pages are never touched. Verified across Qt/Jupyter/Web.
+  - [x] Jupyter widget-tree leak fixed (2026-08-19): removed pages' entire native widget tree (container + every descendant, including `Layout`/`Style` sub-widgets) is now explicitly `.close()`'d — see the "universal component lifecycle" note above.
+  - Still open: timers/subscriptions/background tasks *inside* a page are not auto-cancelled on navigation away — no wiring exists between `RouterView` and `State`/`TaskRunner` handles a page might hold.
+- [x] Route callbacks and page factories receive a unified `RouteContext`
 
 Proposed API draft:
 
@@ -366,33 +418,33 @@ router.push_named("user-detail", params={"id": 42})
 
 Backend implementation:
 
-- [ ] Qt: `RouterView` uses `QStackedWidget` or equivalent to switch pages
-- [ ] Jupyter: update the container's `children`, preserving the same route lifecycle semantics
-- [ ] Jupyter URL/hash sync is an optional enhancement; core routing does not depend on browser capabilities
-- [ ] Core route matching and history remain pure Python for easy independent testing
+- [x] Qt: `RouterView` uses `QStackedWidget` or equivalent to switch pages — `QtOverlayAdapter` wraps `QStackedWidget`
+- [x] Jupyter: update the container's `children`, preserving the same route lifecycle semantics — `JupyterOverlayAdapter`/`ipywidgets.VBox`
+- [ ] Jupyter URL/hash sync is an optional enhancement; core routing does not depend on browser capabilities — describes something intentionally not built; the "core doesn't depend on browser capabilities" half is already true (`routing.py` has zero Qt/Jupyter/Web imports)
+- [x] Core route matching and history remain pure Python for easy independent testing — `routing.py` imports nothing but `re`/`dataclasses`/`uniui.state`
 
 ### Data Display
 
-- [ ] `Card`: title, subtitle, content, action area
-- [ ] `StatCard`: metric value, unit, trend, status color
-- [ ] `Badge` / `Tag`: status labels
-- [ ] `ProgressBar`
+- [x] `Card`: title, subtitle, content, action area
+- [x] `StatCard`: metric value, unit, trend, status color
+- [ ] `Badge` / `Tag`: status labels — no standalone widget; the concept only exists baked into `Table`'s status-pill column, not reusable elsewhere
+- [ ] `ProgressBar` — doesn't exist
 - [ ] `Table` / `DataGrid`:
-  - [ ] Declare columns and bind row data
-  - [ ] Custom cell formatting
-  - [ ] Sorting
-  - [ ] Single/multi-select
-  - [ ] Pagination
-  - [ ] Empty, loading, and error states
-  - [ ] Row action buttons
-- [ ] `Pagination`
+  - [x] Declare columns and bind row data — `set_columns`/`set_rows`
+  - [ ] Custom cell formatting — only two hardcoded kinds (numeric right-align, status pill); no general per-column formatter
+  - [ ] Sorting — doesn't exist
+  - [ ] Single/multi-select — Qt sets visual single-selection highlighting only; no `ITable` API to read/react to a selection, no multi-select
+  - [ ] Pagination — doesn't exist (Web explicitly disables Quasar's built-in pagination)
+  - [ ] Empty, loading, and error states — loading/error are fully implemented (`set_loading`/`set_error`); an empty-rows placeholder is not
+  - [ ] Row action buttons — doesn't exist; only whole-row `on_row_click`
+- [ ] `Pagination` (standalone) — doesn't exist
 
 ### Forms and Feedback
 
 - [ ] `Checkbox`, `RadioGroup`, `NumberInput`, `DateInput`
 - [ ] `Form`: field registration, submit, reset
 - [ ] Validation rules and field-level error messages
-- [ ] `Modal` / `Dialog`: confirmation and edit forms
+- [ ] `Modal` / `Dialog`: confirmation and edit forms — `IDrawer` is the closest analog (uses `QDialog` on Qt) but is explicitly non-modal, a slide-in side panel, not a blocking confirm/edit dialog
 - [ ] `Toast` / `Notification`
 - [ ] `Loading` / `Skeleton`
 
@@ -409,7 +461,9 @@ Backend implementation:
   - [ ] Scatter chart `scatter`
   - [x] Area chart `area`
 - [ ] Support title, legend, axes, units, colors, stacking, and tooltip
+  - Title, basic axis gridlines, and per-series colors exist. Legend, units, stacking, and tooltip are all absent — ADR 0001 explicitly lists this as a deliberate consequence of the hand-rolled renderer.
 - [ ] Support empty data, loading, and render error states
+  - Empty-data state is implemented (a "No data" placeholder). `IChart` has no `set_loading`/`set_error` at all, unlike `Table`.
 - [x] Support dark/light theme and redraw on theme switch
 - [x] Support responsive sizing and minimum height
 
@@ -433,17 +487,19 @@ chart.set_data(
 
 ### Chart Implementation Tasks
 
-- [ ] Compare Plotly, ECharts, and Matplotlib for Qt/Jupyter consistency, package size, offline capability, and packaging complexity
-- [ ] Place chart dependencies in an optional extra, e.g. `uniui[charts]`
+- [x] Compare Plotly, ECharts, and Matplotlib for Qt/Jupyter consistency, package size, offline capability, and packaging complexity — decided against all three; see [docs/adr/0001-chart-rendering.md](docs/adr/0001-chart-rendering.md)
+- [ ] Place chart dependencies in an optional extra, e.g. `uniui[charts]` — moot per the ADR: no chart dependency exists at all, nothing to gate
 - [x] Implement Qt renderer
 - [x] Implement Jupyter renderer
 - [x] Provide `set_data()` to refresh data without replacing the component instance
 - [x] Provide `append_data()` for real-time monitoring charts
 - [x] Cap the number of real-time data points to prevent memory growth over long runs
-- [ ] Support PNG/SVG export (can move to P2)
-- [ ] Raise `NotSupportedError` with installation instructions when chart dependencies are missing
+- [ ] Support PNG/SVG export (can move to P2) — SVG is used internally as the render mechanism (Jupyter/Web) but isn't exposed as an export API; no PNG export exists (Qt renders live via `QPainter`, not to an exportable image)
+- [ ] Raise `NotSupportedError` with installation instructions when chart dependencies are missing — moot per the ADR: no dependency exists to be missing
 
 ## P1: 2D / 3D Visualization
+
+> Audited 2026-08-22: confirmed zero code artifacts anywhere in `src/uniui` for anything in this entire section — no `Scene2D`/`Scene3D`/`Canvas2D`/`Viewport3D`, no `Solid`/CSG, no 3D primitives, no ADRs comparing 3D/CSG libraries, no `csg`/`3d` optional-dependency extras. Every checkbox below is accurately unchecked; none are annotated individually since there's nothing partial to report.
 
 ### Common Scene Model
 
@@ -538,8 +594,10 @@ solid.export_stl("part.stl")
 - [ ] Reusable search/filter bar
 - [ ] DataGrid server-side pagination, sorting, and filtering protocol
 - [ ] Async task status and cancellation
+  - Cancellation infra (`TaskRunner`) exists and works generically, but is unused elsewhere in `src/`, has no explicit "status" property, and no UI component surfaces task state.
 - [ ] Permission-driven menu and button visibility
 - [ ] Keyboard navigation and basic accessibility support
+  - Qt-only, partial: `setAccessibleName` on shell/sidebar regions. No keyboard-navigation logic, no Web/Jupyter ARIA attributes.
 - [ ] Layout state persistence (sidebar, filter conditions, table columns)
 - [ ] Chart interaction: click legend, data point, or box selection triggers callbacks
 - [ ] Dashboard auto-refresh, pause, and refresh interval settings
@@ -575,27 +633,29 @@ solid.export_stl("part.stl")
 
 ### Design System and User Experience
 
-- [ ] Establish unified design tokens: colors, spacing, border radius, font sizes, shadows, and status colors
-- [ ] Establish an icon system to avoid each example mixing Unicode icons ad hoc
+- [x] Establish unified design tokens: colors, spacing, border radius, font sizes, shadows, and status colors — `src/uniui/theme.py` is the explicit single source of truth for all three backends
+- [x] Establish an icon system to avoid each example mixing Unicode icons ad hoc — `src/uniui/icons.py`, one SVG set consumed by all three backends
 - [ ] All data components provide standard Loading, Empty, Error, and Success states
+  - `Table` has real loading/error handling; no Empty or Success state anywhere, and `Chart`/`Gauge`/`StatCard` have no loading/error handling at all.
 - [ ] Support high DPI, font scaling, keyboard focus, and sensible Tab order
-- [ ] Primary components provide consistent compact/standard density modes
-- [ ] Theme switching does not flicker and does not lose table, route, chart, or 3D scene state
+  - Qt sets high-DPI attributes; no font scaling, keyboard focus, or Tab-order management confirmed anywhere.
+- [ ] Primary components provide consistent compact/standard density modes — the only "compact" concept found is the layout-width breakpoint mode, not a component density/row-height mode
+- [ ] Theme switching does not flicker and does not lose table, route, chart, or 3D scene state — architecturally likely true (`THEME` is mutated in place, `apply_theme()` never touches model state) but not covered by a dedicated test
 
 ## Architecture and Code Changes
 
 - [ ] Add new component interfaces in `core.py`; keep interfaces describing only cross-backend capabilities
 - [ ] Implement adapters separately in `qt.py` and `jupyter.py`
 - [ ] Expose declarative constructor functions in `__init__.py`
-- [ ] Split complex components into dedicated modules to avoid growing single backend files further
-- [ ] Place 2D/3D scene models, CSG kernel adapters, and renderers in separate sub-packages
-- [ ] Establish a component registry to reduce boilerplate in the factory
-- [ ] Legacy backends must uniformly raise `NotSupportedError` for new components; no further expansion
-- [ ] Update optional dependencies and package metadata in `pyproject.toml`
-- [ ] Update the component support matrix in README
-- [ ] Fix references to non-existent modules and outdated architecture diagrams in documentation
-- [ ] Fix package description, keywords, classifiers, and project URLs; remove placeholder addresses
-- [ ] Separate installation commands for end users and developers in docs: `.[qt]`, `.[jupyter]`, `.[dev]`
+- [x] Split complex components into dedicated modules to avoid growing single backend files further — `backends/{qt,jupyter,web}/components/` each already have one dedicated module per component
+- [ ] Place 2D/3D scene models, CSG kernel adapters, and renderers in separate sub-packages — N/A, nothing to place yet
+- [ ] Establish a component registry to reduce boilerplate in the factory — each factory still hand-writes one `createXxx` line per component; a narrower `_SNAKE_ALIASES` table auto-generates snake_case aliases, but that's not a full registry
+- [ ] Legacy backends must uniformly raise `NotSupportedError` for new components; no further expansion — N/A, no legacy backends remain and no new unsupported components exist yet
+- [ ] Update optional dependencies and package metadata in `pyproject.toml` — N/A, nothing new to add yet
+- [ ] Update the component support matrix in README — the existing matrix (`README.md`) only covers basic primitives, not Admin components or 2D/3D
+- [x] Fix references to non-existent modules and outdated architecture diagrams in documentation — checked `docs/architecture.md` against the real module layout; it's accurate, nothing stale found
+- [x] Fix package description, keywords, classifiers, and project URLs; remove placeholder addresses — `pyproject.toml`'s description/classifiers/URLs already accurately match the real package
+- [ ] Separate installation commands for end users and developers in docs: `.[qt]`, `.[jupyter]`, `.[dev]` — README only documents `pip install -e .` + per-backend extras, no separate dev-install section
 
 Recommended gradual restructure to avoid continuing to pile everything into `core.py` and single backend files:
 
@@ -616,47 +676,52 @@ src/uniui/
         jupyter/
 ```
 
-- [ ] Maintain compatibility for existing top-level imports, e.g. `from uniui import Button`
-- [ ] Introduce new modules via compatibility shims first; avoid one-shot large-scale migration
-- [ ] Define capability probing for optional modules, e.g. `supports("csg")`
-- [ ] Define a stable serialization format for router state, chart configuration, and scene persistence
+- [x] Maintain compatibility for existing top-level imports, e.g. `from uniui import Button` — enforced by `tests/test_widget_factory_composition.py`, which breaks every shim and asserts `create_factory("qt")` still works
+- [ ] Introduce new modules via compatibility shims first; avoid one-shot large-scale migration — the pattern is already established (`qt.py`/`web.py`/`jupyter.py`/etc. are pure re-export shims) but hasn't been exercised for anything genuinely new yet
+- [ ] Define capability probing for optional modules, e.g. `supports("csg")` — doesn't exist
+- [ ] Define a stable serialization format for router state, chart configuration, and scene persistence — doesn't exist
 
 ## Recommended Implementation Order
 
 ### M0: Engineering Foundation
 
 - [ ] Fix and unify duplicate/missing methods in existing component interfaces
-- [ ] Migrate to PySide6; remove hardcoded PySide2 references from core flows
-- [ ] Main CI and contract tests treat only Qt/Jupyter as official backends
-- [ ] Clean up inconsistencies in README, architecture docs, package metadata, and installation instructions
-- [ ] Establish lifecycle, capability, and backend contract
+  - The common-capabilities gap (show/hide/enabled/sizing missing across most interfaces) was closed 2026-08-19 (see the P0 item above). A broader interface audit beyond that hasn't been done.
+- [ ] Migrate to PySide6; remove hardcoded PySide2 references from core flows — not started, `PySide2` is still imported everywhere in `backends/qt/`
+- [ ] Main CI and contract tests treat only Qt/Jupyter as official backends — CI still checks wxPython/Tkinter compatibility and doesn't install `nicegui` for the Web contract run
+- [ ] Clean up inconsistencies in README, architecture docs, package metadata, and installation instructions — README still says `pip install PySide2` (accurate today, but will need updating once PySide6 migration happens)
+- [ ] Establish lifecycle, capability, and backend contract — no `supports()`/capability-probing mechanism exists; only the `NotSupportedError` exception type
 - [ ] Extract a progressively migratable new module structure
+  - Partial: `src/uniui/contracts/` and `backends/{qt,jupyter,web}/` sub-packages exist with import-isolation enforced by tests. The proposed `state/`/`routing/`/`data/`/`tasks/`/`charts/`/`graphics2d/`/`graphics3d/`/`csg/` split hasn't happened — `core.py`/`state.py`/`routing.py` remain flat files.
 
 ### M1: Adaptive Layout
 
-- [ ] Complete `LayoutSpec`, `SizeSpec`, and `LayoutItem`
-- [ ] Complete `Row`, `Column`, `Grid`, `Wrap`, `ScrollView`, `SplitPane`, and `Overlay`
-- [ ] Complete Qt `QSizePolicy` / stretch / breakpoint renderer
+- [x] Complete `LayoutSpec`, `SizeSpec`, and `LayoutItem`
+- [x] Complete `Row`, `Column`, `Grid`, `Wrap`, `ScrollView`, `SplitPane`, and `Overlay` — all exist and are contract-tested on Qt/Jupyter/Web
+- [x] Complete Qt `QSizePolicy` / stretch / breakpoint renderer
 - [ ] Complete Jupyter Flex/Grid/container responsive renderer
-- [ ] Pass the three-width cross-backend layout acceptance criteria before starting new complex business components
+  - Containers exist, but there's no breakpoint-switching mechanism analogous to Qt's `_ResizeNotifier` — `on_resize` is Qt-only.
+- [ ] Pass the three-width cross-backend layout acceptance criteria before starting new complex business components — only Qt's breakpoint behavior is verified by test; Jupyter parity isn't
 
 ### M2: State and Scheduling
 
-- [ ] Complete `State`, `Computed`, binding, and `TaskRunner`
-- [ ] End-to-end validation with existing `Label`, `LineEdit`, and `Dropdown`
-- [ ] Confirm consistent thread and event loop behavior between Qt and Jupyter
+- [x] Complete `State`, `Computed`, binding, and `TaskRunner`
+- [x] End-to-end validation with existing `Label`, `LineEdit`, and `Dropdown` — `bind_*` helpers + `tests/contracts/test_state_binding.py`
+- [ ] Confirm consistent thread and event loop behavior between Qt and Jupyter — no test directly compares Qt vs. Jupyter scheduling semantics side-by-side
 
 ### M3: Admin Skeleton
 
-- [ ] Complete `AppShell`, `Sidebar`, `Router`, `RouterView`, `Breadcrumb`
-- [ ] Complete `Card`, `StatCard`, basic `Table`, and loading/error feedback
-- [ ] Deliver the first navigable Admin example
+- [x] Complete `AppShell`, `Sidebar`, `Router`, `RouterView`, `Breadcrumb`
+- [x] Complete `Card`, `StatCard`, basic `Table`, and loading/error feedback — "basic" Table scope only: no sorting/pagination (see Data Display above)
+- [x] Deliver the first navigable Admin example — `examples/admin_demo.py`, not literally named "admin_dashboard.py" but satisfies the intent
 
 ### M4: Data Dashboard
 
 - [ ] Complete `DataSource`, pagination/filtering, `Chart`, and dynamic updates
+  - `Chart`/dynamic updates (`set_data()`) are done and used in `admin_demo.py`. `DataSource` doesn't exist; filtering is ad-hoc example code, not a framework abstraction; pagination doesn't exist.
 - [ ] Complete theme integration and Dashboard auto-refresh
-- [ ] Admin example connected to a simulated async data source
+  - Theme integration is extensive and tested. Auto-refresh doesn't exist — `admin_demo.py` only has a manual "Refresh" button.
+- [x] Admin example connected to a simulated async data source — `admin_demo.py` uses `TaskRunner` + a simulated delay
 
 ### M5: 2D/3D and CSG
 
@@ -677,8 +742,8 @@ src/uniui/
 - [ ] Provide a single command to install the dev environment and run all checks
 - [ ] CI runs separate jobs for: core-only tests, Qt contract, Jupyter contract, and optional plugin tests
 - [ ] Do not allow a passing CI result when all official backend tests were skipped due to missing dependencies
-- [ ] Ruff, format checks, and pytest must block non-conforming commits
-- [ ] Gradually enable strict mypy; stop using `|| true` to suppress type errors
+- [ ] Ruff, format checks, and pytest must block non-conforming commits — CI's `lint` job runs `ruff check`/`ruff format --check`/`black --check`, but branch-protection/required-status-check enforcement isn't visible in-repo to confirm this actually blocks merges
+- [ ] Gradually enable strict mypy; stop using `|| true` to suppress type errors — CI still literally runs `mypy src/uniui --ignore-missing-imports || true`
 - [x] Test suite default backend must no longer be legacy Tkinter
 - [ ] Add public API compatibility tests and a deprecation cycle
 - [ ] Add visual snapshot or key-page screenshot regression tests
@@ -691,22 +756,27 @@ src/uniui/
 
 - [x] Every new component has public contract tests
 - [x] Both Qt and Jupyter have minimal smoke tests
-- [ ] Layout size, flex, spacing, alignment, Grid span, and child order have pure model tests
+- [x] Layout size, flex, spacing, alignment, Grid span, and child order have pure model tests — `tests/test_layout_model.py`, `tests/contracts/test_layout.py`
 - [x] Qt correctly switches layout mode at container widths of 640, 900, and 1440
-- [ ] Jupyter Flex/Grid generates key layout attributes that conform to the public `LayoutSpec`
+- [ ] Jupyter Flex/Grid generates key layout attributes that conform to the public `LayoutSpec` — matches the M1 Jupyter breakpoint gap above
 - [x] Breakpoint switches do not destroy components with stable keys
-- [ ] Continuous resize does not trigger CSG recomputation or duplicate data requests
-- [ ] Jupyter resize bridging is debounced and does not generate high-frequency comm messages
-- [ ] Key Admin pages have visual snapshot regression tests at compact/medium/wide
+- [ ] Continuous resize does not trigger CSG recomputation or duplicate data requests — N/A, no CSG exists
+- [ ] Jupyter resize bridging is debounced and does not generate high-frequency comm messages — no debounce mechanism found
+- [ ] Key Admin pages have visual snapshot regression tests at compact/medium/wide — no snapshot tests exist at all
 - [ ] `State` / `Computed` dependency updates, batching, unsubscribe, and cycle detection have unit tests
+  - Dependency updates and unsubscribe/dispose are extensively tested (`tests/test_state.py`). Batching and cycle detection are neither implemented nor tested.
 - [ ] Background task completion, failure, cancellation, timeout, and "new result overwrites old" rule have tests
-- [ ] State subscriptions, timers, and tasks are all released after a page is destroyed
-- [ ] `DataSource` pagination, sorting, filtering, caching, and error states have tests
+  - 4 of 5 covered by `tests/test_task_runner.py` (completion, failure, cancellation, new-overwrites-old). No `timeout` feature/test exists.
+- [ ] State subscriptions, timers, and tasks are all released after a page is destroyed — no combined page-lifecycle-teardown test exists; only `RouterView.dispose()` (narrower) is tested
+- [ ] `DataSource` pagination, sorting, filtering, caching, and error states have tests — N/A, `DataSource` doesn't exist
 - [ ] Route matching, parameter parsing, query parameters, redirects, 404, and history have unit tests
-- [ ] Navigating to the same path in Qt and Jupyter renders equivalent pages
+  - Everything except redirects is thoroughly covered by `tests/test_routing.py` (26 tests) — redirects aren't implemented (see Router section above), so this can't be fully true yet.
+- [ ] Navigating to the same path in Qt and Jupyter renders equivalent pages — no direct Qt-vs-Jupyter equivalence test exists; contract tests are parametrized per-backend, not cross-compared
 - [ ] Rapid consecutive navigation does not duplicate cached pages or leave behind page tasks
+  - Layer/cache-duplication is directly tested (`test_uncached_pages_do_not_accumulate_layers`, `test_cached_pages_are_never_removed_across_navigation`). "No leftover page tasks" isn't separately tested.
 - [ ] Chart configuration validation, empty data, and invalid data have unit tests
-- [ ] Dynamic chart updates do not create duplicate event listeners or duplicate native widgets
+  - Chart-type validation and fallback-to-line are tested (`tests/test_models_gauge_chart.py`); no dedicated empty-data or invalid-data-rejection test.
+- [ ] Dynamic chart updates do not create duplicate event listeners or duplicate native widgets — no such test exists
 - [ ] 2D primitive coordinates, transforms, layering, and event hit-testing have unit tests
 - [ ] 3D transforms, camera state, and object selection have contract tests
 - [ ] CSG boolean results on standard primitives pass volume and mesh topology validation
@@ -714,35 +784,37 @@ src/uniui/
 - [ ] Qt and Jupyter displaying the same CSG model produce consistent vertex/face data
 - [ ] Released 3D scene and CSG background tasks leave no lingering threads or large mesh allocations
 - [ ] After a theme switch, Admin components, charts, and 2D/3D Viewports update their colors in sync
-- [ ] Interaction is acceptable with a 1000-row table and typical chart data volumes
-- [ ] Core package imports and functions correctly when optional dependencies are absent
-- [ ] Permission-based hiding affects only the UI; the example service layer still validates permissions independently
-- [ ] Corrupted or outdated settings files can be safely migrated or reset to defaults
-- [ ] Add a complete `examples/admin_dashboard.py`
-- [ ] Add `examples/csg_demo.py`: parametric input, drilled solid, live preview, and STL export
-- [ ] Add flagship application `examples/engineering_console.py`
-- [ ] Flagship app includes Dashboard, task table, model browser, CSG Editor, and Settings routes
-- [ ] Flagship app uses the same `DataSource` to drive `StatCard`, `DataGrid`, and `Chart`
-- [ ] Flagship app demonstrates async loading, error recovery, permission control, theming, and settings persistence
+  - Admin-component sync is well tested (`tests/test_theme_unification.py`); charts aren't explicitly covered by name; Viewports are N/A.
+- [ ] Interaction is acceptable with a 1000-row table and typical chart data volumes — no performance/load test exists
+- [x] Core package imports and functions correctly when optional dependencies are absent — `tests/test_import_isolation.py` (6 dedicated tests) + `tests/test_optional_backends.py`
+- [ ] Permission-based hiding affects only the UI; the example service layer still validates permissions independently — N/A, no permission system exists yet
+- [ ] Corrupted or outdated settings files can be safely migrated or reset to defaults — N/A, no `Settings` API exists yet
+- [ ] Add a complete `examples/admin_dashboard.py` — `examples/admin_demo.py` exists under a different filename and substantially satisfies the intent
+- [ ] Add `examples/csg_demo.py`: parametric input, drilled solid, live preview, and STL export — doesn't exist
+- [ ] Add flagship application `examples/engineering_console.py` — doesn't exist; `examples/` only has `admin_demo.py`, `calculator.py`, `credit_card.py`, `sysmon.py`
+- [ ] Flagship app includes Dashboard, task table, model browser, CSG Editor, and Settings routes — N/A, flagship app doesn't exist
+- [ ] Flagship app uses the same `DataSource` to drive `StatCard`, `DataGrid`, and `Chart` — N/A
+- [ ] Flagship app demonstrates async loading, error recovery, permission control, theming, and settings persistence — N/A
 - [ ] Examples include at minimum: sidebar, 4 StatCards, filter bar, DataGrid, line chart, pie chart, theme toggle, and auto-refresh
-- [ ] Examples run with `--ui qt` using the same code and can be displayed in Jupyter
+  - `admin_demo.py` has most of this (sidebar, StatCards, filter bar, theme toggle) but no pie chart and no auto-refresh (manual refresh only).
+- [x] Examples run with `--ui qt` using the same code and can be displayed in Jupyter — `admin_demo.py`'s docstring documents all three `--ui` flags working from one file
 
 ## First Deliverable (MVP)
 
-- [ ] `Row` / `Column` / `Grid` / `Wrap`
-- [ ] `ScrollView` / `SplitPane` / `Overlay`
-- [ ] Unified sizing, grow/shrink, gap/padding, and responsive breakpoints
-- [ ] Qt/Jupyter three-tier adaptive layout contract
-- [ ] `Card` / `StatCard`
-- [ ] `Table` (static data, sorting, pagination)
-- [ ] `Sidebar` + `AppShell`
-- [ ] `Router` + `RouterView` (static paths, path parameters, 404, forward/back)
-- [ ] `Chart` (line, bar, pie)
-- [ ] Chart `set_data()` dynamic updates
-- [ ] `Viewport3D` + Box/Sphere/Cylinder/Mesh
-- [ ] CSG union/difference/intersection and STL export
-- [ ] Qt/Jupyter dual-backend with theme support
-- [ ] Admin Dashboard example and tests
+- [x] `Row` / `Column` / `Grid` / `Wrap`
+- [x] `ScrollView` / `SplitPane` / `Overlay`
+- [ ] Unified sizing, grow/shrink, gap/padding, and responsive breakpoints — Qt side done; Jupyter breakpoint-switching parity is still missing (see M1)
+- [ ] Qt/Jupyter three-tier adaptive layout contract — same Jupyter gap as above; not a clean flip
+- [x] `Card` / `StatCard`
+- [ ] `Table` (static data, sorting, pagination) — static data works and is tested; no sorting, no real pagination on any backend
+- [x] `Sidebar` + `AppShell`
+- [x] `Router` + `RouterView` (static paths, path parameters, 404, forward/back) — all four sub-features directly tested
+- [ ] `Chart` (line, bar, pie) — line/bar/area are done; pie doesn't exist
+- [x] Chart `set_data()` dynamic updates
+- [ ] `Viewport3D` + Box/Sphere/Cylinder/Mesh — doesn't exist
+- [ ] CSG union/difference/intersection and STL export — doesn't exist
+- [x] Qt/Jupyter dual-backend with theme support
+- [ ] Admin Dashboard example and tests — `admin_demo.py` exists and is exercised indirectly via component contract tests; no dedicated end-to-end test file, and it's a different filename than the doc names elsewhere
 
 ## Definition of Done
 

@@ -99,7 +99,7 @@ def test_jupyter_sidebar_and_shell_keep_drag_width_state():
     assert shell._saved_sidebar_width == 320
     assert sidebar.get_native().layout.width == "320px"
     assert "onpointerdown" in shell._handle.value
-    assert "@container (max-width:1019px)" in shell._style.value
+    assert "@container (max-width:1199px)" in shell._style.value
 
 
 def test_jupyter_shell_mounts_content_as_direct_flex_child():

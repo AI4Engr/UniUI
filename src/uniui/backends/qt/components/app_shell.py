@@ -7,6 +7,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 
 from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import IAppShell
+from ....contracts.layout import DEFAULT_BREAKPOINTS
 from ....models.navigation import (
     SIDEBAR_COLLAPSED, SIDEBAR_EXPANDED, SIDEBAR_MIN, SIDEBAR_MAX, clamp_width,
 )
@@ -147,7 +148,7 @@ class QtAppShellAdapter(VisibilityMixin, EnableMixin, SizeMixin, IAppShell):
         self._footer_area.show()
 
     def _on_resize(self, width: int) -> None:
-        compact = 0 < width < 1020
+        compact = 0 < width < DEFAULT_BREAKPOINTS.medium
         if self._sidebar_adapter is not None and compact != self._compact_mode:
             if compact:
                 current = self._sidebar_widget.width() if self._sidebar_widget else 0

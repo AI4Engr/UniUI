@@ -248,8 +248,8 @@ page = Column(
   - Confirmed binary in practice (expanded ↔ icon-rail only, verified by parametrized width test); no drawer/overlay compact mode exists.
 - [ ] Dashboard Grid supports: wide = four columns, medium = two columns, compact = one column — no such breakpoint-driven column count exists; `set_columns()` is a manual, unwired API
 - [ ] SplitPane can switch from horizontal to vertical in compact mode — `set_orientation()` exists and is callable, but nothing auto-wires it to a breakpoint
-- [ ] Responsive rules are overridable by the application; default breakpoints must not be hardcoded into components
-  - `Breakpoints` itself is overridable and tested, but real components don't use it: `AppShell` hardcodes its own `1020`/`1019` instead of reading `DEFAULT_BREAKPOINTS` (720/1200) — exactly the anti-pattern this line warns against.
+- [x] Responsive rules are overridable by the application; default breakpoints must not be hardcoded into components
+  - Fixed 2026-08-22: `AppShell`'s sidebar-collapse threshold on all three backends now reads `DEFAULT_BREAKPOINTS.medium`/`.compact` instead of the literal `1020`/`1019`/`719` it previously hardcoded independently in `backends/{qt,jupyter,web}/components/app_shell.py`. This is a real behavior change, not just a refactor: the collapse point moved from 1020px to 1200px to match the documented default. Updated `tests/test_qt_components_production.py` (1180px now collapses, matching the new threshold) and `tests/test_jupyter_components.py`'s CSS-string assertion; full suite (928 tests) passes. Still not truly "overridable by the application" — `AppShell` reads the module-level `DEFAULT_BREAKPOINTS` singleton directly rather than accepting a `Breakpoints` instance, so an app can't override it per-shell without monkeypatching the shared default.
 
 ### Qt Adaptive Renderer
 

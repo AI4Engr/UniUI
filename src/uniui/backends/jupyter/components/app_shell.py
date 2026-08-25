@@ -7,6 +7,7 @@ import ipywidgets as widgets
 
 from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IAppShell
+from ....contracts.layout import DEFAULT_BREAKPOINTS
 from ....models.navigation import clamp_width
 from ..styles import css
 from .app_shell_assets import DEBUG_MEASURE_JS, SPLITTER_HTML, debug_html
@@ -218,7 +219,7 @@ def app_shell_responsive_css() -> str:
     layout decision. Splitting them per component would make it impossible to
     read what the shell looks like at a given width.
     """
-    return f"""@container (max-width:1019px) {{
+    return f"""@container (max-width:{DEFAULT_BREAKPOINTS.medium - 1}px) {{
   .uniui-admin-sidebar {{width:{M['sidebar_collapsed']}px!important;min-width:{M['sidebar_collapsed']}px!important;max-width:{M['sidebar_collapsed']}px!important;flex-basis:{M['sidebar_collapsed']}px!important;padding:14px 8px}}
   .uniui-admin-sidebar .widget-button,
   .uniui-admin-sidebar .widget-button button {{font-size:0;text-align:center;padding:8px 4px}}
@@ -228,7 +229,7 @@ def app_shell_responsive_css() -> str:
   .uniui-splitter-widget {{display:none!important}}
   .uniui-shell-content {{padding:22px 18px}}
 }}
-@container (max-width:719px) {{
+@container (max-width:{DEFAULT_BREAKPOINTS.compact - 1}px) {{
   .uniui-shell-header {{padding:0 10px}}
   .uniui-shell-content {{padding:18px 12px}}
   .uniui-shell-footer {{display:none!important}}

@@ -14,7 +14,7 @@ pytestmark = pytest.mark.qt
 
 @pytest.mark.parametrize(
     ("width", "sidebar_width", "handle_width"),
-    [(1440, 236, 5), (1180, 236, 5), (900, 72, 0), (640, 72, 0)],
+    [(1440, 236, 5), (1180, 72, 0), (900, 72, 0), (640, 72, 0)],
 )
 def test_qt_shell_responsive_geometry(width, sidebar_width, handle_width):
     pytest.importorskip("PySide2")

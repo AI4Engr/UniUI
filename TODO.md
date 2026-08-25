@@ -322,7 +322,8 @@ Admin pages, route parameters, dynamic charts, and parametric CSG need to share 
   - `State.set()` is equality-gated (no-op on unchanged value) but there is no batching/transaction API — sequential `.set()` calls each fire subscribers independently.
 - [ ] Subscriptions return a disposable handle; auto-unsubscribe when the page is destroyed
   - `Handle` is real and used everywhere, but nothing automatically disposes a page's handles when `RouterView` navigates away from it — that wiring doesn't exist.
-- [ ] Detect and prevent circular bindings and duplicate subscriptions with clear diagnostics — no such detection exists; `subscribe()` just appends to a list
+- [ ] Detect and prevent circular bindings and duplicate subscriptions with clear diagnostics
+  - Circular-update half done (2026-08-22): `State`/`Computed` both gained a reentrancy guard (`_updating` flag) — if a subscriber's call chain re-enters `.set()`/`._recompute()` on the same instance before it finished notifying, it now raises a clear `RuntimeError` ("Circular State/Computed update detected...") instead of recursing. Worth noting honestly: Python's own recursion limit already turned a non-converging cycle into a `RecursionError` before this fix, so the real win is failing after ~2 hops with an actionable message instead of after ~1000 hops with a generic one — not preventing an actual infinite hang, which was never possible. A converging ping-pong (both sides settle on the same value) is correctly left alone, since the existing equality-gate already breaks that cycle. 5 new tests in `tests/test_state.py`; verified by disabling each guard and confirming the RecursionError-storm behavior returns before restoring it. "Duplicate subscriptions" detection is still not implemented — deliberately skipped, since deduping identical callables would break the existing contract that each `subscribe()` call gets its own independent `Handle`.
 - [x] The state layer is pure Python — no dependency on Qt or ipywidgets — confirmed via ADR 0002 and direct import inspection
 
 Proposed API draft:
@@ -764,7 +765,7 @@ src/uniui/
 - [ ] Jupyter resize bridging is debounced and does not generate high-frequency comm messages — no debounce mechanism found
 - [ ] Key Admin pages have visual snapshot regression tests at compact/medium/wide — no snapshot tests exist at all
 - [ ] `State` / `Computed` dependency updates, batching, unsubscribe, and cycle detection have unit tests
-  - Dependency updates and unsubscribe/dispose are extensively tested (`tests/test_state.py`). Batching and cycle detection are neither implemented nor tested.
+  - Dependency updates and unsubscribe/dispose are extensively tested (`tests/test_state.py`). Cycle detection is now implemented and tested (2026-08-22, see the P0 State item above). Batching is still neither implemented nor tested.
 - [x] Background task completion, failure, cancellation, timeout, and "new result overwrites old" rule have tests — `tests/test_task_runner.py` (11 tests: completion, failure, cancellation, new-overwrites-old, and timeout added 2026-08-22)
 - [ ] State subscriptions, timers, and tasks are all released after a page is destroyed — no combined page-lifecycle-teardown test exists; only `RouterView.dispose()` (narrower) is tested
 - [ ] `DataSource` pagination, sorting, filtering, caching, and error states have tests — N/A, `DataSource` doesn't exist

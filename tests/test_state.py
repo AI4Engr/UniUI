@@ -95,6 +95,52 @@ def test_state_subscriber_exception_does_not_stop_siblings(caplog):
     assert "boom" in caplog.text
 
 
+def test_state_reentrant_set_is_detected_and_logged(caplog):
+    """A subscriber that calls set() on the same State it's reacting to must
+    fail fast with a clear message, not silently recurse."""
+    s = State(0)
+    calls = []
+
+    def naive_mirror(v):
+        calls.append(v)
+        s.set(v + 1)  # always different - would recurse forever unguarded
+
+    s.subscribe(naive_mirror)
+
+    with caplog.at_level("ERROR", logger="uniui.events"):
+        s.set(1)  # must not raise, and must not recurse hundreds of times
+
+    assert len(calls) == 1, "the guard must stop the second, reentrant set() call"
+    assert "Circular State update detected" in caplog.text
+
+
+def test_state_mutual_cycle_across_two_states_is_detected(caplog):
+    """The cycle doesn't have to be direct - A -> B -> A must be caught too."""
+    a, b = State(0), State(0)
+    calls = []
+    a.subscribe(lambda v: (calls.append(("a", v)), b.set(v + 1)))
+    b.subscribe(lambda v: (calls.append(("b", v)), a.set(v + 1)))
+
+    with caplog.at_level("ERROR", logger="uniui.events"):
+        a.set(1)  # must not raise
+
+    assert len(calls) == 2, "must fail on the first re-entry into A, not recurse"
+    assert "Circular State update detected" in caplog.text
+
+
+def test_state_converging_ping_pong_is_not_flagged_as_circular():
+    """Two States that settle on the same value must not trip the guard -
+    only non-converging (truly infinite) cycles are a problem."""
+    a, b = State(0), State(0)
+    a.subscribe(lambda v: b.set(v))
+    b.subscribe(lambda v: a.set(v))
+
+    a.set(5)  # must not raise
+
+    assert a.value == 5
+    assert b.value == 5
+
+
 # ---------------------------------------------------------------------------
 # Computed[T]
 # ---------------------------------------------------------------------------
@@ -160,6 +206,27 @@ def test_computed_dispose_stops_dep_tracking():
     s.set(42)
     assert received == []
     assert c.value == 1  # frozen at disposal time
+
+
+def test_computed_reentrant_recompute_is_detected_and_logged(caplog):
+    """A subscriber that, via a *different* dependency, causes this same
+    Computed to recompute again before it finished notifying must fail fast
+    with a clear message rather than recursing."""
+    s1, s2 = State(0), State(0)
+    c = Computed(lambda: s1.value + s2.value, s1, s2)
+    calls = []
+
+    def naive_mirror(v):
+        calls.append(v)
+        s2.set(s2.value + 1)
+
+    c.subscribe(naive_mirror)
+
+    with caplog.at_level("ERROR", logger="uniui.events"):
+        s1.set(1)  # must not raise
+
+    assert len(calls) == 1, "the guard must stop the nested recompute"
+    assert "Circular Computed update detected" in caplog.text
 
 
 def test_computed_subscriber_exception_does_not_stop_siblings(caplog):

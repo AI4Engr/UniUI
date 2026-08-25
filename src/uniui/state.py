@@ -50,6 +50,7 @@ class State(Generic[T]):
     def __init__(self, value: T):
         self._value: T = value
         self._subscribers: List[Callable[[T], None]] = []
+        self._updating = False
 
     @property
     def value(self) -> T:
@@ -58,9 +59,20 @@ class State(Generic[T]):
     def set(self, value: T) -> None:
         if value == self._value:
             return
+        if self._updating:
+            raise RuntimeError(
+                "Circular State update detected: a subscriber triggered "
+                "set() on this same State before its previous set() finished "
+                "notifying subscribers. Break the cycle in your subscriber "
+                "(e.g. only forward a value when it actually changes)."
+            )
         self._value = value
-        for fn in list(self._subscribers):
-            safe_call(fn, value, backend="core", component="State", method="subscribe")
+        self._updating = True
+        try:
+            for fn in list(self._subscribers):
+                safe_call(fn, value, backend="core", component="State", method="subscribe")
+        finally:
+            self._updating = False
 
     def subscribe(self, fn: Callable[[T], None]) -> Handle:
         self._subscribers.append(fn)
@@ -78,6 +90,7 @@ class Computed(Generic[T]):
         self._value: T = fn()
         self._subscribers: List[Callable[[T], None]] = []
         self._dep_handles: List[Handle] = []
+        self._updating = False
         for dep in deps:
             h = dep.subscribe(lambda _: self._recompute())
             self._dep_handles.append(h)
@@ -101,10 +114,22 @@ class Computed(Generic[T]):
 
     def _recompute(self) -> None:
         new_val = self._fn()
-        if new_val != self._value:
-            self._value = new_val
+        if new_val == self._value:
+            return
+        if self._updating:
+            raise RuntimeError(
+                "Circular Computed update detected: recomputing this "
+                "Computed's value triggered another recompute of the same "
+                "Computed before the previous one finished notifying "
+                "subscribers. Check for a dependency cycle."
+            )
+        self._value = new_val
+        self._updating = True
+        try:
             for fn in list(self._subscribers):
                 safe_call(fn, new_val, backend="core", component="Computed", method="subscribe")
+        finally:
+            self._updating = False
 
 
 # ---------------------------------------------------------------------------

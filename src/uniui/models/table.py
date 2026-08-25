@@ -34,6 +34,9 @@ ALIGN_RIGHT = "right"
 #: Overlay text shown while rows are being fetched.
 LOADING_TEXT = "Loading…"
 
+#: Overlay text shown when a fetch completed but returned zero rows.
+EMPTY_TEXT = "No data"
+
 _ERROR_PREFIX = "⚠"
 
 
@@ -109,11 +112,18 @@ class TableModel:
     currently visible.
     """
 
-    __slots__ = ("_columns", "_rows", "_loading", "_error", "_sort_key", "_sort_reverse")
+    __slots__ = (
+        "_columns", "_rows", "_rows_set", "_loading", "_error",
+        "_sort_key", "_sort_reverse",
+    )
 
     def __init__(self) -> None:
         self._columns: List[Column] = []
         self._rows: List[Dict] = []
+        #: Whether set_rows() has ever been called. A model that was simply
+        #: never populated yet must not show the empty-state placeholder -
+        #: only a fetch that genuinely returned nothing should.
+        self._rows_set = False
         self._loading = False
         self._error = ""
         self._sort_key: Optional[str] = None
@@ -133,6 +143,7 @@ class TableModel:
 
     def set_rows(self, rows: Sequence[Dict]) -> None:
         self._rows = list(rows)
+        self._rows_set = True
 
     @property
     def has_status_column(self) -> bool:
@@ -224,15 +235,26 @@ class TableModel:
         return self._error
 
     @property
+    def is_empty(self) -> bool:
+        """Whether set_rows() ran and genuinely returned nothing.
+
+        A model that was simply never populated yet is not "empty" in this
+        sense - only a completed fetch that returned zero rows is.
+        """
+        return self._rows_set and not self._rows
+
+    @property
     def shows_overlay(self) -> bool:
         """Whether the overlay replaces the table right now."""
-        return self._loading or bool(self._error)
+        return self._loading or bool(self._error) or self.is_empty
 
     def overlay_text(self, separator: str = "  ", escape: Optional[Callable[[str], str]] = None) -> str:
-        """Text for the loading/error overlay, or ``""`` when the table shows.
+        """Text for the loading/error/empty overlay, or ``""`` when the table shows.
 
-        An error outranks the loading state: if a fetch failed, saying so beats
-        claiming the rows are still on their way.
+        Priority: an error outranks loading (if a fetch failed, saying so beats
+        claiming the rows are still on their way), which outranks the empty
+        state (a refresh that clears rows before repopulating them should
+        keep showing "Loading…", not flash "No data" first).
 
         ``separator`` sits between the warning sign and the message because the
         HTML backends need ``&nbsp;`` to keep the gap from collapsing, while Qt
@@ -245,4 +267,6 @@ class TableModel:
             return f"{_ERROR_PREFIX}{separator}{message}"
         if self._loading:
             return LOADING_TEXT
+        if self.is_empty:
+            return EMPTY_TEXT
         return ""

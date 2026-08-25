@@ -39,6 +39,7 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
     def set_rows(self, rows: List[Dict]) -> None:
         self._model.set_rows(rows)
         self._render()
+        self._sync_message()
 
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)

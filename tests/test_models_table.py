@@ -7,6 +7,7 @@ from uniui.models.table import (
     CELL_NUMBER,
     CELL_STATUS,
     CELL_TEXT,
+    EMPTY_TEXT,
     LOADING_TEXT,
     NUMERIC_COLUMN_KEYS,
     Column,
@@ -292,6 +293,57 @@ class TestOverlay:
         assert model.overlay_text() == "⚠  boom"
 
 
+class TestEmptyState:
+    def test_never_populated_is_not_empty(self):
+        """A table that hasn't had set_rows() called yet is not "empty" -
+        it just hasn't loaded, so it must not show a "No data" placeholder."""
+        model = TableModel()
+        assert not model.is_empty
+        assert not model.shows_overlay
+        assert model.overlay_text() == ""
+
+    def test_set_rows_with_zero_rows_is_empty(self):
+        model = TableModel()
+        model.set_rows([])
+        assert model.is_empty
+        assert model.shows_overlay
+        assert model.overlay_text() == EMPTY_TEXT
+
+    def test_set_rows_with_data_is_not_empty(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}])
+        assert not model.is_empty
+        assert not model.shows_overlay
+
+    def test_clearing_rows_after_data_becomes_empty(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}])
+        model.set_rows([])
+        assert model.is_empty
+        assert model.overlay_text() == EMPTY_TEXT
+
+    def test_repopulating_after_empty_clears_the_placeholder(self):
+        model = TableModel()
+        model.set_rows([])
+        model.set_rows([{"id": 1}])
+        assert not model.is_empty
+        assert not model.shows_overlay
+
+    def test_loading_outranks_empty(self):
+        """A refresh that clears rows before repopulating must keep showing
+        "Loading…", not flash "No data" in between."""
+        model = TableModel()
+        model.set_rows([])
+        model.set_loading(True)
+        assert model.overlay_text() == LOADING_TEXT
+
+    def test_error_outranks_empty(self):
+        model = TableModel()
+        model.set_rows([])
+        model.set_error("boom")
+        assert model.overlay_text() == "⚠  boom"
+
+
 class TestBackendsAgree:
     """Every backend must make the same column and row-lookup decisions."""
 
@@ -404,6 +456,37 @@ class TestBackendsAgree:
         table._on_header_clicked(0)
         assert table._table.item(0, 0).text() == "banana"
         assert table._table.horizontalHeader().sortIndicatorOrder() == QtCore.Qt.DescendingOrder
+
+    def test_qt_empty_rows_shows_the_overlay_and_hides_the_table(self):
+        table = self._qt()  # already populated with self.ROWS
+        assert table._table.isHidden() is False
+        table.set_rows([])
+        assert table._table.isHidden() is True
+        assert table._overlay.isHidden() is False
+        assert table._overlay.text() == "No data"
+
+    def test_qt_repopulating_hides_the_overlay_again(self):
+        table = self._qt()
+        table.set_rows([])
+        table.set_rows(self.ROWS)
+        assert table._table.isHidden() is False
+        assert table._overlay.isHidden() is True
+
+    def test_jupyter_empty_rows_shows_the_overlay_and_hides_the_table(self):
+        table = self._jupyter()
+        table.set_rows([])
+        assert table._table.layout.display == "none"
+        assert table._message.layout.display is None
+        assert "No data" in table._message.value
+
+    def test_web_empty_rows_shows_the_overlay_and_hides_the_table(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebTableAdapter
+
+        table = WebTableAdapter()
+        table.set_columns(COLUMNS)
+        table.set_rows([])
+        assert table._message.text == "No data"
 
     def test_qt_header_click_ignores_non_sortable_column(self):
         table = self._qt()

@@ -436,7 +436,7 @@ Backend implementation:
   - [x] Sorting — Done (2026-08-22): `TableModel.set_sort()`/`toggle_sort()`/`sorted_rows()` (`models/table.py`) sort display order without touching the underlying row data, so a later `set_rows()` still diffs correctly. Columns opt in via `{"sortable": True}`. Qt clicks the header (`sectionClicked`, native sort-indicator arrow); Jupyter clicks a `<th>` wired through a hidden bridge widget, same pattern as row-click; Web sets `"sortable"` on the Quasar column def for client-side visual sorting plus a Python-observable `set_sort()` API. `ITable.set_sort(key, reverse=False)` is the new backend-agnostic contract method, tested via `tests/contracts/test_admin.py::TestTableContract` on all three backends plus dedicated model/backend tests in `tests/test_models_table.py`. Verified by temporarily breaking `sorted_rows()` and confirming 7 tests fail, then restoring.
   - [ ] Single/multi-select — Qt sets visual single-selection highlighting only; no `ITable` API to read/react to a selection, no multi-select
   - [ ] Pagination — doesn't exist (Web explicitly disables Quasar's built-in pagination)
-  - [ ] Empty, loading, and error states — loading/error are fully implemented (`set_loading`/`set_error`); an empty-rows placeholder is not
+  - [x] Empty, loading, and error states — Done (2026-08-22): `TableModel` tracks whether `set_rows()` has ever run (`_rows_set`), so a table that simply hasn't loaded yet is left alone, but a completed fetch returning zero rows now shows a "No data" placeholder (`is_empty`/`EMPTY_TEXT`) with the existing priority order preserved — error beats loading beats empty, so a refresh that clears rows before repopulating keeps showing "Loading…" instead of flashing "No data". All three backends' `set_rows()` now call the existing overlay/message sync so the placeholder actually renders, not just the model flag. 13 new tests; verified by disabling `is_empty` and confirming 5 tests fail (across all three backends) before restoring it.
   - [ ] Row action buttons — doesn't exist; only whole-row `on_row_click`
 - [ ] `Pagination` (standalone) — doesn't exist
 
@@ -637,7 +637,7 @@ solid.export_stl("part.stl")
 - [x] Establish unified design tokens: colors, spacing, border radius, font sizes, shadows, and status colors — `src/uniui/theme.py` is the explicit single source of truth for all three backends
 - [x] Establish an icon system to avoid each example mixing Unicode icons ad hoc — `src/uniui/icons.py`, one SVG set consumed by all three backends
 - [ ] All data components provide standard Loading, Empty, Error, and Success states
-  - `Table` has real loading/error handling; no Empty or Success state anywhere, and `Chart`/`Gauge`/`StatCard` have no loading/error handling at all.
+  - `Table` has real loading/error/empty handling (empty added 2026-08-22); no Success state anywhere, and `Chart`/`Gauge`/`StatCard` have no loading/error/empty handling at all.
 - [ ] Support high DPI, font scaling, keyboard focus, and sensible Tab order
   - Qt sets high-DPI attributes; no font scaling, keyboard focus, or Tab-order management confirmed anywhere.
 - [ ] Primary components provide consistent compact/standard density modes — the only "compact" concept found is the layout-width breakpoint mode, not a component density/row-height mode

@@ -49,6 +49,7 @@ class WebTableAdapter(_WebAdapter, ITable):
         self._table.update()
     def set_rows(self, rows: List[Dict]) -> None:
         self._model.set_rows(rows); self._table.rows = self._model.sorted_rows(); self._table.update()
+        self._sync_message()
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)
         self._table.rows = self._model.sorted_rows()

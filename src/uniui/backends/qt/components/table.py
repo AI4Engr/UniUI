@@ -165,6 +165,7 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
     def set_rows(self, rows: List[Dict]) -> None:
         self._model.set_rows(rows)
         self._render_rows()
+        self._sync_overlay()
 
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)

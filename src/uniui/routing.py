@@ -44,11 +44,19 @@ class RouteContext:
 
 @dataclass
 class Route:
-    """Maps a URL pattern to a page factory function."""
+    """Maps a URL pattern to a page factory function.
+
+    ``redirect``, when set, makes this route a pure redirect: navigating to
+    ``pattern`` immediately resolves to the ``redirect`` path instead of
+    calling ``page_factory`` (which may be a placeholder in this case).
+    ``:param`` placeholders in ``redirect`` are filled from this route's own
+    matched params, e.g. ``Route("/u/:id", ..., redirect="/users/:id")``.
+    """
     pattern: str
     page_factory: Callable[[RouteContext], Any]
     name: str = ""
     cache: bool = False
+    redirect: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +97,18 @@ def _split_path_query(full_path: str):
     return path, qs
 
 
+def _append_qs(path: str, qs: str) -> str:
+    """Carry a query string onto a redirect target unless it sets its own."""
+    if not qs or "?" in path:
+        return path
+    return f"{path}?{qs}"
+
+
+#: Bounds default-route/redirect resolution so a cycle raises a clear error
+#: instead of recursing forever.
+_MAX_REDIRECT_HOPS = 10
+
+
 # ---------------------------------------------------------------------------
 # Router
 # ---------------------------------------------------------------------------
@@ -96,9 +116,11 @@ def _split_path_query(full_path: str):
 class Router:
     """In-process router. Maintains history; notifies subscribers on navigation."""
 
-    def __init__(self, *routes: Route, not_found: Optional[Callable] = None):
+    def __init__(self, *routes: Route, not_found: Optional[Callable] = None,
+                 default: Optional[str] = None):
         self._routes: List[Route] = list(routes)
         self._not_found = not_found
+        self._default = default
         self._compiled: List[tuple] = [
             (_compile_pattern(r.pattern), r) for r in routes
         ]
@@ -183,19 +205,24 @@ class Router:
     # ------------------------------------------------------------------
 
     def _navigate(self, full_path: str, record: bool = True) -> None:
-        path, qs = _split_path_query(full_path)
+        resolved = self._resolve_path(full_path)
+        if resolved != full_path and self._history_index >= 0 \
+                and self._history[self._history_index] == full_path:
+            self._history[self._history_index] = resolved
+
+        path, qs = _split_path_query(resolved)
         query = _parse_query(qs)
         matched_route, params = self._match(path)
         if matched_route is None:
             if self._not_found is not None:
-                ctx = RouteContext(path=full_path, params={}, query=query,
+                ctx = RouteContext(path=resolved, params={}, query=query,
                                    name="__not_found__", router=self)
                 self._current_context = ctx
                 self._notify(ctx)
                 return
             raise RouteNotFoundError(f"No route matches {full_path!r}")
         ctx = RouteContext(
-            path=full_path,
+            path=resolved,
             params=params,
             query=query,
             name=matched_route.name,
@@ -203,6 +230,26 @@ class Router:
         )
         self._current_context = ctx
         self._notify(ctx)
+
+    def _resolve_path(self, full_path: str) -> str:
+        """Follow the default route and any ``Route.redirect`` chain to a
+        concrete path. A path that resolves to nothing new is returned as-is.
+        """
+        current = full_path
+        for _ in range(_MAX_REDIRECT_HOPS):
+            path, qs = _split_path_query(current)
+            if path in ("", "/") and self._default is not None \
+                    and self._match(path)[0] is None:
+                current = _append_qs(self._default, qs)
+                continue
+            matched_route, params = self._match(path)
+            if matched_route is None or matched_route.redirect is None:
+                return current
+            target = matched_route.redirect
+            for k, v in params.items():
+                target = target.replace(f":{k}", str(v))
+            current = _append_qs(target, qs)
+        raise RouteNotFoundError(f"Redirect loop detected resolving {full_path!r}")
 
     def _match(self, path: str):
         for (regex, param_names), route in self._compiled:

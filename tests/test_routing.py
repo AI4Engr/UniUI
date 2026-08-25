@@ -114,6 +114,118 @@ def test_router_not_found_handler():
 
 
 # ---------------------------------------------------------------------------
+# Default route and redirects
+# ---------------------------------------------------------------------------
+
+def test_default_route_used_for_empty_path():
+    router = Router(Route("/dashboard", _dummy_page, name="dashboard"), default="/dashboard")
+    router.push("")
+    assert router.current_context.name == "dashboard"
+    assert router.current_path == "/dashboard"
+
+
+def test_default_route_used_for_root_path():
+    router = Router(Route("/dashboard", _dummy_page, name="dashboard"), default="/dashboard")
+    router.push("/")
+    assert router.current_context.name == "dashboard"
+
+
+def test_default_route_does_not_override_an_explicit_root_route():
+    router = Router(Route("/", _dummy_page, name="home"), default="/elsewhere")
+    router.push("/")
+    assert router.current_context.name == "home"
+
+
+def test_default_route_preserves_query_string():
+    router = Router(Route("/dashboard", _dummy_page, name="dashboard"), default="/dashboard")
+    router.push("/?tab=charts")
+    assert router.current_context.query == {"tab": "charts"}
+
+
+def test_no_default_route_falls_through_to_not_found_handling():
+    router = Router(Route("/dashboard", _dummy_page, name="dashboard"))
+    with pytest.raises(RouteNotFoundError):
+        router.push("/")
+
+
+def test_redirect_route_resolves_to_target():
+    router = Router(
+        Route("/old", _dummy_page, name="old", redirect="/new"),
+        Route("/new", _dummy_page, name="new"),
+    )
+    router.push("/old")
+    assert router.current_context.name == "new"
+    assert router.current_path == "/new"
+
+
+def test_redirect_interpolates_matched_params():
+    router = Router(
+        Route("/u/:id", _dummy_page, name="short", redirect="/users/:id"),
+        Route("/users/:id", _dummy_page, name="user-detail"),
+    )
+    router.push("/u/42")
+    ctx = router.current_context
+    assert ctx.name == "user-detail"
+    assert ctx.params == {"id": "42"}
+    assert router.current_path == "/users/42"
+
+
+def test_redirect_preserves_query_string():
+    router = Router(
+        Route("/old", _dummy_page, name="old", redirect="/new"),
+        Route("/new", _dummy_page, name="new"),
+    )
+    router.push("/old?page=2")
+    assert router.current_context.query == {"page": "2"}
+
+
+def test_redirect_chain_resolves_to_final_target():
+    router = Router(
+        Route("/a", _dummy_page, name="a", redirect="/b"),
+        Route("/b", _dummy_page, name="b", redirect="/c"),
+        Route("/c", _dummy_page, name="c"),
+    )
+    router.push("/a")
+    assert router.current_context.name == "c"
+
+
+def test_redirect_cycle_raises_instead_of_hanging():
+    router = Router(
+        Route("/a", _dummy_page, name="a", redirect="/b"),
+        Route("/b", _dummy_page, name="b", redirect="/a"),
+    )
+    with pytest.raises(RouteNotFoundError):
+        router.push("/a")
+
+
+def test_redirect_notifies_subscribers_with_the_final_context_only():
+    """A redirect must not fire on_navigate for the intermediate route."""
+    events = []
+    router = Router(
+        Route("/old", _dummy_page, name="old", redirect="/new"),
+        Route("/new", _dummy_page, name="new"),
+    )
+    router.on_navigate(events.append)
+    router.push("/old")
+    assert len(events) == 1
+    assert events[0].name == "new"
+
+
+def test_redirect_target_does_not_leave_stale_history_entry():
+    """back() after a redirected push() must not land on the dead source path."""
+    router = Router(
+        Route("/x", _dummy_page, name="x"),
+        Route("/old", _dummy_page, name="old", redirect="/new"),
+        Route("/new", _dummy_page, name="new"),
+    )
+    router.push("/x")
+    router.push("/old")
+    assert router.current_path == "/new"
+    router.back()
+    assert router.current_path == "/x"
+
+
+# ---------------------------------------------------------------------------
 # Named routes
 # ---------------------------------------------------------------------------
 

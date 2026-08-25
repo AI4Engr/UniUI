@@ -385,8 +385,8 @@ The first version uses "in-process routing": UniUI maintains the current path an
 - [x] Support query parameters: `/users?page=2&status=active`
 - [x] Support named routes to avoid hardcoded paths throughout business code — `Route.name`, `push_named()`
 - [x] Support `push()`, `replace()`, `back()`, `forward()` — all four implemented with real history-index bookkeeping
-- [ ] Support default routes, 404 pages, and redirects
-  - 404 (`not_found` handler) is implemented. There is no "default route" concept and no redirect mechanism.
+- [x] Support default routes, 404 pages, and redirects
+  - Done (2026-08-22): 404 (`not_found`) already existed. Added `Router(default=...)` (resolves `""`/`"/"` to a target path when no route matches root) and `Route(..., redirect=...)` (a route that resolves to another path instead of rendering, interpolating its own matched `:param`s into the target). Both share one `_resolve_path()` hop-bounded resolver (`_MAX_REDIRECT_HOPS = 10`), so a redirect cycle raises `RouteNotFoundError` instead of hanging; query strings carry through unless the target sets its own; the history entry is rewritten to the resolved path so `back()` doesn't land on a dead source route. 13 new tests in `tests/test_routing.py`; verified by temporarily disabling the redirect branch and confirming 10 tests fail before restoring it.
 - [ ] Sync Sidebar selected state, page title, and Breadcrumb on route changes
   - Sidebar sync (`NavMenu.from_router`) and Breadcrumb sync (`sync_breadcrumb`) both exist. No page-title sync helper exists.
 - [ ] Support navigation guards: confirm before leaving unsaved forms, redirect on missing permissions — no guard/beforeEach concept exists anywhere
@@ -769,8 +769,7 @@ src/uniui/
   - 4 of 5 covered by `tests/test_task_runner.py` (completion, failure, cancellation, new-overwrites-old). No `timeout` feature/test exists.
 - [ ] State subscriptions, timers, and tasks are all released after a page is destroyed — no combined page-lifecycle-teardown test exists; only `RouterView.dispose()` (narrower) is tested
 - [ ] `DataSource` pagination, sorting, filtering, caching, and error states have tests — N/A, `DataSource` doesn't exist
-- [ ] Route matching, parameter parsing, query parameters, redirects, 404, and history have unit tests
-  - Everything except redirects is thoroughly covered by `tests/test_routing.py` (26 tests) — redirects aren't implemented (see Router section above), so this can't be fully true yet.
+- [x] Route matching, parameter parsing, query parameters, redirects, 404, and history have unit tests — `tests/test_routing.py` (39 tests, including redirect/default-route coverage added 2026-08-22)
 - [ ] Navigating to the same path in Qt and Jupyter renders equivalent pages — no direct Qt-vs-Jupyter equivalence test exists; contract tests are parametrized per-backend, not cross-compared
 - [ ] Rapid consecutive navigation does not duplicate cached pages or leave behind page tasks
   - Layer/cache-duplication is directly tested (`test_uncached_pages_do_not_accumulate_layers`, `test_cached_pages_are_never_removed_across_navigation`). "No leftover page tasks" isn't separately tested.

@@ -23,7 +23,11 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         self._bridge.layout.display = "none"
         self._bridge.add_class("uniui-table-bridge")
         self._bridge.observe(self._on_bridge, names="value")
-        self._native = widgets.VBox([self._table, self._message, self._bridge])
+        self._sort_bridge = widgets.Text(value="")
+        self._sort_bridge.layout.display = "none"
+        self._sort_bridge.add_class("uniui-table-sortbridge")
+        self._sort_bridge.observe(self._on_sort_bridge, names="value")
+        self._native = widgets.VBox([self._table, self._message, self._bridge, self._sort_bridge])
         self._native.add_class("uniui-admin-table")
 
     def get_native(self): return self._native
@@ -36,12 +40,28 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         self._model.set_rows(rows)
         self._render()
 
-    def _render(self) -> None:
-        headers = "".join(
-            f"<th>{escape(col.label)}</th>" for col in self._model.columns
+    def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
+        self._model.set_sort(key, reverse)
+        self._render()
+
+    def _header_cell(self, col) -> str:
+        label = escape(col.label)
+        if not col.sortable:
+            return f"<th>{label}</th>"
+        arrow = ""
+        if self._model.sort_key == col.key:
+            arrow = " ▼" if self._model.sort_reverse else " ▲"
+        click = (
+            "const root=this.closest('.uniui-admin-table'),input=root.querySelector("
+            "'.uniui-table-sortbridge input');if(input){input.value='" + col.key +
+            "';input.dispatchEvent(new Event('change',{bubbles:true}));}"
         )
+        return f'<th class="uniui-sortable" onclick="{click}">{label}{arrow}</th>'
+
+    def _render(self) -> None:
+        headers = "".join(self._header_cell(col) for col in self._model.columns)
         rendered_rows = []
-        for index, row in enumerate(self._model.rows):
+        for index, row in enumerate(self._model.sorted_rows()):
             cells = []
             for col in self._model.columns:
                 kind = col.cell_kind
@@ -101,6 +121,13 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         if index != -1:
             self._bridge.value = -1
 
+    def _on_sort_bridge(self, change) -> None:
+        key = change["new"]
+        if key:
+            self._model.toggle_sort(key)
+            self._render()
+            self._sort_bridge.value = ""
+
 
 def table_css() -> str:
     """The Table CSS fragment, composed into the shell sheet by ``styles.css``.
@@ -115,6 +142,7 @@ def table_css() -> str:
   background:var(--uniui-surface); border-bottom:1px solid var(--uniui-border);
   font-size:{M['stat_label_size']}px; font-weight:600;
 }}
+.uniui-admin-table th.uniui-sortable {{cursor:pointer; user-select:none}}
 .uniui-admin-table td {{padding:11px 12px;border-bottom:1px solid var(--uniui-border)}}
 .uniui-admin-table tbody tr {{cursor:pointer}}
 .uniui-admin-table tbody tr:hover {{background:var(--uniui-surface_subtle)}}

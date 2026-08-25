@@ -64,6 +64,10 @@ class Column:
         return self.key == STATUS_COLUMN_KEY
 
     @property
+    def sortable(self) -> bool:
+        return bool(self.source.get("sortable", False))
+
+    @property
     def cell_kind(self) -> str:
         """The semantic kind of every cell in this column."""
         if self.is_status:
@@ -105,13 +109,15 @@ class TableModel:
     currently visible.
     """
 
-    __slots__ = ("_columns", "_rows", "_loading", "_error")
+    __slots__ = ("_columns", "_rows", "_loading", "_error", "_sort_key", "_sort_reverse")
 
     def __init__(self) -> None:
         self._columns: List[Column] = []
         self._rows: List[Dict] = []
         self._loading = False
         self._error = ""
+        self._sort_key: Optional[str] = None
+        self._sort_reverse = False
 
     # -- columns and rows ------------------------------------------------
     @property
@@ -141,16 +147,66 @@ class TableModel:
         return [col.value_of(row) for col in self._columns]
 
     def row_at(self, index: int) -> Optional[Dict]:
-        """Return the row at ``index``, or ``None`` if out of range.
+        """Return the displayed row at ``index``, or ``None`` if out of range.
 
-        Every backend reports clicks as an integer index and every backend had
-        its own bounds check; this is that check, written once. Negative
-        indices are rejected rather than wrapping, because a negative index
-        from a UI event means "nothing selected", not "count from the end".
+        Every backend reports clicks as an integer index into whatever is
+        currently on screen, which is ``sorted_rows()`` — not necessarily the
+        order ``set_rows()`` was called with. Negative indices are rejected
+        rather than wrapping, because a negative index from a UI event means
+        "nothing selected", not "count from the end".
         """
-        if 0 <= index < len(self._rows):
-            return self._rows[index]
+        rows = self.sorted_rows()
+        if 0 <= index < len(rows):
+            return rows[index]
         return None
+
+    # -- sorting -----------------------------------------------------------
+    @property
+    def sort_key(self) -> Optional[str]:
+        return self._sort_key
+
+    @property
+    def sort_reverse(self) -> bool:
+        return self._sort_reverse
+
+    def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
+        """Sort displayed rows by column ``key``; ``None`` clears sorting.
+
+        Display order only — the row data itself (``self._rows``, what a
+        future ``set_rows()`` diffs against) is never reordered.
+        """
+        if key is not None and not any(col.key == key for col in self._columns):
+            return
+        self._sort_key = key
+        self._sort_reverse = bool(reverse)
+
+    def toggle_sort(self, key: str) -> None:
+        """Cycle a column through ascending, descending, then unsorted."""
+        if self._sort_key != key:
+            self.set_sort(key, reverse=False)
+        elif not self._sort_reverse:
+            self.set_sort(key, reverse=True)
+        else:
+            self.set_sort(None)
+
+    def sorted_rows(self) -> List[Dict]:
+        """Rows in display order: unsorted rows if no sort is active."""
+        if self._sort_key is None:
+            return self._rows
+        column = next((col for col in self._columns if col.key == self._sort_key), None)
+        if column is None:
+            return self._rows
+
+        def sort_value(row: Dict):
+            value = column.value_of(row)
+            if column.is_numeric:
+                try:
+                    return (0, float(value))
+                except (TypeError, ValueError):
+                    return (1, 0.0)
+            return (0, str(value).lower())
+
+        return sorted(self._rows, key=sort_value, reverse=self._sort_reverse)
 
     # -- overlay state ---------------------------------------------------
     def set_loading(self, loading: bool) -> None:

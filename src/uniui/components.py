@@ -94,6 +94,15 @@ class ITable(IWidget):
         """Register a callback fired when the user clicks a row."""
         ...
 
+    @abstractmethod
+    def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
+        """Sort displayed rows by column ``key``. ``key=None`` clears sorting.
+
+        Display order only; the row data passed to ``set_rows()`` is
+        unchanged, so a later ``set_rows()`` call still diffs correctly.
+        """
+        ...
+
 
 class ISidebar(IWidget):
     """Navigation sidebar with selectable items and collapse support."""

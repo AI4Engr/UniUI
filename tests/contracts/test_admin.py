@@ -198,6 +198,40 @@ class TestTableContract(_Common):
         handle.dispose()
         assert tbl._row_click_cb is None
 
+    @pytest.mark.contract
+    def test_set_sort_ascending(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "name", "label": "Name", "sortable": True}])
+        tbl.set_rows([{"name": "Bob"}, {"name": "Alice"}])
+        tbl.set_sort("name")
+        assert tbl._model.sorted_rows() == [{"name": "Alice"}, {"name": "Bob"}]
+
+    @pytest.mark.contract
+    def test_set_sort_descending(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "name", "label": "Name", "sortable": True}])
+        tbl.set_rows([{"name": "Alice"}, {"name": "Bob"}])
+        tbl.set_sort("name", reverse=True)
+        assert tbl._model.sorted_rows() == [{"name": "Bob"}, {"name": "Alice"}]
+
+    @pytest.mark.contract
+    def test_set_sort_none_clears(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "name", "label": "Name", "sortable": True}])
+        tbl.set_rows([{"name": "Bob"}, {"name": "Alice"}])
+        tbl.set_sort("name")
+        tbl.set_sort(None)
+        assert tbl._model.sorted_rows() == [{"name": "Bob"}, {"name": "Alice"}]
+
+    @pytest.mark.contract
+    def test_set_sort_persists_across_new_rows(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "amount", "label": "Amount", "sortable": True}])
+        tbl.set_rows([{"amount": 3}, {"amount": 1}])
+        tbl.set_sort("amount")
+        tbl.set_rows([{"amount": 5}, {"amount": 2}])
+        assert tbl._model.sorted_rows() == [{"amount": 2}, {"amount": 5}]
+
 
 class TestSidebarContract(_Common):
     widget_kind = SIDEBAR

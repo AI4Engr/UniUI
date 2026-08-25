@@ -138,6 +138,102 @@ class TestTableModel:
         assert TableModel().row_at(0) is None
 
 
+class TestSorting:
+    def test_unsorted_by_default(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"id": 2}, {"id": 1}])
+        assert model.sort_key is None
+        assert model.sorted_rows() == [{"id": 2}, {"id": 1}]
+
+    def test_sort_ascending_by_string_key(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"id": "banana"}, {"id": "apple"}])
+        model.set_sort("id")
+        assert model.sorted_rows() == [{"id": "apple"}, {"id": "banana"}]
+
+    def test_sort_descending(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"id": "apple"}, {"id": "banana"}])
+        model.set_sort("id", reverse=True)
+        assert model.sorted_rows() == [{"id": "banana"}, {"id": "apple"}]
+
+    def test_sort_numeric_column_compares_numerically_not_lexically(self):
+        """Lexical sort would put "10" before "2" - numeric columns must not."""
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"amount": 10}, {"amount": 2}])
+        model.set_sort("amount")
+        assert model.sorted_rows() == [{"amount": 2}, {"amount": 10}]
+
+    def test_sort_numeric_column_tolerates_non_numeric_values(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"amount": 5}, {"amount": "n/a"}])
+        model.set_sort("amount")
+        assert model.sorted_rows() == [{"amount": 5}, {"amount": "n/a"}]
+
+    def test_set_sort_ignores_unknown_column(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"id": 2}, {"id": 1}])
+        model.set_sort("nope")
+        assert model.sort_key is None
+        assert model.sorted_rows() == [{"id": 2}, {"id": 1}]
+
+    def test_set_sort_none_clears(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"id": 2}, {"id": 1}])
+        model.set_sort("id")
+        model.set_sort(None)
+        assert model.sort_key is None
+        assert model.sorted_rows() == [{"id": 2}, {"id": 1}]
+
+    def test_toggle_sort_cycles_asc_desc_none(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.toggle_sort("id")
+        assert (model.sort_key, model.sort_reverse) == ("id", False)
+        model.toggle_sort("id")
+        assert (model.sort_key, model.sort_reverse) == ("id", True)
+        model.toggle_sort("id")
+        assert model.sort_key is None
+
+    def test_toggle_sort_switching_columns_resets_to_ascending(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.toggle_sort("id")
+        model.toggle_sort("id")  # now descending
+        model.toggle_sort("amount")
+        assert (model.sort_key, model.sort_reverse) == ("amount", False)
+
+    def test_sort_does_not_mutate_underlying_rows(self):
+        """Display order changes; the rows a future set_rows() diffs against don't."""
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        rows = [{"id": 2}, {"id": 1}]
+        model.set_rows(rows)
+        model.set_sort("id")
+        assert model.rows == [{"id": 2}, {"id": 1}]
+
+    def test_row_at_reflects_sorted_order(self):
+        model = TableModel()
+        model.set_columns(COLUMNS)
+        model.set_rows([{"id": 2}, {"id": 1}])
+        model.set_sort("id")
+        assert model.row_at(0) == {"id": 1}
+        assert model.row_at(1) == {"id": 2}
+
+    def test_column_sortable_defaults_false(self):
+        assert not Column({"key": "id"}).sortable
+
+    def test_column_sortable_reads_source_dict(self):
+        assert Column({"key": "id", "sortable": True}).sortable
+
+
 class TestOverlay:
     def test_loading_text(self):
         model = TableModel()
@@ -292,6 +388,49 @@ class TestBackendsAgree:
         table._on_bridge({"new": 1})
         table._on_bridge({"new": 99})
         assert seen == [self.ROWS[1]]
+
+    def test_qt_header_click_sorts_and_updates_indicator(self):
+        from PySide2 import QtCore
+
+        table = self._qt()
+        table.set_columns([{"key": "id", "label": "ID", "sortable": True}])
+        table.set_rows([{"id": "banana"}, {"id": "apple"}])
+
+        table._on_header_clicked(0)
+        assert table._table.item(0, 0).text() == "apple"
+        assert table._table.horizontalHeader().sortIndicatorSection() == 0
+        assert table._table.horizontalHeader().sortIndicatorOrder() == QtCore.Qt.AscendingOrder
+
+        table._on_header_clicked(0)
+        assert table._table.item(0, 0).text() == "banana"
+        assert table._table.horizontalHeader().sortIndicatorOrder() == QtCore.Qt.DescendingOrder
+
+    def test_qt_header_click_ignores_non_sortable_column(self):
+        table = self._qt()
+        table.set_columns(COLUMNS)  # none declared sortable
+        table.set_rows(self.ROWS)
+        table._on_header_clicked(0)
+        assert table._model.sort_key is None
+
+    def test_jupyter_header_click_sorts_via_bridge(self):
+        table = self._jupyter()
+        table.set_columns([{"key": "id", "label": "ID", "sortable": True}])
+        table.set_rows([{"id": "banana"}, {"id": "apple"}])
+
+        table._on_sort_bridge({"new": "id"})
+        assert table._model.sort_key == "id"
+        assert table._model.sorted_rows() == [{"id": "apple"}, {"id": "banana"}]
+        assert table._table.value.index("apple") < table._table.value.index("banana")
+
+    def test_web_set_sort_reorders_the_native_rows(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebTableAdapter
+
+        table = WebTableAdapter()
+        table.set_columns([{"key": "id", "label": "ID", "sortable": True}])
+        table.set_rows([{"id": "banana"}, {"id": "apple"}])
+        table.set_sort("id")
+        assert table._table.rows == [{"id": "apple"}, {"id": "banana"}]
 
     def test_all_backends_agree_on_header_labels(self):
         model = TableModel()

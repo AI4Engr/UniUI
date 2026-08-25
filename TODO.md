@@ -432,7 +432,7 @@ Backend implementation:
 - [ ] `Table` / `DataGrid`:
   - [x] Declare columns and bind row data — `set_columns`/`set_rows`
   - [ ] Custom cell formatting — only two hardcoded kinds (numeric right-align, status pill); no general per-column formatter
-  - [ ] Sorting — doesn't exist
+  - [x] Sorting — Done (2026-08-22): `TableModel.set_sort()`/`toggle_sort()`/`sorted_rows()` (`models/table.py`) sort display order without touching the underlying row data, so a later `set_rows()` still diffs correctly. Columns opt in via `{"sortable": True}`. Qt clicks the header (`sectionClicked`, native sort-indicator arrow); Jupyter clicks a `<th>` wired through a hidden bridge widget, same pattern as row-click; Web sets `"sortable"` on the Quasar column def for client-side visual sorting plus a Python-observable `set_sort()` API. `ITable.set_sort(key, reverse=False)` is the new backend-agnostic contract method, tested via `tests/contracts/test_admin.py::TestTableContract` on all three backends plus dedicated model/backend tests in `tests/test_models_table.py`. Verified by temporarily breaking `sorted_rows()` and confirming 7 tests fail, then restoring.
   - [ ] Single/multi-select — Qt sets visual single-selection highlighting only; no `ITable` API to read/react to a selection, no multi-select
   - [ ] Pagination — doesn't exist (Web explicitly disables Quasar's built-in pagination)
   - [ ] Empty, loading, and error states — loading/error are fully implemented (`set_loading`/`set_error`); an empty-rows placeholder is not
@@ -806,7 +806,7 @@ src/uniui/
 - [ ] Unified sizing, grow/shrink, gap/padding, and responsive breakpoints — Qt side done; Jupyter breakpoint-switching parity is still missing (see M1)
 - [ ] Qt/Jupyter three-tier adaptive layout contract — same Jupyter gap as above; not a clean flip
 - [x] `Card` / `StatCard`
-- [ ] `Table` (static data, sorting, pagination) — static data works and is tested; no sorting, no real pagination on any backend
+- [ ] `Table` (static data, sorting, pagination) — static data and sorting both work and are tested (2026-08-22); no real pagination on any backend
 - [x] `Sidebar` + `AppShell`
 - [x] `Router` + `RouterView` (static paths, path parameters, 404, forward/back) — all four sub-features directly tested
 - [ ] `Chart` (line, bar, pie) — line/bar/area are done; pie doesn't exist

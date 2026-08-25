@@ -28,7 +28,10 @@ class WebTableAdapter(_WebAdapter, ITable):
     def set_columns(self, columns: List[Dict]) -> None:
         self._model.set_columns(columns)
         self._table.columns = [
-            {"name": c.key, "label": c.label, "field": c.key, "align": c.align}
+            {
+                "name": c.key, "label": c.label, "field": c.key, "align": c.align,
+                "sortable": c.sortable,
+            }
             for c in self._model.columns
         ]
         if self._model.has_status_column:
@@ -45,7 +48,11 @@ class WebTableAdapter(_WebAdapter, ITable):
             )
         self._table.update()
     def set_rows(self, rows: List[Dict]) -> None:
-        self._model.set_rows(rows); self._table.rows = self._model.rows; self._table.update()
+        self._model.set_rows(rows); self._table.rows = self._model.sorted_rows(); self._table.update()
+    def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
+        self._model.set_sort(key, reverse)
+        self._table.rows = self._model.sorted_rows()
+        self._table.update()
     def set_loading(self, loading: bool) -> None:
         self._model.set_loading(loading); self._sync_message()
     def set_error(self, message: str) -> None:

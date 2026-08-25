@@ -1,7 +1,7 @@
 """Qt ITable: a data table with semantic status pills and an overlay."""
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
@@ -118,6 +118,8 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         self._table.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.Interactive
         )
+        self._table.horizontalHeader().setSectionsClickable(True)
+        self._table.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
         self._table.setShowGrid(False)
         self._table.setFocusPolicy(QtCore.Qt.StrongFocus)
         self._table.setWordWrap(False)
@@ -161,6 +163,15 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
                 )
 
     def set_rows(self, rows: List[Dict]) -> None:
+        self._model.set_rows(rows)
+        self._render_rows()
+
+    def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
+        self._model.set_sort(key, reverse)
+        self._render_rows()
+        self._sync_sort_indicator()
+
+    def _render_rows(self) -> None:
         """Update existing ``QTableWidgetItem``s in place instead of
         rebuilding every cell. Rows have no stable identity in the model
         (see ``TableModel``), so this diffs positionally: a row index that
@@ -169,13 +180,12 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         previous count are created fresh; ``setRowCount`` shrinking handles
         removed trailing rows (Qt deletes their items automatically).
         """
-        old_row_count = len(self._model.rows)
-        self._model.set_rows(rows)
-        new_rows = self._model.rows
+        old_row_count = self._table.rowCount()
+        display_rows = self._model.sorted_rows()
         columns = self._model.columns
 
-        self._table.setRowCount(len(new_rows))
-        for r_idx, row in enumerate(new_rows):
+        self._table.setRowCount(len(display_rows))
+        for r_idx, row in enumerate(display_rows):
             for c_idx, col in enumerate(columns):
                 text = col.text_of(row)
                 item = self._table.item(r_idx, c_idx) if r_idx < old_row_count else None
@@ -234,3 +244,24 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         clicked = self._model.row_at(row)
         if self._row_click_cb and clicked is not None:
             safe_call(self._row_click_cb, clicked, backend="qt", component="Table", method="on_row_click")
+
+    def _on_header_clicked(self, index: int) -> None:
+        columns = self._model.columns
+        if not (0 <= index < len(columns)) or not columns[index].sortable:
+            return
+        self._model.toggle_sort(columns[index].key)
+        self._render_rows()
+        self._sync_sort_indicator()
+
+    def _sync_sort_indicator(self) -> None:
+        header = self._table.horizontalHeader()
+        columns = self._model.columns
+        index = next(
+            (i for i, col in enumerate(columns) if col.key == self._model.sort_key), -1
+        )
+        if index < 0:
+            header.setSortIndicatorShown(False)
+            return
+        order = QtCore.Qt.DescendingOrder if self._model.sort_reverse else QtCore.Qt.AscendingOrder
+        header.setSortIndicator(index, order)
+        header.setSortIndicatorShown(True)

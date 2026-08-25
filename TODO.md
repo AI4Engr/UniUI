@@ -355,7 +355,7 @@ stat_card.bind_value(active_count)
 - [x] Qt uses signal/slot or an event queue to return to the UI thread — a `QObject`-relayed Qt signal, specifically because `QTimer.singleShot` from a non-Qt thread is silently ignored (ADR 0002)
 - [x] Jupyter uses the asyncio/IPython event loop to safely update widgets — `asyncio.get_event_loop()`/`loop.call_later` in `schedule_after()`
 - [ ] Support progress, cancellation, timeout, error callbacks, and completion callbacks
-  - Cancellation, error, and completion callbacks all exist and are tested. No `progress` callback support and no built-in `timeout` parameter.
+  - Cancellation, error, completion, and now timeout (2026-08-22) all exist and are tested. `TaskRunner.run(..., timeout=...)` is cooperative — Python can't forcibly kill a thread, so after `timeout` seconds the task is marked cancelled and `on_error` fires with a `TimeoutError`, but `fn` itself only actually stops once it next checks the `cancelled` event it's passed. A lock settles the on_done/on_error race exactly once so a task finishing right as its timeout fires never double-fires. 5 new tests in `tests/test_task_runner.py`; verified by disabling the timeout branch and confirming 2 tests fail before restoring it. Still no `progress` callback support.
 - [x] New tasks can cancel old tasks to prevent stale results from overwriting new ones during rapid filtering or CSG parameter changes — `TaskRunner.run()` cancels any in-flight run at the top of every call, tested (`test_new_run_cancels_old`)
 - [ ] When a page route is left or a component is destroyed, its tasks are automatically cancelled — no wiring exists between `RouterView` and any `TaskRunner` instance
 - [ ] Reserve a process pool execution strategy for CPU-intensive CSG to avoid GIL contention and UI jank — N/A, no CSG exists
@@ -765,8 +765,7 @@ src/uniui/
 - [ ] Key Admin pages have visual snapshot regression tests at compact/medium/wide — no snapshot tests exist at all
 - [ ] `State` / `Computed` dependency updates, batching, unsubscribe, and cycle detection have unit tests
   - Dependency updates and unsubscribe/dispose are extensively tested (`tests/test_state.py`). Batching and cycle detection are neither implemented nor tested.
-- [ ] Background task completion, failure, cancellation, timeout, and "new result overwrites old" rule have tests
-  - 4 of 5 covered by `tests/test_task_runner.py` (completion, failure, cancellation, new-overwrites-old). No `timeout` feature/test exists.
+- [x] Background task completion, failure, cancellation, timeout, and "new result overwrites old" rule have tests — `tests/test_task_runner.py` (11 tests: completion, failure, cancellation, new-overwrites-old, and timeout added 2026-08-22)
 - [ ] State subscriptions, timers, and tasks are all released after a page is destroyed — no combined page-lifecycle-teardown test exists; only `RouterView.dispose()` (narrower) is tested
 - [ ] `DataSource` pagination, sorting, filtering, caching, and error states have tests — N/A, `DataSource` doesn't exist
 - [x] Route matching, parameter parsing, query parameters, redirects, 404, and history have unit tests — `tests/test_routing.py` (39 tests, including redirect/default-route coverage added 2026-08-22)

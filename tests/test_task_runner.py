@@ -159,3 +159,95 @@ def test_run_without_callbacks_does_not_raise():
     with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: cb()):
         runner.run(work)
         assert done.wait(timeout=2.0), "worker did not complete"
+
+
+def test_timeout_fires_on_error_with_timeout_error():
+    runner = TaskRunner()
+    errors = []
+    started = threading.Event()
+
+    def work(cancelled):
+        started.set()
+        cancelled.wait(timeout=2.0)  # never finishes on its own
+        return "too late"
+
+    def on_error(e):
+        errors.append(e)
+
+    with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: cb()):
+        runner.run(work, on_error=on_error, timeout=0.05)
+        started.wait(timeout=1.0)
+        runner._thread.join(timeout=2.0)
+
+    assert len(errors) == 1
+    assert isinstance(errors[0], TimeoutError)
+
+
+def test_timeout_sets_the_cancelled_event():
+    runner = TaskRunner()
+    seen_cancelled = []
+    started = threading.Event()
+
+    def work(cancelled):
+        started.set()
+        cancelled.wait(timeout=2.0)
+        seen_cancelled.append(cancelled.is_set())
+        return "done"
+
+    with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: cb()):
+        runner.run(work, timeout=0.05)
+        started.wait(timeout=1.0)
+        runner._thread.join(timeout=2.0)
+
+    assert seen_cancelled == [True]
+
+
+def test_fast_task_beats_its_own_timeout():
+    """A task finishing before the timeout must call on_done, not on_error."""
+    runner = TaskRunner()
+    done_results = []
+    errors = []
+
+    def work(cancelled):
+        return "fast"
+
+    with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: cb()):
+        runner.run(work, on_done=done_results.append, on_error=errors.append, timeout=5.0)
+        runner._thread.join(timeout=2.0)
+        time.sleep(0.05)  # let a wrongly-armed timer prove it does nothing
+
+    assert done_results == ["fast"]
+    assert errors == []
+
+
+def test_timeout_does_not_fire_after_normal_completion():
+    """A short timeout that outlives the task must not call on_error late."""
+    runner = TaskRunner()
+    errors = []
+
+    def work(cancelled):
+        return "ok"
+
+    with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: cb()):
+        runner.run(work, on_error=errors.append, timeout=0.2)
+        runner._thread.join(timeout=2.0)
+        time.sleep(0.3)  # past the timeout window
+
+    assert errors == []
+
+
+def test_no_timeout_means_task_can_run_indefinitely():
+    runner = TaskRunner()
+    errors = []
+    started = threading.Event()
+
+    def work(cancelled):
+        started.set()
+        return "ok" if cancelled.wait(timeout=0.2) else "ok"
+
+    with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: cb()):
+        runner.run(work, on_error=errors.append)
+        started.wait(timeout=1.0)
+        runner._thread.join(timeout=2.0)
+
+    assert errors == []

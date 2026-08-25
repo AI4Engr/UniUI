@@ -194,26 +194,60 @@ class TaskRunner:
     def run(self,
             fn: Callable,
             on_done: Optional[Callable] = None,
-            on_error: Optional[Callable[[Exception], None]] = None) -> None:
+            on_error: Optional[Callable[[Exception], None]] = None,
+            timeout: Optional[float] = None) -> None:
+        """Run ``fn(cancelled)`` in a daemon thread.
+
+        ``timeout``, if given, is cooperative: after ``timeout`` seconds the
+        task is marked cancelled and ``on_error`` is called with a
+        ``TimeoutError`` — but ``fn`` itself keeps running until it next
+        checks ``cancelled``. Python cannot forcibly kill a thread. A ``lock``
+        settles the on_done/on_error race once, so a task that finishes right
+        as its timeout fires calls back exactly one of them, never both.
+        """
         from uniui.display import schedule_after
 
         self.cancel()
         cancelled = threading.Event()
         self._cancelled = cancelled
+        lock = threading.Lock()
+        settled = False
+
+        def settle_once() -> bool:
+            nonlocal settled
+            with lock:
+                if settled:
+                    return False
+                settled = True
+                return True
 
         def worker():
             try:
                 result = fn(cancelled)
-                if not cancelled.is_set() and on_done is not None:
-                    schedule_after(0, lambda: on_done(result))
             except Exception as exc:
-                if not cancelled.is_set() and on_error is not None:
+                if not cancelled.is_set() and settle_once() and on_error is not None:
                     captured = exc
                     schedule_after(0, lambda: on_error(captured))
+                return
+            if not cancelled.is_set() and settle_once() and on_done is not None:
+                schedule_after(0, lambda: on_done(result))
 
         t = threading.Thread(target=worker, daemon=True)
         self._thread = t
         t.start()
+
+        if timeout is not None:
+            def on_timeout():
+                if settle_once():
+                    cancelled.set()
+                    if on_error is not None:
+                        schedule_after(0, lambda: on_error(TimeoutError(
+                            f"Task timed out after {timeout}s"
+                        )))
+
+            timer = threading.Timer(timeout, on_timeout)
+            timer.daemon = True
+            timer.start()
 
     def cancel(self) -> None:
         self._cancelled.set()

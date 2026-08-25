@@ -463,8 +463,7 @@ Backend implementation:
   - [x] Area chart `area`
 - [ ] Support title, legend, axes, units, colors, stacking, and tooltip
   - Title, basic axis gridlines, and per-series colors exist. Legend, units, stacking, and tooltip are all absent — ADR 0001 explicitly lists this as a deliberate consequence of the hand-rolled renderer.
-- [ ] Support empty data, loading, and render error states
-  - Empty-data state is implemented (a "No data" placeholder). `IChart` has no `set_loading`/`set_error` at all, unlike `Table`.
+- [x] Support empty data, loading, and render error states — Done (2026-08-24): `ChartModel` gained `set_loading`/`set_error` mirroring `Table`'s priority order (error beats loading beats empty). Qt's `_ChartWidget.paintEvent` draws the model's message text instead of a hardcoded "No data" literal; Jupyter/Web share a new `render_chart_message_svg()` (`visuals.py`, factored out of the existing empty-state SVG) so all three status messages sit in the exact spot the chart would occupy. Also fixed a pre-existing cross-backend inconsistency along the way: the SVG empty-state used to show the chart's title text instead of "No data" when a title was set, while Qt always showed literal "No data" — now both agree. 15 new tests; verified by disabling `shows_overlay` and confirming 5 tests fail across all three backends before restoring it.
 - [x] Support dark/light theme and redraw on theme switch
 - [x] Support responsive sizing and minimum height
 
@@ -637,7 +636,7 @@ solid.export_stl("part.stl")
 - [x] Establish unified design tokens: colors, spacing, border radius, font sizes, shadows, and status colors — `src/uniui/theme.py` is the explicit single source of truth for all three backends
 - [x] Establish an icon system to avoid each example mixing Unicode icons ad hoc — `src/uniui/icons.py`, one SVG set consumed by all three backends
 - [ ] All data components provide standard Loading, Empty, Error, and Success states
-  - `Table` has real loading/error/empty handling (empty added 2026-08-22); no Success state anywhere, and `Chart`/`Gauge`/`StatCard` have no loading/error/empty handling at all.
+  - `Table` and `Chart` both have real loading/error/empty handling (Table empty added 2026-08-22, Chart loading/error added 2026-08-24); no Success state anywhere, and `Gauge`/`StatCard` still have no loading/error/empty handling at all.
 - [ ] Support high DPI, font scaling, keyboard focus, and sensible Tab order
   - Qt sets high-DPI attributes; no font scaling, keyboard focus, or Tab-order management confirmed anywhere.
 - [ ] Primary components provide consistent compact/standard density modes — the only "compact" concept found is the layout-width breakpoint mode, not a component density/row-height mode

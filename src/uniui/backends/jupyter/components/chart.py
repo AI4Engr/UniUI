@@ -6,7 +6,7 @@ from typing import Dict, List
 from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import IChart
 from ....models.chart import ChartModel
-from ....visuals import render_chart_svg
+from ....visuals import render_chart_message_svg, render_chart_svg
 from ..runtime import get_palette, html, track_themed
 
 class JupyterChartAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IChart):
@@ -24,8 +24,15 @@ class JupyterChartAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         self._model.append_data(x, values); self._render()
     def set_max_points(self, max_points: int) -> None:
         self._model.set_max_points(max_points); self._render()
+    def set_loading(self, loading: bool) -> None:
+        self._model.set_loading(loading); self._render()
+    def set_error(self, message: str) -> None:
+        self._model.set_error(message); self._render()
     def _render(self) -> None:
-        self._native.value = render_chart_svg(*self._model.render_args(), get_palette())
+        if self._model.shows_overlay:
+            self._native.value = render_chart_message_svg(self._model.overlay_text(), get_palette())
+        else:
+            self._native.value = render_chart_svg(*self._model.render_args(), get_palette())
     def apply_theme(self) -> None: self._render()
 
 

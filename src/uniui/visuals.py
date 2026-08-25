@@ -81,6 +81,20 @@ def _chart_points(data: Sequence[float], left: float, top: float, width: float,
     ]
 
 
+def render_chart_message_svg(message: str, palette: Dict[str, str]) -> str:
+    """A centered status message in place of the chart itself.
+
+    Shared by the empty-data case below and by the Jupyter/Web backends'
+    loading and error states, so all three status messages sit in exactly
+    the same spot the chart would otherwise occupy.
+    """
+    return (
+        '<svg class="uniui-chart-svg" viewBox="0 0 640 250">'
+        f'<text x="320" y="125" text-anchor="middle" fill="{palette["text_muted"]}" '
+        f'font-size="14">{escape(message)}</text></svg>'
+    )
+
+
 def render_chart_svg(chart_type: str, title: str, x_values: Sequence[Any],
                      series: Sequence[Dict], palette: Dict[str, str]) -> str:
     chart_type = chart_type if chart_type in CHART_TYPES else "line"
@@ -88,11 +102,7 @@ def render_chart_svg(chart_type: str, title: str, x_values: Sequence[Any],
     left, top, plot_width, plot_height = 46.0, 36.0, 574.0, 170.0
     all_values = [value for item in series for value in item.get("data", [])]
     if not all_values:
-        return (
-            '<svg class="uniui-chart-svg" viewBox="0 0 640 250">'
-            f'<text x="320" y="125" text-anchor="middle" fill="{palette["text_muted"]}" '
-            f'font-size="14">{escape(title or "No data")}</text></svg>'
-        )
+        return render_chart_message_svg("No data", palette)
     low, high = min(all_values), max(all_values)
     if low == high:
         low -= 1.0
@@ -158,5 +168,5 @@ def render_chart_svg(chart_type: str, title: str, x_values: Sequence[Any],
 
 __all__ = [
     "CHART_TYPES", "append_chart_point", "clamp", "normalized_series",
-    "render_chart_svg", "render_gauge_svg",
+    "render_chart_message_svg", "render_chart_svg", "render_gauge_svg",
 ]

@@ -199,6 +199,16 @@ class IChart(IWidget):
     @abstractmethod
     def set_max_points(self, max_points: int) -> None: ...
 
+    @abstractmethod
+    def set_loading(self, loading: bool) -> None:
+        """Show or hide a loading indicator in place of the chart."""
+        ...
+
+    @abstractmethod
+    def set_error(self, message: str) -> None:
+        """Show an error message in place of the chart (empty string clears it)."""
+        ...
+
 
 class IDrawer(IWidget):
     """Animated secondary panel which can be opened without replacing a page."""

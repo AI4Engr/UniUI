@@ -42,11 +42,12 @@ class _ChartWidget(QtWidgets.QWidget):
             painter.setFont(font); painter.setPen(QtGui.QColor(C["text"]))
             painter.drawText(QtCore.QRectF(8, 2, self.width() - 16, 22),
                              QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter, self.title)
-        values = [value for item in self.series for value in item.get("data", [])]
-        if not values:
+        message = self.model.overlay_text()
+        if message:
             painter.setPen(QtGui.QColor(C["text_muted"]))
-            painter.drawText(plot, QtCore.Qt.AlignCenter, "No data")
+            painter.drawText(plot, QtCore.Qt.AlignCenter, message)
             return
+        values = [value for item in self.series for value in item.get("data", [])]
         low, high = min(values), max(values)
         if low == high:
             low -= 1.0; high += 1.0
@@ -109,4 +110,8 @@ class QtChartAdapter(VisibilityMixin, EnableMixin, SizeMixin, IChart):
         self._widget.model.append_data(x, values); self._widget.update()
     def set_max_points(self, max_points: int) -> None:
         self._widget.model.set_max_points(max_points); self._widget.update()
+    def set_loading(self, loading: bool) -> None:
+        self._widget.model.set_loading(loading); self._widget.update()
+    def set_error(self, message: str) -> None:
+        self._widget.model.set_error(message); self._widget.update()
     def apply_theme(self) -> None: self._widget.update()

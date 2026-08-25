@@ -17,9 +17,13 @@ MIN_MAX_POINTS = 2
 
 
 class ChartModel:
-    """Type, title, x values, and series for a chart."""
+    """Type, title, x values, series, and the loading/error/empty overlay
+    decision for a chart."""
 
-    __slots__ = ("chart_type", "title", "x_values", "series", "max_points")
+    __slots__ = (
+        "chart_type", "title", "x_values", "series", "max_points",
+        "_loading", "_error",
+    )
 
     def __init__(self, max_points: int = DEFAULT_MAX_POINTS):
         self.chart_type = DEFAULT_CHART_TYPE
@@ -27,6 +31,8 @@ class ChartModel:
         self.x_values: List[Any] = []
         self.series: List[Dict] = []
         self.max_points = max(MIN_MAX_POINTS, int(max_points))
+        self._loading = False
+        self._error = ""
 
     def set_type(self, chart_type) -> None:
         """Unknown chart types fall back to ``line``."""
@@ -58,3 +64,38 @@ class ChartModel:
     def render_args(self):
         """Positional arguments for :func:`uniui.visuals.render_chart_svg`."""
         return (self.chart_type, self.title, self.x_values, self.series)
+
+    # -- overlay state ---------------------------------------------------
+    def set_loading(self, loading) -> None:
+        self._loading = bool(loading)
+
+    def set_error(self, message) -> None:
+        self._error = str(message) if message else ""
+
+    @property
+    def loading(self) -> bool:
+        return self._loading
+
+    @property
+    def error(self) -> str:
+        return self._error
+
+    @property
+    def has_data(self) -> bool:
+        return any(item.get("data") for item in self.series)
+
+    @property
+    def shows_overlay(self) -> bool:
+        """Whether a status message replaces the chart right now."""
+        return self._loading or bool(self._error) or not self.has_data
+
+    def overlay_text(self) -> str:
+        """Text for the loading/error/empty overlay, or ``""`` when the chart
+        draws. Same priority as Table: error beats loading beats empty."""
+        if self._error:
+            return f"⚠  {self._error}"
+        if self._loading:
+            return "Loading…"
+        if not self.has_data:
+            return "No data"
+        return ""

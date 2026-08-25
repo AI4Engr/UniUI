@@ -176,6 +176,58 @@ class TestChartAppendByName:
         assert chart.series[1]["data"] == [2.0, 0.0]
 
 
+class TestChartOverlay:
+    def test_empty_by_default(self):
+        chart = ChartModel()
+        assert chart.shows_overlay
+        assert chart.overlay_text() == "No data"
+
+    def test_not_empty_once_data_is_set(self):
+        chart = ChartModel()
+        chart.set_data([1], [{"name": "a", "data": [1]}])
+        assert not chart.shows_overlay
+        assert chart.overlay_text() == ""
+
+    def test_series_with_no_points_still_counts_as_empty(self):
+        chart = ChartModel()
+        chart.set_data([], [{"name": "a", "data": []}])
+        assert chart.shows_overlay
+
+    def test_loading_overrides_existing_data(self):
+        chart = ChartModel()
+        chart.set_data([1], [{"name": "a", "data": [1]}])
+        chart.set_loading(True)
+        assert chart.shows_overlay
+        assert chart.overlay_text() == "Loading…"
+
+    def test_error_outranks_loading(self):
+        chart = ChartModel()
+        chart.set_loading(True)
+        chart.set_error("boom")
+        assert chart.overlay_text() == "⚠  boom"
+
+    def test_loading_outranks_empty(self):
+        chart = ChartModel()
+        chart.set_loading(True)
+        assert chart.overlay_text() == "Loading…"
+
+    def test_clearing_loading_and_error_reveals_data(self):
+        chart = ChartModel()
+        chart.set_data([1], [{"name": "a", "data": [1]}])
+        chart.set_loading(True)
+        chart.set_error("boom")
+        chart.set_error("")
+        chart.set_loading(False)
+        assert not chart.shows_overlay
+
+    @pytest.mark.parametrize("blank", ["", None])
+    def test_blank_error_clears(self, blank):
+        chart = ChartModel()
+        chart.set_error("boom")
+        chart.set_error(blank)
+        assert chart.error == ""
+
+
 class TestBackendsShareTheModel:
     """Each backend's adapter must delegate to the model, not keep a copy."""
 
@@ -192,6 +244,45 @@ class TestBackendsShareTheModel:
         model = _chart_model(chart)
         assert model.x_values == [2, 3, 4]
         assert model.series[0]["data"] == [30.0, 40.0, 50.0]
+
+    @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+    def test_chart_set_error_reaches_the_shared_model(self, framework):
+        _skip_unless_available(framework)
+        from uniui import create_factory
+
+        chart = create_factory(framework).create_chart()
+        chart.set_error("network down")
+        model = _chart_model(chart)
+        assert model.error == "network down"
+        assert model.overlay_text() == "⚠  network down"
+
+    @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+    def test_chart_set_loading_reaches_the_shared_model(self, framework):
+        _skip_unless_available(framework)
+        from uniui import create_factory
+
+        chart = create_factory(framework).create_chart()
+        chart.set_data([1], [{"name": "a", "data": [1]}])
+        chart.set_loading(True)
+        model = _chart_model(chart)
+        assert model.loading
+        assert model.overlay_text() == "Loading…"
+
+    @pytest.mark.parametrize("framework", ["jupyter", "web"])
+    def test_chart_error_replaces_the_rendered_svg(self, framework):
+        """Jupyter/Web render to an HTML/SVG string - verify the error
+        message actually reaches it, not just the model."""
+        _skip_unless_available(framework)
+        from uniui import create_factory
+
+        chart = create_factory(framework).create_chart()
+        chart.set_data([1], [{"name": "a", "data": [1]}])
+        chart.set_error("network down")
+        native = chart.get_native()
+        content = getattr(native, "value", None)
+        if content is None:
+            content = native._props.get("innerHTML", "")
+        assert "network down" in content
 
     @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
     def test_gauge_range_rules_are_shared(self, framework):

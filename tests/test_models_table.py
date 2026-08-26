@@ -212,6 +212,107 @@ class TestSelection:
         assert model.selected_row == {"id": 1}
 
 
+class TestPagination:
+    def test_disabled_by_default(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        assert model.page_size is None
+        assert model.page_count == 1
+        assert model.display_rows() == model.sorted_rows()
+
+    def test_page_size_slices_rows(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        assert model.display_rows() == [{"id": 0}, {"id": 1}]
+
+    def test_set_page_navigates(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page(1)
+        assert model.display_rows() == [{"id": 2}, {"id": 3}]
+        model.set_page(2)
+        assert model.display_rows() == [{"id": 4}]
+
+    def test_page_count_rounds_up(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        assert model.page_count == 3
+
+    def test_page_count_is_at_least_one_for_zero_rows(self):
+        model = TableModel()
+        model.set_rows([])
+        model.set_page_size(10)
+        assert model.page_count == 1
+        assert model.display_rows() == []
+
+    def test_set_page_clamps_to_the_last_page(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page(99)
+        assert model.page == 2
+        assert model.display_rows() == [{"id": 4}]
+
+    def test_set_page_clamps_negative_to_zero(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page(-1)
+        assert model.page == 0
+
+    def test_set_page_size_resets_to_the_first_page(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page(2)
+        model.set_page_size(3)
+        assert model.page == 0
+
+    def test_new_rows_reset_to_the_first_page(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page(2)
+        model.set_rows([{"id": i} for i in range(5)])
+        assert model.page == 0
+
+    def test_zero_page_size_disables_pagination(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page_size(0)
+        assert model.page_size is None
+        assert len(model.display_rows()) == 5
+
+    def test_pagination_applies_after_sorting(self):
+        model = TableModel()
+        model.set_columns([{"key": "id"}])
+        model.set_rows([{"id": "c"}, {"id": "a"}, {"id": "b"}])
+        model.set_sort("id")
+        model.set_page_size(2)
+        assert model.display_rows() == [{"id": "a"}, {"id": "b"}]
+
+    def test_changing_sort_resets_to_the_first_page(self):
+        model = TableModel()
+        model.set_columns([{"key": "id"}])
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page(2)
+        model.set_sort("id")
+        assert model.page == 0
+
+    def test_row_at_indexes_into_the_current_page(self):
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        model.set_page(1)
+        assert model.row_at(0) == {"id": 2}
+        assert model.row_at(2) is None, "index 2 is out of range for a 2-row page"
+
+
 class TestSorting:
     def test_unsorted_by_default(self):
         model = TableModel()
@@ -630,6 +731,34 @@ class TestBackendsAgree:
         table.set_columns([{"key": "amount", "label": "Amount", "format": lambda v: f"${v:,.2f}"}])
         table.set_rows([{"amount": 1234.5}])
         assert table._table.rows == [{"amount": "$1,234.50"}]
+
+    def test_qt_set_page_size_reaches_the_rendered_table(self):
+        table = self._qt()  # 2 rows from self.ROWS
+        table.set_page_size(1)
+        assert table._table.rowCount() == 1
+        table.set_page(1)
+        assert table._table.rowCount() == 1
+        assert table._table.item(0, 0).text() == str(self.ROWS[1]["id"])
+
+    def test_jupyter_set_page_size_reaches_the_rendered_table(self):
+        table = self._jupyter()  # 2 rows from self.ROWS
+        table.set_page_size(1)
+        table.set_page(1)
+        html = table._table.value
+        assert html.count("<tr") == 2, "only the header row and one data row must render"
+        assert "Delivered" not in html, "page 0's row must not still be there"
+        assert "mystery" in html, "page 1's row must be the one that renders"
+
+    def test_web_set_page_size_reaches_the_rendered_rows(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebTableAdapter
+
+        table = WebTableAdapter()
+        table.set_columns(COLUMNS)
+        table.set_rows(self.ROWS)
+        table.set_page_size(1)
+        table.set_page(1)
+        assert table._table.rows == [self.ROWS[1]]
 
     def test_web_set_sort_reorders_the_native_rows(self):
         pytest.importorskip("nicegui")

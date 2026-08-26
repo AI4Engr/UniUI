@@ -204,6 +204,32 @@ class TestTableContract(_Common):
         assert tbl.get_selected_row() is None
 
     @pytest.mark.contract
+    def test_set_page_size_slices_the_displayed_rows(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "id"}])
+        tbl.set_rows([{"id": i} for i in range(5)])
+        tbl.set_page_size(2)
+        assert tbl._model.display_rows() == [{"id": 0}, {"id": 1}]
+
+    @pytest.mark.contract
+    def test_set_page_navigates(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "id"}])
+        tbl.set_rows([{"id": i} for i in range(5)])
+        tbl.set_page_size(2)
+        tbl.set_page(2)
+        assert tbl._model.display_rows() == [{"id": 4}]
+
+    @pytest.mark.contract
+    def test_set_page_size_none_disables_pagination(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "id"}])
+        tbl.set_rows([{"id": i} for i in range(5)])
+        tbl.set_page_size(2)
+        tbl.set_page_size(None)
+        assert len(tbl._model.display_rows()) == 5
+
+    @pytest.mark.contract
     def test_set_sort_ascending(self, factory):
         tbl = self.create_widget(factory)
         tbl.set_columns([{"key": "name", "label": "Name", "sortable": True}])

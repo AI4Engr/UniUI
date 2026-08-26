@@ -172,6 +172,14 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         self._render_rows()
         self._sync_sort_indicator()
 
+    def set_page_size(self, size: Optional[int]) -> None:
+        self._model.set_page_size(size)
+        self._render_rows()
+
+    def set_page(self, page: int) -> None:
+        self._model.set_page(page)
+        self._render_rows()
+
     def _render_rows(self) -> None:
         """Update existing ``QTableWidgetItem``s in place instead of
         rebuilding every cell. Rows have no stable identity in the model
@@ -182,7 +190,7 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         removed trailing rows (Qt deletes their items automatically).
         """
         old_row_count = self._table.rowCount()
-        display_rows = self._model.sorted_rows()
+        display_rows = self._model.display_rows()
         columns = self._model.columns
 
         self._table.setRowCount(len(display_rows))

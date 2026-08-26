@@ -130,6 +130,7 @@ class TableModel:
     __slots__ = (
         "_columns", "_rows", "_rows_set", "_loading", "_error",
         "_sort_key", "_sort_reverse", "_selected_row",
+        "_page_size", "_page",
     )
 
     def __init__(self) -> None:
@@ -144,6 +145,9 @@ class TableModel:
         self._selected_row: Optional[Dict] = None
         self._sort_key: Optional[str] = None
         self._sort_reverse = False
+        #: None = pagination disabled (every row displays).
+        self._page_size: Optional[int] = None
+        self._page = 0
 
     # -- columns and rows ------------------------------------------------
     @property
@@ -160,6 +164,7 @@ class TableModel:
     def set_rows(self, rows: Sequence[Dict]) -> None:
         self._rows = list(rows)
         self._rows_set = True
+        self._page = 0
         if self._selected_row is not None and self._selected_row not in self._rows:
             self._selected_row = None
 
@@ -194,12 +199,13 @@ class TableModel:
         """Return the displayed row at ``index``, or ``None`` if out of range.
 
         Every backend reports clicks as an integer index into whatever is
-        currently on screen, which is ``sorted_rows()`` — not necessarily the
-        order ``set_rows()`` was called with. Negative indices are rejected
-        rather than wrapping, because a negative index from a UI event means
+        currently on screen, which is ``display_rows()`` — not necessarily
+        the order ``set_rows()`` was called with, and not necessarily every
+        row if pagination is active. Negative indices are rejected rather
+        than wrapping, because a negative index from a UI event means
         "nothing selected", not "count from the end".
         """
-        rows = self.sorted_rows()
+        rows = self.display_rows()
         if 0 <= index < len(rows):
             return rows[index]
         return None
@@ -223,6 +229,7 @@ class TableModel:
             return
         self._sort_key = key
         self._sort_reverse = bool(reverse)
+        self._page = 0
 
     def toggle_sort(self, key: str) -> None:
         """Cycle a column through ascending, descending, then unsorted."""
@@ -251,6 +258,42 @@ class TableModel:
             return (0, str(value).lower())
 
         return sorted(self._rows, key=sort_value, reverse=self._sort_reverse)
+
+    # -- pagination ----------------------------------------------------
+    @property
+    def page_size(self) -> Optional[int]:
+        return self._page_size
+
+    @property
+    def page(self) -> int:
+        return self._page
+
+    @property
+    def page_count(self) -> int:
+        """Always at least 1, even for zero rows, so a UI can show "Page 1 of 1"."""
+        if not self._page_size:
+            return 1
+        return max(1, -(-len(self.sorted_rows()) // self._page_size))  # ceil div
+
+    def set_page_size(self, size: Optional[int]) -> None:
+        """Rows per page; ``None`` or ``0`` disables pagination (every row displays)."""
+        self._page_size = int(size) if size else None
+        self._page = 0
+
+    def set_page(self, page: int) -> None:
+        """Jump to ``page`` (0-indexed), clamped to ``[0, page_count - 1]``."""
+        self._page = max(0, min(int(page), self.page_count - 1))
+
+    def display_rows(self) -> List[Dict]:
+        """Rows actually on screen: sorted, then sliced to the current page
+        if pagination is active. Every backend renders this, not
+        sorted_rows() directly, once pagination is in play.
+        """
+        rows = self.sorted_rows()
+        if not self._page_size:
+            return rows
+        start = self._page * self._page_size
+        return rows[start:start + self._page_size]
 
     # -- overlay state ---------------------------------------------------
     def set_loading(self, loading: bool) -> None:

@@ -48,14 +48,22 @@ class WebTableAdapter(_WebAdapter, ITable):
             )
         self._table.update()
     def set_rows(self, rows: List[Dict]) -> None:
-        self._model.set_rows(rows); self._table.rows = self._display_rows(); self._table.update()
+        self._model.set_rows(rows); self._table.rows = self._formatted_rows(); self._table.update()
         self._sync_message()
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)
-        self._table.rows = self._display_rows()
+        self._table.rows = self._formatted_rows()
         self._table.update()
-    def _display_rows(self) -> List[Dict]:
-        """sorted_rows(), with any column.format() applied.
+    def set_page_size(self, size: Optional[int]) -> None:
+        self._model.set_page_size(size)
+        self._table.rows = self._formatted_rows()
+        self._table.update()
+    def set_page(self, page: int) -> None:
+        self._model.set_page(page)
+        self._table.rows = self._formatted_rows()
+        self._table.update()
+    def _formatted_rows(self) -> List[Dict]:
+        """display_rows() (sorted, paginated), with any column.format() applied.
 
         Quasar renders straight from these dicts' field values - unlike Qt
         and Jupyter, it never calls Column.text_of() - so a column's format
@@ -70,7 +78,7 @@ class WebTableAdapter(_WebAdapter, ITable):
         column's value out of a click payload) that it's documented here
         rather than solved with position-based click resolution.
         """
-        rows = self._model.sorted_rows()
+        rows = self._model.display_rows()
         formatted = [c for c in self._model.columns if c.source.get("format")]
         if not formatted:
             return rows

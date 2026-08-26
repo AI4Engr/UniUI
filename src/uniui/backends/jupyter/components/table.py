@@ -45,6 +45,14 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         self._model.set_sort(key, reverse)
         self._render()
 
+    def set_page_size(self, size: Optional[int]) -> None:
+        self._model.set_page_size(size)
+        self._render()
+
+    def set_page(self, page: int) -> None:
+        self._model.set_page(page)
+        self._render()
+
     def _header_cell(self, col) -> str:
         label = escape(col.label)
         if not col.sortable:
@@ -62,7 +70,7 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
     def _render(self) -> None:
         headers = "".join(self._header_cell(col) for col in self._model.columns)
         rendered_rows = []
-        for index, row in enumerate(self._model.sorted_rows()):
+        for index, row in enumerate(self._model.display_rows()):
             cells = []
             for col in self._model.columns:
                 kind = col.cell_kind

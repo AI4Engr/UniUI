@@ -113,6 +113,17 @@ class ITable(IWidget):
         """
         ...
 
+    @abstractmethod
+    def set_page_size(self, size: Optional[int]) -> None:
+        """Rows per page. ``None`` (or ``0``) disables pagination — every
+        row displays, sorted but not sliced."""
+        ...
+
+    @abstractmethod
+    def set_page(self, page: int) -> None:
+        """Jump to ``page`` (0-indexed), clamped to the valid range."""
+        ...
+
 
 class ISidebar(IWidget):
     """Navigation sidebar with selectable items and collapse support."""

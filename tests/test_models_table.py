@@ -83,6 +83,38 @@ class TestColumn:
         spec = {"key": "id", "sortable": True}
         assert Column(spec).source is spec
 
+    def test_format_overrides_plain_str_rendering(self):
+        col = Column({"key": "amount", "format": lambda v: f"${v:,.2f}"})
+        assert col.text_of({"amount": 1234.5}) == "$1,234.50"
+
+    def test_format_does_not_change_the_sort_value(self):
+        """Sorting must use the raw value, not the formatted string."""
+        col = Column({"key": "amount", "format": lambda v: f"${v:,.2f}"})
+        assert col.value_of({"amount": 1234.5}) == 1234.5
+
+    def test_format_does_not_run_on_a_missing_cell(self):
+        """A formatter written for a real value has no reason to handle ''."""
+        calls = []
+
+        def fmt(v):
+            calls.append(v)
+            return f"${v}"
+
+        col = Column({"key": "amount", "format": fmt})
+        assert col.text_of({}) == ""
+        assert calls == []
+
+    def test_a_raising_formatter_falls_back_to_the_unformatted_text(self):
+        def bad_format(v):
+            raise ValueError("boom")
+
+        col = Column({"key": "amount", "format": bad_format})
+        assert col.text_of({"amount": 5}) == "5"
+
+    def test_no_format_key_behaves_as_before(self):
+        col = Column({"key": "name"})
+        assert col.text_of({"name": "Alice"}) == "Alice"
+
 
 class TestTableModel:
     def test_starts_empty_and_visible(self):
@@ -504,6 +536,27 @@ class TestBackendsAgree:
         assert table._model.sort_key == "id"
         assert table._model.sorted_rows() == [{"id": "apple"}, {"id": "banana"}]
         assert table._table.value.index("apple") < table._table.value.index("banana")
+
+    def test_qt_format_reaches_the_rendered_cell(self):
+        table = self._qt()
+        table.set_columns([{"key": "amount", "label": "Amount", "format": lambda v: f"${v:,.2f}"}])
+        table.set_rows([{"amount": 1234.5}])
+        assert table._table.item(0, 0).text() == "$1,234.50"
+
+    def test_jupyter_format_reaches_the_rendered_cell(self):
+        table = self._jupyter()
+        table.set_columns([{"key": "amount", "label": "Amount", "format": lambda v: f"${v:,.2f}"}])
+        table.set_rows([{"amount": 1234.5}])
+        assert "$1,234.50" in table._table.value
+
+    def test_web_format_reaches_the_rendered_row(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebTableAdapter
+
+        table = WebTableAdapter()
+        table.set_columns([{"key": "amount", "label": "Amount", "format": lambda v: f"${v:,.2f}"}])
+        table.set_rows([{"amount": 1234.5}])
+        assert table._table.rows == [{"amount": "$1,234.50"}]
 
     def test_web_set_sort_reorders_the_native_rows(self):
         pytest.importorskip("nicegui")

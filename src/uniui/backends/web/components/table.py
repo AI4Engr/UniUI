@@ -48,12 +48,39 @@ class WebTableAdapter(_WebAdapter, ITable):
             )
         self._table.update()
     def set_rows(self, rows: List[Dict]) -> None:
-        self._model.set_rows(rows); self._table.rows = self._model.sorted_rows(); self._table.update()
+        self._model.set_rows(rows); self._table.rows = self._display_rows(); self._table.update()
         self._sync_message()
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)
-        self._table.rows = self._model.sorted_rows()
+        self._table.rows = self._display_rows()
         self._table.update()
+    def _display_rows(self) -> List[Dict]:
+        """sorted_rows(), with any column.format() applied.
+
+        Quasar renders straight from these dicts' field values - unlike Qt
+        and Jupyter, it never calls Column.text_of() - so a column's format
+        callable has to be applied here or it would silently have no effect
+        on this backend.
+
+        Known caveat: the browser's rowClick event reports back whatever
+        dict is in ``self._table.rows``, so on_row_click's payload carries
+        the *formatted* string for a formatted column, not its original
+        value - unlike Qt/Jupyter, which always resolve clicks against the
+        raw model. Narrow enough (only affects code reading a formatted
+        column's value out of a click payload) that it's documented here
+        rather than solved with position-based click resolution.
+        """
+        rows = self._model.sorted_rows()
+        formatted = [c for c in self._model.columns if c.source.get("format")]
+        if not formatted:
+            return rows
+        result = []
+        for row in rows:
+            display = dict(row)
+            for col in formatted:
+                display[col.key] = col.text_of(row)
+            result.append(display)
+        return result
     def set_loading(self, loading: bool) -> None:
         self._model.set_loading(loading); self._sync_message()
     def set_error(self, message: str) -> None:

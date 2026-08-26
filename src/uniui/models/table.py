@@ -93,8 +93,23 @@ class Column:
         return "" if value is None else value
 
     def text_of(self, row: Dict) -> str:
-        """The cell's display text, before any backend-specific escaping."""
-        return str(self.value_of(row))
+        """The cell's display text, before any backend-specific escaping.
+
+        A column may supply a ``{"format": callable}`` in its spec to
+        override the plain ``str(value)`` rendering (e.g. currency, date
+        formatting). It never runs on a missing/blank cell - a formatter
+        written for a real value has no reason to also handle "", and a
+        formatter that raises falls back to the unformatted text rather than
+        breaking the whole table's render.
+        """
+        value = self.value_of(row)
+        formatter = self.source.get("format")
+        if formatter is not None and value != "":
+            try:
+                return str(formatter(value))
+            except Exception:
+                pass
+        return str(value)
 
     def status_of(self, row: Dict) -> str:
         """The semantic status of this row's cell, for status columns."""

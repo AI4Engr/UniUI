@@ -425,3 +425,122 @@ def test_sync_page_title_returns_a_disposable_handle():
     handle.dispose()
     router.push("/home")
     assert titles == []
+
+
+# ---------------------------------------------------------------------------
+# Navigation guards
+# ---------------------------------------------------------------------------
+
+def test_guard_allowing_true_lets_navigation_through():
+    router = Router(Route("/home", _dummy_page, name="home"))
+    router.add_guard(lambda ctx: True)
+    router.push("/home")
+    assert router.current_context.name == "home"
+
+
+def test_guard_allowing_none_lets_navigation_through():
+    router = Router(Route("/home", _dummy_page, name="home"))
+    router.add_guard(lambda ctx: None)
+    router.push("/home")
+    assert router.current_context.name == "home"
+
+
+def test_guard_returning_false_cancels_navigation():
+    router = Router(
+        Route("/home", _dummy_page, name="home"),
+        Route("/admin", _dummy_page, name="admin"),
+    )
+    router.push("/home")
+    router.add_guard(lambda ctx: ctx.name != "admin")
+    router.push("/admin")
+    assert router.current_context.name == "home", "must stay on the current route"
+
+
+def test_guard_returning_a_path_redirects():
+    router = Router(
+        Route("/admin", _dummy_page, name="admin"),
+        Route("/login", _dummy_page, name="login"),
+    )
+    router.add_guard(lambda ctx: "/login" if ctx.name == "admin" else True)
+    router.push("/admin")
+    assert router.current_context.name == "login"
+
+
+def test_guard_redirect_restarts_the_whole_chain_on_the_new_target():
+    """A guard's redirect must itself be guarded: the whole chain restarts
+    against the new target rather than resuming from the next guard - the
+    same pattern vue-router's beforeEach redirect uses."""
+    calls = []
+    router = Router(
+        Route("/admin", _dummy_page, name="admin"),
+        Route("/login", _dummy_page, name="login"),
+    )
+    router.add_guard(lambda ctx: "/login" if ctx.name == "admin" else True)
+    router.add_guard(lambda ctx: (calls.append(ctx.name), True)[-1])
+    router.push("/admin")
+    assert calls == ["login"], "guard 2 must only ever see the resolved target"
+    assert router.current_context.name == "login"
+
+
+def test_guard_redirect_loop_raises_instead_of_hanging():
+    router = Router(
+        Route("/a", _dummy_page, name="a"),
+        Route("/b", _dummy_page, name="b"),
+    )
+    router.add_guard(lambda ctx: "/b" if ctx.name == "a" else "/a")
+    with pytest.raises(RouteNotFoundError):
+        router.push("/a")
+
+
+def test_guard_exception_fails_open(caplog):
+    """A broken guard must not make the app unnavigable."""
+    router = Router(Route("/home", _dummy_page, name="home"))
+
+    def bad_guard(ctx):
+        raise ValueError("boom")
+
+    router.add_guard(bad_guard)
+    with caplog.at_level("ERROR", logger="uniui.events"):
+        router.push("/home")  # must not raise
+
+    assert router.current_context.name == "home"
+    assert "Router.add_guard" in caplog.text
+
+
+def test_guard_dispose_stops_it_from_running():
+    router = Router(
+        Route("/home", _dummy_page, name="home"),
+        Route("/admin", _dummy_page, name="admin"),
+    )
+    handle = router.add_guard(lambda ctx: ctx.name != "admin")
+    handle.dispose()
+    router.push("/admin")
+    assert router.current_context.name == "admin"
+
+
+def test_cancelled_navigation_does_not_notify_subscribers():
+    router = Router(
+        Route("/home", _dummy_page, name="home"),
+        Route("/admin", _dummy_page, name="admin"),
+    )
+    router.push("/home")
+    events = []
+    router.on_navigate(events.append)
+    router.add_guard(lambda ctx: ctx.name != "admin")
+    router.push("/admin")
+    assert events == []
+
+
+def test_redirected_history_entry_replaces_the_blocked_path():
+    """back() after a guard-redirected push() must not land on the blocked path."""
+    router = Router(
+        Route("/x", _dummy_page, name="x"),
+        Route("/admin", _dummy_page, name="admin"),
+        Route("/login", _dummy_page, name="login"),
+    )
+    router.add_guard(lambda ctx: "/login" if ctx.name == "admin" else True)
+    router.push("/x")
+    router.push("/admin")
+    assert router.current_path == "/login"
+    router.back()
+    assert router.current_path == "/x"

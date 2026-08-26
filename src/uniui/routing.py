@@ -127,6 +127,7 @@ class Router:
         self._history: List[str] = []
         self._history_index: int = -1
         self._subscribers: List[Callable[[RouteContext], None]] = []
+        self._guards: List[Callable[[RouteContext], Any]] = []
         self._current_context: Optional[RouteContext] = None
 
     # ------------------------------------------------------------------
@@ -200,36 +201,90 @@ class Router:
                 self._subscribers.remove(fn)
         return Handle(cancel)
 
+    def add_guard(self, fn: Callable[[RouteContext], Any]) -> Handle:
+        """Register a navigation guard, run before a route is entered.
+
+        ``fn(ctx)`` receives the ``RouteContext`` about to be entered and
+        returns:
+          - ``True`` or ``None`` — allow the navigation
+          - ``False`` — cancel it; the router stays on its current route
+          - a path string — redirect there instead (re-resolved and matched
+            like any other navigation, then run back through every guard)
+
+        Guards run in registration order; the first one that doesn't allow
+        wins. A guard that raises is logged and treated as an allow, the
+        same fail-open policy every other callback in this codebase has via
+        ``safe_call`` — a broken guard must not make the app unnavigable.
+        """
+        self._guards.append(fn)
+        def cancel():
+            if fn in self._guards:
+                self._guards.remove(fn)
+        return Handle(cancel)
+
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
 
     def _navigate(self, full_path: str, record: bool = True) -> None:
-        resolved = self._resolve_path(full_path)
-        if resolved != full_path and self._history_index >= 0 \
-                and self._history[self._history_index] == full_path:
-            self._history[self._history_index] = resolved
+        ctx = self._build_context(full_path)
+        ctx = self._run_guards(ctx)
+        if ctx is None:
+            return  # a guard cancelled this navigation
 
+        # Rewrite the history slot once, to wherever resolution (default
+        # route / Route.redirect / a guard's own redirect) actually landed -
+        # so back() doesn't land on a dead intermediate path.
+        if ctx.path != full_path and self._history_index >= 0 \
+                and self._history[self._history_index] == full_path:
+            self._history[self._history_index] = ctx.path
+
+        self._current_context = ctx
+        self._notify(ctx)
+
+    def _build_context(self, full_path: str) -> RouteContext:
+        """Resolve the default route and any ``Route.redirect`` chain, match
+        a route, and build the ``RouteContext`` to notify subscribers with.
+        """
+        resolved = self._resolve_path(full_path)
         path, qs = _split_path_query(resolved)
         query = _parse_query(qs)
         matched_route, params = self._match(path)
         if matched_route is None:
             if self._not_found is not None:
-                ctx = RouteContext(path=resolved, params={}, query=query,
-                                   name="__not_found__", router=self)
-                self._current_context = ctx
-                self._notify(ctx)
-                return
+                return RouteContext(path=resolved, params={}, query=query,
+                                     name="__not_found__", router=self)
             raise RouteNotFoundError(f"No route matches {full_path!r}")
-        ctx = RouteContext(
-            path=resolved,
-            params=params,
-            query=query,
-            name=matched_route.name,
-            router=self,
+        return RouteContext(
+            path=resolved, params=params, query=query,
+            name=matched_route.name, router=self,
         )
-        self._current_context = ctx
-        self._notify(ctx)
+
+    def _run_guards(self, ctx: RouteContext) -> Optional[RouteContext]:
+        """Run every guard against ``ctx``, following string-redirect
+        results to a fresh context and restarting the guard pass each time.
+
+        A guard that raises is logged and treated as an allow (same
+        fail-open policy every other callback in this codebase already has
+        via safe_call) - a broken guard must not make the whole app
+        unnavigable.
+        """
+        hops = 0
+        while True:
+            for guard in list(self._guards):
+                result = safe_call(guard, ctx, backend="core", component="Router", method="add_guard")
+                if result is False:
+                    return None
+                if isinstance(result, str):
+                    hops += 1
+                    if hops > _MAX_REDIRECT_HOPS:
+                        raise RouteNotFoundError(
+                            f"Navigation guard redirect loop detected at {result!r}"
+                        )
+                    ctx = self._build_context(result)
+                    break
+            else:
+                return ctx
 
     def _resolve_path(self, full_path: str) -> str:
         """Follow the default route and any ``Route.redirect`` chain to a

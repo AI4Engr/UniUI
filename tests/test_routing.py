@@ -6,7 +6,7 @@ No backend dependency — these run without Qt, Jupyter, or NiceGUI.
 import pytest
 from uniui.routing import (
     Router, Route, RouteContext, RouteNotFoundError,
-    _compile_pattern, _parse_query, _split_path_query,
+    _compile_pattern, _parse_query, _split_path_query, sync_page_title,
 )
 from uniui.state import Handle
 
@@ -376,3 +376,52 @@ def test_router_initial_path_is_empty():
     router = Router(Route("/home", _dummy_page))
     assert router.current_path == ""
     assert router.current_context is None
+
+
+# ---------------------------------------------------------------------------
+# sync_page_title
+# ---------------------------------------------------------------------------
+
+def test_sync_page_title_uses_the_default_title_case_formatter():
+    router = Router(Route("/user-list", _dummy_page, name="user-list"))
+    titles = []
+    sync_page_title(router, titles.append)
+    router.push("/user-list")
+    assert titles == ["User List"]
+
+
+def test_sync_page_title_fires_on_every_navigation():
+    router = Router(
+        Route("/a", _dummy_page, name="a"),
+        Route("/b", _dummy_page, name="b"),
+    )
+    titles = []
+    sync_page_title(router, titles.append)
+    router.push("/a")
+    router.push("/b")
+    assert titles == ["A", "B"]
+
+
+def test_sync_page_title_not_found_gets_a_readable_default():
+    router = Router(Route("/home", _dummy_page, name="home"), not_found=_dummy_page)
+    titles = []
+    sync_page_title(router, titles.append)
+    router.push("/missing")
+    assert titles == ["Not Found"]
+
+
+def test_sync_page_title_accepts_a_custom_title_fn():
+    router = Router(Route("/users/:id", _dummy_page, name="user-detail"))
+    titles = []
+    sync_page_title(router, titles.append, title_fn=lambda ctx: f"User {ctx.params.get('id')}")
+    router.push("/users/42")
+    assert titles == ["User 42"]
+
+
+def test_sync_page_title_returns_a_disposable_handle():
+    router = Router(Route("/home", _dummy_page, name="home"))
+    titles = []
+    handle = sync_page_title(router, titles.append)
+    handle.dispose()
+    router.push("/home")
+    assert titles == []

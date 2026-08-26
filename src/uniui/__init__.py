@@ -65,7 +65,10 @@ from .state import State, Computed, Handle, TaskRunner, batch
 from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
 
 # Routing
-from .routing import Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu, sync_breadcrumb
+from .routing import (
+    Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu,
+    sync_breadcrumb, sync_page_title,
+)
 
 # Admin component interfaces
 from .components import (
@@ -156,6 +159,7 @@ __all__ = [
     'RouteNotFoundError',
     'NavMenu',
     'sync_breadcrumb',
+    'sync_page_title',
 
     # Admin interfaces
     'ICard',

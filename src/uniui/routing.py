@@ -394,3 +394,29 @@ def sync_breadcrumb(breadcrumb, router: Router,
         breadcrumb.set_items(fn(ctx))
 
     return router.on_navigate(on_navigate)
+
+
+def sync_page_title(router: Router, set_title: Callable[[str], None],
+                    title_fn: Optional[Callable[[RouteContext], str]] = None) -> Handle:
+    """Call ``set_title(text)`` on every navigation, so a page title stays in
+    sync with the current route.
+
+    "Page title" means different native things per backend (a Qt window
+    title, a browser tab title, a Jupyter cell's displayed heading), so this
+    only computes the text and hands it to a caller-supplied setter rather
+    than assuming any one of those.
+
+    title_fn(ctx) -> str computes the title. Defaults to the current route's
+    name, title-cased, or "Not Found" for an unmatched path.
+    """
+    def _default_title(ctx: RouteContext) -> str:
+        if not ctx.name or ctx.name == "__not_found__":
+            return "Not Found"
+        return ctx.name.replace("-", " ").title()
+
+    fn = title_fn or _default_title
+
+    def on_navigate(ctx: RouteContext) -> None:
+        set_title(fn(ctx))
+
+    return router.on_navigate(on_navigate)

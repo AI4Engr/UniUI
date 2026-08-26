@@ -61,7 +61,7 @@ from .core import (
 )
 
 # Reactive state and scheduling
-from .state import State, Computed, Handle, TaskRunner
+from .state import State, Computed, Handle, TaskRunner, batch
 from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
 
 # Routing
@@ -141,6 +141,7 @@ __all__ = [
     'Computed',
     'Handle',
     'TaskRunner',
+    'batch',
     'bind_text',
     'bind_value',
     'bind_items',

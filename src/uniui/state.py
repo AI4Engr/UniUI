@@ -3,7 +3,7 @@ Reactive state layer for UniUI.
 
 Pure Python — no backend dependencies. Works with Qt, Jupyter, and Web.
 """
-from typing import TypeVar, Generic, Callable, List, Optional
+from typing import TypeVar, Generic, Callable, Dict, List, Optional, Tuple
 import logging
 import threading
 
@@ -44,6 +44,47 @@ class Handle:
             self._cancel()
 
 
+#: > 0 while inside a batch() block. Module-level, not per-State: batching is
+#: a UI-thread-only concept, same assumption schedule_after() already makes.
+_batch_depth = 0
+#: id(state) -> (state, value) for State.set() calls made during a batch,
+#: keyed by identity so N sets on the same State during one batch collapse
+#: to its single final value instead of firing N notifications.
+_pending: Dict[int, Tuple["State", object]] = {}
+
+
+class batch:
+    """Context manager: defer State notifications until the outermost
+    ``batch()`` block exits, coalescing repeated ``set()`` calls on the same
+    State into a single notification - "one business operation triggers at
+    most one necessary redraw."
+
+    ``.value`` always reflects the latest write immediately; only the
+    subscriber notification is deferred. A ``Computed`` that depends on a
+    batched State is a subscriber like any other, so it also only recomputes
+    once, at flush time - not once per intermediate ``set()`` call.
+
+    Nested batches are flattened: only the outermost block flushes. If a
+    State is set back to a value that nets out unchanged from before the
+    batch started, subscribers still fire once with that value - batching
+    only removes *redundant intermediate* notifications, not net-zero ones.
+    """
+
+    def __enter__(self) -> "batch":
+        global _batch_depth
+        _batch_depth += 1
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        global _batch_depth
+        _batch_depth -= 1
+        if _batch_depth == 0 and _pending:
+            pending = list(_pending.values())
+            _pending.clear()
+            for instance, value in pending:
+                instance._notify(value)
+
+
 class State(Generic[T]):
     """Mutable reactive value. Subscribers are notified when value changes."""
 
@@ -59,6 +100,13 @@ class State(Generic[T]):
     def set(self, value: T) -> None:
         if value == self._value:
             return
+        self._value = value
+        if _batch_depth > 0:
+            _pending[id(self)] = (self, value)
+            return
+        self._notify(value)
+
+    def _notify(self, value: T) -> None:
         if self._updating:
             raise RuntimeError(
                 "Circular State update detected: a subscriber triggered "
@@ -66,7 +114,6 @@ class State(Generic[T]):
                 "notifying subscribers. Break the cycle in your subscriber "
                 "(e.g. only forward a value when it actually changes)."
             )
-        self._value = value
         self._updating = True
         try:
             for fn in list(self._subscribers):

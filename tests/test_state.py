@@ -3,7 +3,9 @@ Pure-Python unit tests for State[T] and Computed[T].
 
 No backend dependency — these run without Qt, Jupyter, or NiceGUI.
 """
-from uniui.state import State, Computed, Handle
+import pytest
+
+from uniui.state import State, Computed, Handle, batch
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +141,106 @@ def test_state_converging_ping_pong_is_not_flagged_as_circular():
 
     assert a.value == 5
     assert b.value == 5
+
+
+# ---------------------------------------------------------------------------
+# batch()
+# ---------------------------------------------------------------------------
+
+def test_batch_coalesces_multiple_sets_on_the_same_state():
+    s = State(0)
+    received = []
+    s.subscribe(received.append)
+
+    with batch():
+        s.set(1)
+        s.set(2)
+        s.set(3)
+
+    assert received == [3], "only the final value should fire, once"
+
+
+def test_value_is_current_immediately_even_inside_a_batch():
+    """.value always reflects the latest write - only notification defers."""
+    s = State(0)
+    with batch():
+        s.set(1)
+        assert s.value == 1
+
+
+def test_no_notification_without_a_batch_is_unaffected():
+    s = State(0)
+    received = []
+    s.subscribe(received.append)
+    s.set(1)
+    s.set(2)
+    assert received == [1, 2], "outside a batch, every set() still fires immediately"
+
+
+def test_batch_coalesces_across_multiple_independent_states():
+    a, b = State(0), State(0)
+    seen = []
+    a.subscribe(lambda v: seen.append(("a", v)))
+    b.subscribe(lambda v: seen.append(("b", v)))
+
+    with batch():
+        a.set(1)
+        b.set(1)
+        a.set(2)
+
+    assert seen == [("a", 2), ("b", 1)]
+
+
+def test_nested_batches_only_flush_once_at_the_outermost_exit():
+    s = State(0)
+    received = []
+    s.subscribe(received.append)
+
+    with batch():
+        s.set(1)
+        with batch():
+            s.set(2)
+        assert received == [], "inner batch exiting must not flush yet"
+        s.set(3)
+
+    assert received == [3]
+
+
+def test_batch_still_flushes_after_an_exception():
+    """Values were already written; subscribers must still learn the truth."""
+    s = State(0)
+    received = []
+    s.subscribe(received.append)
+
+    with pytest.raises(ValueError):
+        with batch():
+            s.set(1)
+            raise ValueError("boom")
+
+    assert received == [1]
+    assert s.value == 1
+
+
+def test_batch_defers_computed_recomputation_to_the_flush():
+    """A Computed depending on a batched State must not recompute once per
+    intermediate set() - it's a subscriber like any other."""
+    s = State(0)
+    recompute_count = []
+
+    def derive():
+        recompute_count.append(s.value)
+        return s.value * 10
+
+    c = Computed(derive, s)
+    recompute_count.clear()  # drop the constructor's initial call
+
+    with batch():
+        s.set(1)
+        s.set(2)
+        assert c.value == 0, "Computed must not have recomputed mid-batch yet"
+
+    assert c.value == 20
+    assert recompute_count == [2], "must recompute exactly once, with the final value"
 
 
 # ---------------------------------------------------------------------------

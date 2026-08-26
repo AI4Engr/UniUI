@@ -378,8 +378,8 @@ stat_card.bind_value(active_count)
 
 The first version uses "in-process routing": UniUI maintains the current path and history; business code does not touch native navigation APIs in Qt or Jupyter.
 
-- [ ] Add `Router`, `Route`, `RouterView`, and `Link` public interfaces
-  - `Router`/`Route`/`RouterView` all exist and are exported. `Link` doesn't exist anywhere.
+- [x] Add `Router`, `Route`, `RouterView`, and `Link` public interfaces
+  - Done (2026-08-24): added `Link(router, label, path=None, name=None, params=None, query=None, factory=None)` in `routing.py`, exported from `uniui`. UniUI has no browser anchor/native-navigation concept to hook a real hyperlink into, so it's a `Button` wired to `push()`/`push_named()` instead — same "compose from existing primitives" shape as `NavMenu.from_router`/`sync_breadcrumb`, not a new low-level widget interface. Requires exactly one of `path=` (a literal path) or `name=` (a registered route name, resolved like `push_named`). 6 new tests parametrized across Qt/Jupyter/Web (clicking actually navigates, on both the literal-path and named-route forms); verified by removing the click handler's navigation call and confirming all 6 backend-parametrized cases fail before restoring it.
 - [x] Support static paths: `/dashboard`, `/users`
 - [x] Support path parameters: `/users/:id`
 - [x] Support query parameters: `/users?page=2&status=active`

@@ -5,10 +5,28 @@ No backend dependency — these run without Qt, Jupyter, or NiceGUI.
 """
 import pytest
 from uniui.routing import (
-    Router, Route, RouteContext, RouteNotFoundError,
+    Link, Router, Route, RouteContext, RouteNotFoundError,
     _compile_pattern, _parse_query, _split_path_query, sync_page_title,
 )
 from uniui.state import Handle
+
+
+def _skip_unless_available(framework):
+    module = {"qt": "PySide2", "jupyter": "ipywidgets", "web": "nicegui"}[framework]
+    pytest.importorskip(module)
+
+
+def _simulate_click(button):
+    """Trigger a Button's click callback via its native widget, backend-agnostically."""
+    native = button.get_native()
+    if hasattr(native, "animateClick"):
+        native.animateClick(0)
+    elif hasattr(native, "_callback") and callable(native._callback):
+        native._callback()
+    elif hasattr(native, "click") and callable(native.click):
+        native.click()  # ipywidgets Button: calls registered handlers as handler(self)
+    else:
+        pytest.skip("Cannot trigger click on this backend's native widget")
 
 
 # ---------------------------------------------------------------------------
@@ -544,3 +562,48 @@ def test_redirected_history_entry_replaces_the_blocked_path():
     assert router.current_path == "/login"
     router.back()
     assert router.current_path == "/x"
+
+
+# ---------------------------------------------------------------------------
+# Link — the one exception to this file's "no backend dependency" rule,
+# since a Link is a real clickable widget, not pure routing logic.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+def test_link_with_path_navigates_on_click(framework):
+    _skip_unless_available(framework)
+    from uniui import create_factory
+
+    router = Router(Route("/users", _dummy_page, name="users"))
+    link = Link(router, "Users", path="/users", factory=create_factory(framework))
+    _simulate_click(link)
+    assert router.current_context.name == "users"
+
+
+@pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+def test_link_with_name_navigates_via_push_named(framework):
+    _skip_unless_available(framework)
+    from uniui import create_factory
+
+    router = Router(Route("/users/:id", _dummy_page, name="user-detail"))
+    link = Link(router, "Alice", name="user-detail", params={"id": 42},
+                factory=create_factory(framework))
+    _simulate_click(link)
+    assert router.current_context.params == {"id": "42"}
+
+
+def test_link_sets_the_button_label():
+    pytest.importorskip("PySide2")
+    from uniui import create_factory
+
+    router = Router(Route("/users", _dummy_page, name="users"))
+    link = Link(router, "Users", path="/users", factory=create_factory("qt"))
+    assert link.get_text() == "Users"
+
+
+def test_link_requires_exactly_one_of_path_or_name():
+    router = Router(Route("/users", _dummy_page, name="users"))
+    with pytest.raises(ValueError):
+        Link(router, "Users")
+    with pytest.raises(ValueError):
+        Link(router, "Users", path="/users", name="users")

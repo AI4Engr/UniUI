@@ -66,7 +66,7 @@ from .state import bind_text, bind_value, bind_items, bind_enabled, bind_visible
 
 # Routing
 from .routing import (
-    Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu,
+    Router, Route, RouteContext, RouterView, RouteNotFoundError, NavMenu, Link,
     sync_breadcrumb, sync_page_title,
 )
 
@@ -158,6 +158,7 @@ __all__ = [
     'RouterView',
     'RouteNotFoundError',
     'NavMenu',
+    'Link',
     'sync_breadcrumb',
     'sync_page_title',
 

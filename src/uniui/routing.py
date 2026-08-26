@@ -432,6 +432,35 @@ class NavMenu:
         return sidebar
 
 
+def Link(router: Router, label: str, path: Optional[str] = None,
+        name: Optional[str] = None, params: Optional[Dict] = None,
+        query: Optional[Dict] = None, factory=None) -> Any:
+    """A clickable widget that navigates via ``router`` instead of a native
+    hyperlink - UniUI has no browser anchor/navigation model to hook into,
+    so this is a Button wired to ``push()``/``push_named()`` instead.
+
+    Provide exactly one of ``path`` (a literal path, e.g. ``"/users"``) or
+    ``name`` (a registered route name, resolved like ``push_named`` with the
+    given ``params``/``query``).
+    """
+    if (path is None) == (name is None):
+        raise ValueError("Link() needs exactly one of path= or name=")
+    if factory is None:
+        from uniui import _get_factory
+        factory = _get_factory()
+    button = factory.create_button()
+    button.set_text(label)
+
+    def on_click() -> None:
+        if path is not None:
+            router.push(path)
+        else:
+            router.push_named(name, params=params, query=query)
+
+    button.connect(on_click)
+    return button
+
+
 def sync_breadcrumb(breadcrumb, router: Router,
                     trail_fn: Optional[Callable[[RouteContext], List[Dict]]] = None) -> Handle:
     """Wire a Breadcrumb to a Router so it updates on every navigation.

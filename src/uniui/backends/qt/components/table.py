@@ -241,8 +241,12 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
                 self._row_click_cb = None
         return Handle(cancel)
 
+    def get_selected_row(self):
+        return self._model.selected_row
+
     def _on_cell_clicked(self, row: int, col: int) -> None:
         clicked = self._model.row_at(row)
+        self._model.select_row(clicked)
         if self._row_click_cb and clicked is not None:
             safe_call(self._row_click_cb, clicked, backend="qt", component="Table", method="on_row_click")
 

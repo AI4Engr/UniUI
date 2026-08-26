@@ -199,6 +199,11 @@ class TestTableContract(_Common):
         assert tbl._row_click_cb is None
 
     @pytest.mark.contract
+    def test_get_selected_row_starts_as_none(self, factory):
+        tbl = self.create_widget(factory)
+        assert tbl.get_selected_row() is None
+
+    @pytest.mark.contract
     def test_set_sort_ascending(self, factory):
         tbl = self.create_widget(factory)
         tbl.set_columns([{"key": "name", "label": "Name", "sortable": True}])

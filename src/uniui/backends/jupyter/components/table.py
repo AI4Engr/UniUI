@@ -114,9 +114,14 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
                 self._row_click_cb = None
         return Handle(cancel)
 
+    def get_selected_row(self):
+        return self._model.selected_row
+
     def _on_bridge(self, change) -> None:
         index = int(change["new"])
         clicked = self._model.row_at(index)
+        if clicked is not None:
+            self._model.select_row(clicked)
         if clicked is not None and self._row_click_cb:
             safe_call(self._row_click_cb, clicked, backend="jupyter", component="Table", method="on_row_click")
         if index != -1:

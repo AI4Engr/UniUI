@@ -96,11 +96,15 @@ class WebTableAdapter(_WebAdapter, ITable):
             if self._row_click_cb is fn:
                 self._row_click_cb = None
         return Handle(cancel)
+    def get_selected_row(self):
+        return self._model.selected_row
     def _on_row_event(self, event) -> None:
         args = getattr(event, "args", None)
         row = args.get("row") if isinstance(args, dict) else None
         if row is None and isinstance(args, (list, tuple)) and args:
             row = args[-1]
+        if isinstance(row, dict):
+            self._model.select_row(row)
         if self._row_click_cb and isinstance(row, dict):
             safe_call(self._row_click_cb, row, backend="web", component="Table", method="on_row_click")
 

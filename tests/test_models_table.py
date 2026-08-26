@@ -171,6 +171,47 @@ class TestTableModel:
         assert TableModel().row_at(0) is None
 
 
+class TestSelection:
+    def test_nothing_selected_by_default(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}])
+        assert model.selected_row is None
+
+    def test_select_row(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}, {"id": 2}])
+        model.select_row({"id": 2})
+        assert model.selected_row == {"id": 2}
+
+    def test_select_row_none_clears_it(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}])
+        model.select_row({"id": 1})
+        model.select_row(None)
+        assert model.selected_row is None
+
+    def test_selecting_a_different_row_replaces_the_previous_one(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}, {"id": 2}])
+        model.select_row({"id": 1})
+        model.select_row({"id": 2})
+        assert model.selected_row == {"id": 2}
+
+    def test_set_rows_clears_a_selection_that_no_longer_exists(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}])
+        model.select_row({"id": 1})
+        model.set_rows([{"id": 2}])
+        assert model.selected_row is None
+
+    def test_set_rows_keeps_a_selection_still_present_in_the_new_data(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}, {"id": 2}])
+        model.select_row({"id": 1})
+        model.set_rows([{"id": 1}, {"id": 3}])
+        assert model.selected_row == {"id": 1}
+
+
 class TestSorting:
     def test_unsorted_by_default(self):
         model = TableModel()
@@ -472,6 +513,38 @@ class TestBackendsAgree:
         table._on_bridge({"new": 1})
         table._on_bridge({"new": 99})
         assert seen == [self.ROWS[1]]
+
+    def test_qt_clicking_a_row_selects_it(self):
+        table = self._qt()
+        assert table.get_selected_row() is None
+        table._on_cell_clicked(1, 0)
+        assert table.get_selected_row() == self.ROWS[1]
+
+    def test_qt_clicking_out_of_range_does_not_select_anything(self):
+        table = self._qt()
+        table._on_cell_clicked(99, 0)
+        assert table.get_selected_row() is None
+
+    def test_jupyter_clicking_a_row_selects_it(self):
+        table = self._jupyter()
+        assert table.get_selected_row() is None
+        table._on_bridge({"new": 1})
+        assert table.get_selected_row() == self.ROWS[1]
+
+    def test_web_clicking_a_row_selects_it(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebTableAdapter
+
+        table = WebTableAdapter()
+        table.set_columns(COLUMNS)
+        table.set_rows(self.ROWS)
+        assert table.get_selected_row() is None
+
+        class Event:
+            args = {"row": self.ROWS[1]}
+
+        table._on_row_event(Event())
+        assert table.get_selected_row() == self.ROWS[1]
 
     def test_qt_header_click_sorts_and_updates_indicator(self):
         from PySide2 import QtCore

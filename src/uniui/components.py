@@ -103,6 +103,16 @@ class ITable(IWidget):
         """
         ...
 
+    @abstractmethod
+    def get_selected_row(self) -> Optional[Dict]:
+        """The currently selected row, or ``None`` if nothing is selected.
+
+        A row becomes selected when the user clicks it (same click that
+        fires ``on_row_click``) and stays selected until a different row is
+        clicked or ``set_rows()`` drops it from the data.
+        """
+        ...
+
 
 class ISidebar(IWidget):
     """Navigation sidebar with selectable items and collapse support."""

@@ -129,7 +129,7 @@ class TableModel:
 
     __slots__ = (
         "_columns", "_rows", "_rows_set", "_loading", "_error",
-        "_sort_key", "_sort_reverse",
+        "_sort_key", "_sort_reverse", "_selected_row",
     )
 
     def __init__(self) -> None:
@@ -141,6 +141,7 @@ class TableModel:
         self._rows_set = False
         self._loading = False
         self._error = ""
+        self._selected_row: Optional[Dict] = None
         self._sort_key: Optional[str] = None
         self._sort_reverse = False
 
@@ -159,6 +160,23 @@ class TableModel:
     def set_rows(self, rows: Sequence[Dict]) -> None:
         self._rows = list(rows)
         self._rows_set = True
+        if self._selected_row is not None and self._selected_row not in self._rows:
+            self._selected_row = None
+
+    # -- selection ---------------------------------------------------------
+    def select_row(self, row: Optional[Dict]) -> None:
+        """Mark ``row`` as selected, or clear the selection with ``None``.
+
+        Rows have no stable identity in this model (see the module
+        docstring), so selection is by value: a later ``set_rows()`` that no
+        longer contains an equal row clears it automatically rather than
+        leaving a stale selection pointing at data that's gone.
+        """
+        self._selected_row = row
+
+    @property
+    def selected_row(self) -> Optional[Dict]:
+        return self._selected_row
 
     @property
     def has_status_column(self) -> bool:

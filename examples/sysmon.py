@@ -203,7 +203,6 @@ def create_sysmon_ui(framework="auto"):
 
     toggle_btn.connect(on_toggle)
     theme_btn.connect(on_theme)
-    on_toggle()
 
     return layout
 

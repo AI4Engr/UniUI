@@ -185,9 +185,18 @@ def show(native, title, width, height, set_refresh_root=None, stylesheet=None) -
         # Accept either a QLayout or a QWidget as the root container
         if isinstance(native, (QLayout, QWidget)):
             app = QApplication.instance()
-            _app_is_ours = app is None
-            if _app_is_ours:
+            if app is None:
                 app = QApplication(sys.argv)
+                app._uniui_owns_app = True
+            # The Qt factory (use("qt")/create_factory("qt")) typically
+            # creates the QApplication before any widget is ever shown, so
+            # by this point app is never None even in the plain, unembedded
+            # case - checking that would misidentify every normal standalone
+            # script as "embedded in a host app" and skip exec_() below.
+            # _uniui_owns_app is stamped once, on the instance, wherever
+            # UniUI first created it (here or in the factory), so it stays
+            # correct regardless of construction order.
+            _app_is_ours = getattr(app, "_uniui_owns_app", False)
 
             # Set application-wide font
             font = QFont(T["font_family"], T["font_size"])
@@ -238,9 +247,10 @@ def show_forced(container, title="Qt App", width=500, height=400) -> None:
     from PySide2.QtWidgets import QWidget, QApplication
 
     app = QApplication.instance()
-    _app_is_ours = app is None
-    if _app_is_ours:
+    if app is None:
         app = QApplication(sys.argv)
+        app._uniui_owns_app = True
+    _app_is_ours = getattr(app, "_uniui_owns_app", False)
 
     widget = QWidget()
     widget.setLayout(container.get_native())

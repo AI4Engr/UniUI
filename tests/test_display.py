@@ -53,6 +53,15 @@ def test_qt_show_skips_event_loop_when_app_already_exists(monkeypatch):
     create this QApplication" — the pytest heuristic happens to mask this in
     every other test in this file, so it's hidden here via monkeypatch to
     exercise the real ownership-check path.
+
+    Ownership is now tracked via a `_uniui_owns_app` flag stamped onto the
+    QApplication instance wherever UniUI first creates one (the Qt factory
+    usually gets there before show() ever runs), not by asking "is
+    QApplication.instance() None right now" — that would call every
+    standalone script's own app "a host's", since the factory already
+    created it. This test forces that flag off to simulate a genuine
+    host-created app, since in this shared test process the existing
+    QApplication may well already be UniUI's own from an earlier test.
     """
     pytest.importorskip("PySide2")
     import sys as _sys
@@ -63,12 +72,45 @@ def test_qt_show_skips_event_loop_when_app_already_exists(monkeypatch):
     exec_calls = []
     monkeypatch.setattr(app, "exec_", lambda: exec_calls.append(1))
     monkeypatch.delitem(_sys.modules, "pytest", raising=False)
+    # Simulate a genuine host app: this QApplication must not be marked as
+    # UniUI's own, even though in this shared test process it may actually
+    # have been created (and stamped) by an earlier test's factory setup.
+    monkeypatch.setattr(app, "_uniui_owns_app", False, raising=False)
 
     try:
         assert display.UniversalDisplay._show_qt(
             widget, "Embedded", 400, 300, stylesheet=""
         ) is True
         assert exec_calls == []
+    finally:
+        widget.close()
+
+
+def test_qt_show_enters_event_loop_when_the_factory_created_the_app(monkeypatch):
+    """Regression test for the real-world case this fix broke: a normal
+    standalone script calls use("qt")/create_factory("qt") - which creates
+    the QApplication as a side effect, before any window is ever shown -
+    then later calls show_ui(). QApplication.instance() is never None by
+    that point, but nothing else is going to run the event loop, so exec_()
+    must still fire. Without _uniui_owns_app being stamped by the factory
+    itself, `python examples/admin_demo.py` built its whole UI, called
+    show(), and exited immediately with no error and no visible window.
+    """
+    pytest.importorskip("PySide2")
+    import sys as _sys
+    from PySide2.QtWidgets import QWidget
+
+    factory = create_factory("qt")  # creates + stamps the QApplication
+    widget = QWidget()
+    exec_calls = []
+    monkeypatch.setattr(factory.app, "exec_", lambda: exec_calls.append(1))
+    monkeypatch.delitem(_sys.modules, "pytest", raising=False)
+
+    try:
+        assert display.UniversalDisplay._show_qt(
+            widget, "Standalone", 400, 300, stylesheet=""
+        ) is True
+        assert exec_calls == [1]
     finally:
         widget.close()
 

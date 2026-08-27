@@ -47,10 +47,15 @@ class _BaseQtWidgetFactory(IWidgetFactory):
             if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):
                 QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 
-        # Ensure QApplication has been created
+        # Ensure QApplication has been created. Stamped with _uniui_owns_app
+        # so display.show() can later tell "UniUI created this app" from "a
+        # host app already owned one" even though by the time show() runs,
+        # QApplication.instance() is never None either way - the factory
+        # always creates it first.
         app = QApplication.instance()
         if app is None:
             self.app = QApplication(sys.argv)
+            self.app._uniui_owns_app = True
         else:
             self.app = app
 

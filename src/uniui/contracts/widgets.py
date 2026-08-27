@@ -643,6 +643,10 @@ class IWidgetFactory(ABC):
         """Create a label/value metric list (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("MetricList not supported on this platform")
 
+    def createBadge(self) -> "IBadge":
+        """Create a status badge/tag (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Badge not supported on this platform")
+
     def createTable(self) -> "ITable":
         """Create a tabular data table (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Table not supported on this platform")
@@ -700,6 +704,7 @@ _SNAKE_ALIASES = {
     "createCard":       "create_card",
     "createStatCard":   "create_stat_card",
     "createMetricList": "create_metric_list",
+    "createBadge":      "create_badge",
     "createTable":      "create_table",
     "createSidebar":    "create_sidebar",
     "createAppShell":   "create_app_shell",

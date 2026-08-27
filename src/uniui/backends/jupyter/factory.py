@@ -7,14 +7,14 @@ rather than in the root ``jupyter_components`` compatibility module.
 from __future__ import annotations
 
 from ...components import (
-    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
 from .components import (
-    JupyterAppShellAdapter, JupyterBreadcrumbAdapter, JupyterCardAdapter,
-    JupyterChartAdapter, JupyterDrawerAdapter, JupyterGaugeAdapter,
-    JupyterMetricListAdapter, JupyterSidebarAdapter, JupyterStatCardAdapter,
-    JupyterTableAdapter,
+    JupyterAppShellAdapter, JupyterBadgeAdapter, JupyterBreadcrumbAdapter,
+    JupyterCardAdapter, JupyterChartAdapter, JupyterDrawerAdapter,
+    JupyterGaugeAdapter, JupyterMetricListAdapter, JupyterSidebarAdapter,
+    JupyterStatCardAdapter, JupyterTableAdapter,
 )
 from .primitives import _BaseJupyterWidgetFactory
 
@@ -25,6 +25,7 @@ class JupyterWidgetFactory(_BaseJupyterWidgetFactory):
     def createCard(self)       -> ICard:       return JupyterCardAdapter()
     def createStatCard(self)   -> IStatCard:   return JupyterStatCardAdapter()
     def createMetricList(self) -> IMetricList: return JupyterMetricListAdapter()
+    def createBadge(self)      -> IBadge:      return JupyterBadgeAdapter()
     def createTable(self)      -> ITable:      return JupyterTableAdapter()
     def createSidebar(self)    -> ISidebar:    return JupyterSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return JupyterAppShellAdapter()

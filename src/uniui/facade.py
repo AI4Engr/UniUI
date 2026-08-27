@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from .backends.registry import _create_factory, _get_factory
 from .components import (
-    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
 from .core import (
@@ -204,6 +204,15 @@ def MetricList(items=None) -> IMetricList:
     if items is not None:
         ml.set_items(items)
     return ml
+
+
+def Badge(text: str = "", status: str = "neutral") -> IBadge:
+    """Create a small status pill."""
+    badge = _get_factory().create_badge()
+    if text:
+        badge.set_text(text)
+    badge.set_status(status)
+    return badge
 
 
 def Table(columns=None, rows=None) -> ITable:

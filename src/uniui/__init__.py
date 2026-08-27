@@ -72,7 +72,7 @@ from .routing import (
 
 # Admin component interfaces
 from .components import (
-    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
 
@@ -99,7 +99,7 @@ from .backends.registry import (
 
 # Convenience constructors and the legacy facade class
 from .facade import (
-    AppShell, Breadcrumb, Button, Card, Chart, Column, ComboBox, Drawer,
+    AppShell, Badge, Breadcrumb, Button, Card, Chart, Column, ComboBox, Drawer,
     Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit, MetricList,
     Overlay, Row, ScrollView, Sidebar, SplitPane, StatCard, Table, TabWidget,
     TextArea, UniUI, VBox, Wrap, Grid,
@@ -129,6 +129,7 @@ OVERLAY = 'overlay'
 CARD = 'card'
 STAT_CARD = 'stat_card'
 METRIC_LIST = 'metric_list'
+BADGE = 'badge'
 TABLE = 'table'
 SIDEBAR = 'sidebar'
 APP_SHELL = 'app_shell'
@@ -166,6 +167,7 @@ __all__ = [
     'ICard',
     'IStatCard',
     'IMetricList',
+    'IBadge',
     'ITable',
     'ISidebar',
     'IAppShell',
@@ -193,6 +195,7 @@ __all__ = [
     'Card',
     'StatCard',
     'MetricList',
+    'Badge',
     'Table',
     'Sidebar',
     'AppShell',
@@ -216,7 +219,7 @@ __all__ = [
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
-    'CARD', 'STAT_CARD', 'METRIC_LIST', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
+    'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
 
     # Framework selection

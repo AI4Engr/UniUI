@@ -21,13 +21,13 @@ longer defines it.
 from __future__ import annotations
 
 from ...components import (
-    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
 from .components import (
-    QtAppShellAdapter, QtBreadcrumbAdapter, QtCardAdapter, QtChartAdapter,
-    QtDrawerAdapter, QtGaugeAdapter, QtMetricListAdapter, QtSidebarAdapter,
-    QtStatCardAdapter, QtTableAdapter,
+    QtAppShellAdapter, QtBadgeAdapter, QtBreadcrumbAdapter, QtCardAdapter,
+    QtChartAdapter, QtDrawerAdapter, QtGaugeAdapter, QtMetricListAdapter,
+    QtSidebarAdapter, QtStatCardAdapter, QtTableAdapter,
 )
 from .primitives import _BaseQtWidgetFactory
 
@@ -38,6 +38,7 @@ class QtWidgetFactory(_BaseQtWidgetFactory):
     def createCard(self)       -> ICard:       return QtCardAdapter()
     def createStatCard(self)   -> IStatCard:   return QtStatCardAdapter()
     def createMetricList(self) -> IMetricList: return QtMetricListAdapter()
+    def createBadge(self)      -> IBadge:      return QtBadgeAdapter()
     def createTable(self)      -> ITable:      return QtTableAdapter()
     def createSidebar(self)    -> ISidebar:    return QtSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return QtAppShellAdapter()

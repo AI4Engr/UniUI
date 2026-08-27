@@ -63,6 +63,20 @@ class IMetricList(IWidget):
         ...
 
 
+class IBadge(IWidget):
+    """Small inline status pill, reusing the same semantic status vocabulary
+    as Table's status column (see uniui.models.status)."""
+
+    @abstractmethod
+    def set_text(self, text: str) -> None: ...
+
+    @abstractmethod
+    def set_status(self, status: str) -> None:
+        """Any raw value; classified via models.status.classify_status
+        (falls back to 'neutral' for anything unrecognized)."""
+        ...
+
+
 class ITable(IWidget):
     """Tabular data display with columns, rows, loading and error states."""
 

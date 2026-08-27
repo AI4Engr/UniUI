@@ -5,6 +5,7 @@ re-exported here (and by ``uniui.qt_components``) because tests and the
 examples reach for them.
 """
 from .app_shell import QtAppShellAdapter, _ResponsiveShellWidget
+from .badge import QtBadgeAdapter
 from .breadcrumb import QtBreadcrumbAdapter, _breadcrumb_button_style
 from .card import QtCardAdapter
 from .chart import QtChartAdapter, _ChartWidget
@@ -22,6 +23,7 @@ from .table import (
 
 __all__ = [
     "QtAppShellAdapter",
+    "QtBadgeAdapter",
     "QtBreadcrumbAdapter",
     "QtCardAdapter",
     "QtChartAdapter",

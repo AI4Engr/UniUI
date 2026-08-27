@@ -1,5 +1,6 @@
 """Web Admin components, one module per component."""
 from .app_shell import WebAppShellAdapter
+from .badge import WebBadgeAdapter
 from .breadcrumb import WebBreadcrumbAdapter
 from .card import WebCardAdapter
 from .chart import WebChartAdapter
@@ -12,6 +13,7 @@ from .table import WebTableAdapter
 
 __all__ = [
     "WebAppShellAdapter",
+    "WebBadgeAdapter",
     "WebBreadcrumbAdapter",
     "WebCardAdapter",
     "WebChartAdapter",

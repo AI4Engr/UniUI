@@ -963,6 +963,7 @@ def create_admin_ui(framework="auto", debug=False):
     header.set_spec(LayoutSpec(gap=8))
     logo = f.create_label(); logo.set_text("U"); _add_class(logo, "uniui-demo-logo-mark")
     product = f.create_label(); product.set_text("UniUI Admin"); _add_class(product, "uniui-demo-product")
+    beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
     back = f.create_button()
     forward = f.create_button()
     back.set_text(""); forward.set_text("")
@@ -988,6 +989,7 @@ def create_admin_ui(framework="auto", debug=False):
     _set_icon_class(theme_button, "dark_mode")
     header.add_item(logo)
     header.add_item(product)
+    header.add_item(beta_badge)
     header.add_item(back)
     header.add_item(forward)
     header.add_item_with_spec(breadcrumb, LayoutItem(breadcrumb, grow=1))
@@ -996,13 +998,15 @@ def create_admin_ui(framework="auto", debug=False):
     header.add_item(avatar)
 
     sidebar = f.create_sidebar()
+    sidebar.add_group("Workspace")
     for key, label, icon in (
         ("dashboard", "Dashboard", "dashboard"),
         ("users", "Users", "users"),
         ("components", "Components", "components"),
-        ("settings", "Settings", "settings"),
     ):
         sidebar.add_item(key, label, icon)
+    sidebar.add_group("Admin")
+    sidebar.add_item("settings", "Settings", "settings")
     sidebar.on_select(router.push_named)
     router.on_navigate(lambda ctx: sidebar.set_active(ctx.name)
                        if ctx.name and ctx.name != "__not_found__" else None)
@@ -1172,6 +1176,9 @@ def main():
     logo.setProperty("productName", "1")
     hl.addWidget(logo)
 
+    beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
+    hl.addWidget(beta_badge.get_native())
+
     sep = QtWidgets.QFrame()
     sep.setProperty("headerSeparator", "1")
     sep.setFrameShape(QtWidgets.QFrame.VLine)
@@ -1229,13 +1236,15 @@ def main():
 
     # ── Sidebar + content ─────────────────────────────────────────────────────
     sidebar = f.create_sidebar()
+    sidebar.add_group("Workspace")
     for key, label, icon in (
         ("dashboard", "Dashboard", "dashboard"),
         ("users", "Users", "users"),
         ("components", "Components", "components"),
-        ("settings", "Settings", "settings"),
     ):
         sidebar.add_item(key, label, icon)
+    sidebar.add_group("Admin")
+    sidebar.add_item("settings", "Settings", "settings")
     sidebar.on_select(router.push_named)
 
     def _sync_sidebar(ctx):

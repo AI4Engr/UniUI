@@ -14,7 +14,7 @@ detour through this module. No production code imports it.
 from __future__ import annotations
 
 from uniui.components import (
-    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
 from uniui.backends.jupyter.factory import JupyterWidgetFactory
@@ -39,6 +39,7 @@ from uniui.backends.jupyter.styles import (
 )
 from uniui.backends.jupyter.components import (
     JupyterAppShellAdapter,
+    JupyterBadgeAdapter,
     JupyterBreadcrumbAdapter,
     JupyterCardAdapter,
     JupyterChartAdapter,
@@ -59,6 +60,7 @@ set_admin_theme = set_theme
 __all__ = [
     "JupyterWidgetFactory",
     "JupyterCardAdapter", "JupyterStatCardAdapter", "JupyterMetricListAdapter",
+    "JupyterBadgeAdapter",
     "JupyterTableAdapter", "JupyterSidebarAdapter", "JupyterAppShellAdapter",
     "JupyterBreadcrumbAdapter", "JupyterGaugeAdapter", "JupyterChartAdapter",
     "JupyterDrawerAdapter",

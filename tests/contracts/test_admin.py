@@ -4,8 +4,9 @@ Contract tests for Admin components: Card, StatCard, Table, Sidebar, AppShell, B
 import pytest
 
 from tests.contract_framework import CommonCapabilitiesContractTest as _Common
+from tests.contract_framework import skip_unless_available
 from uniui import (
-    APP_SHELL, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
+    APP_SHELL, BADGE, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
     METRIC_LIST, SIDEBAR, STAT_CARD, TABLE,
 )
 
@@ -115,6 +116,101 @@ class TestMetricListContract(_Common):
         ml = self.create_widget(factory)
         ml.set_items([{"label": "A", "value": "1"}])
         ml.set_items([{"label": "B", "value": "2"}])
+
+
+class TestBadgeContract(_Common):
+    widget_kind = BADGE
+
+    def create_widget(self, factory):
+        return factory.create_badge()
+
+    @pytest.mark.contract
+    def test_set_text(self, factory):
+        badge = self.create_widget(factory)
+        badge.set_text("Beta")
+
+    @pytest.mark.contract
+    def test_defaults_to_neutral_status(self, factory):
+        badge = self.create_widget(factory)
+        assert badge._status == "neutral"
+
+    @pytest.mark.contract
+    @pytest.mark.parametrize("status", ["ok", "warn", "error", "neutral"])
+    def test_set_status(self, factory, status):
+        badge = self.create_widget(factory)
+        badge.set_status(status)
+        assert badge._status == status
+
+    @pytest.mark.contract
+    def test_unknown_status_classifies_as_neutral(self, factory):
+        badge = self.create_widget(factory)
+        badge.set_status("mystery")
+        assert badge._status == "neutral"
+
+    @pytest.mark.contract
+    def test_set_status_accepts_a_raw_table_style_value(self, factory):
+        """Same vocabulary Table's status column already classifies."""
+        badge = self.create_widget(factory)
+        badge.set_status("Delivered")
+        assert badge._status == "ok"
+
+
+class TestBadgeRendering:
+    """Verify text/status actually reach each backend's native widget, not
+    just the adapter's own state - the contract tests above only check the
+    latter."""
+
+    @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+    def test_set_text_reaches_the_native_widget(self, framework):
+        skip_unless_available(framework)
+        from uniui import create_factory
+
+        badge = create_factory(framework).create_badge()
+        badge.set_text("Beta")
+        native = badge.get_native()
+        if framework == "qt":
+            assert native.text() == "Beta"
+        elif framework == "jupyter":
+            assert "Beta" in native.value
+        else:
+            assert native.text == "Beta"
+
+    @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+    def test_set_status_reaches_the_native_widget(self, framework):
+        skip_unless_available(framework)
+        from uniui import create_factory
+
+        badge = create_factory(framework).create_badge()
+        badge.set_status("error")
+        native = badge.get_native()
+        if hasattr(native, "styleSheet"):
+            assert "status_error" in native.styleSheet() or native.styleSheet()
+        elif hasattr(native, "value"):
+            assert "uniui-status-error" in native.value
+        else:
+            assert "uniui-status-error" in native._classes
+
+    def test_qt_status_color_changes_with_status(self):
+        skip_unless_available("qt")
+        from uniui import create_factory
+
+        badge = create_factory("qt").create_badge()
+        badge.set_status("ok")
+        ok_style = badge.get_native().styleSheet()
+        badge.set_status("error")
+        error_style = badge.get_native().styleSheet()
+        assert ok_style != error_style
+
+    def test_web_status_class_is_swapped_not_accumulated(self):
+        skip_unless_available("web")
+        from uniui import create_factory
+
+        badge = create_factory("web").create_badge()
+        badge.set_status("ok")
+        badge.set_status("error")
+        classes = badge.get_native()._classes
+        assert "uniui-status-error" in classes
+        assert "uniui-status-ok" not in classes
 
 
 class TestTableContract(_Common):

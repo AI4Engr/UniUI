@@ -17,7 +17,7 @@ whatever theme was active when it was first imported.
 from __future__ import annotations
 
 from uniui.components import (
-    IAppShell, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
     IMetricList, ISidebar, IStatCard, ITable,
 )
 from uniui.backends.qt.factory import QtWidgetFactory
@@ -45,6 +45,7 @@ from uniui.backends.qt.styles import (
 )
 from uniui.backends.qt.components import (
     QtAppShellAdapter,
+    QtBadgeAdapter,
     QtBreadcrumbAdapter,
     QtCardAdapter,
     QtChartAdapter,
@@ -73,6 +74,7 @@ set_admin_theme = set_theme
 __all__ = [
     "QtWidgetFactory",
     "QtAppShellAdapter",
+    "QtBadgeAdapter",
     "QtBreadcrumbAdapter",
     "QtCardAdapter",
     "QtChartAdapter",

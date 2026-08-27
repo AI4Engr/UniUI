@@ -8,6 +8,38 @@ import pytest
 from uniui.core import InvalidValueError
 
 
+def simulate_click(button) -> None:
+    """Trigger a Button's click callback via its native widget, backend-agnostically.
+
+    Skips the test if the current backend's native widget exposes none of
+    the known click-trigger mechanisms.
+    """
+    native = button.get_native()
+    if hasattr(native, "animateClick"):
+        native.animateClick(0)
+    elif hasattr(native, "_callback") and callable(native._callback):
+        native._callback()
+    elif hasattr(native, "click") and callable(native.click):
+        native.click()  # ipywidgets Button: calls registered handlers as handler(self)
+    else:
+        pytest.skip("Cannot trigger click on this backend's native widget")
+
+
+def skip_unless_available(framework: str) -> None:
+    """Skip the current test if ``framework``'s toolkit isn't installed.
+
+    ``framework`` is one of "qt" / "jupyter" / "web" - the values used to
+    parametrize a factory-per-backend test. Also activates the Web backend
+    state so a Web widget created for the first time in a process behaves
+    the same as one created after a normal ``use("web")`` call.
+    """
+    module = {"qt": "PySide2", "jupyter": "ipywidgets", "web": "nicegui"}[framework]
+    pytest.importorskip(module)
+    if framework == "web":
+        from uniui import use
+        use(framework)
+
+
 class WidgetContractTest:
     """Base class for all widget contract tests.
 

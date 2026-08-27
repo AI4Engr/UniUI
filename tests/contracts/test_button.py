@@ -5,7 +5,7 @@ These tests ensure that Button behaves consistently across all platforms.
 """
 import pytest
 
-from tests.contract_framework import CommonCapabilitiesContractTest
+from tests.contract_framework import CommonCapabilitiesContractTest, simulate_click
 from uniui import BUTTON
 
 
@@ -71,17 +71,7 @@ class TestButtonContract(CommonCapabilitiesContractTest):
         called = []
 
         button.connect(lambda: called.append(1))
-
-        # Trigger via the native widget's click mechanism, backend-agnostically.
-        native = button.get_native()
-        if hasattr(native, "animateClick"):
-            native.animateClick(0)
-        elif hasattr(native, "_callback") and callable(native._callback):
-            native._callback()
-        elif hasattr(native, "click") and callable(native.click):
-            native.click()  # ipywidgets Button: calls registered handlers as handler(self)
-        else:
-            pytest.skip("Cannot trigger click on this backend's native widget")
+        simulate_click(button)
 
         assert called == [1]
 
@@ -93,16 +83,7 @@ class TestButtonContract(CommonCapabilitiesContractTest):
 
         handle = button.connect(lambda: called.append(1))
         handle.dispose()
-
-        native = button.get_native()
-        if hasattr(native, "animateClick"):
-            native.animateClick(0)
-        elif hasattr(native, "_callback") and callable(native._callback):
-            native._callback()
-        elif hasattr(native, "click") and callable(native.click):
-            native.click()  # ipywidgets Button: calls registered handlers as handler(self)
-        else:
-            pytest.skip("Cannot trigger click on this backend's native widget")
+        simulate_click(button)
 
         assert called == []
 
@@ -117,15 +98,6 @@ class TestButtonContract(CommonCapabilitiesContractTest):
 
         button.connect(bad)
         button.connect(lambda: called.append(1))
-
-        native = button.get_native()
-        if hasattr(native, "animateClick"):
-            native.animateClick(0)
-        elif hasattr(native, "_callback") and callable(native._callback):
-            native._callback()
-        elif hasattr(native, "click") and callable(native.click):
-            native.click()  # ipywidgets Button: calls registered handlers as handler(self)
-        else:
-            pytest.skip("Cannot trigger click on this backend's native widget")
+        simulate_click(button)
 
         assert called == [1]

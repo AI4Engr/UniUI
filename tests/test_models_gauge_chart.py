@@ -10,6 +10,8 @@ from uniui.models.chart import (
 from uniui.models.gauge import MIN_SPAN, GaugeModel
 from uniui.models.status import STATUS_ERROR, STATUS_OK, STATUS_WARN
 
+from tests.contract_framework import skip_unless_available
+
 
 class TestGaugeRange:
     def test_defaults(self):
@@ -233,7 +235,7 @@ class TestBackendsShareTheModel:
 
     @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
     def test_chart_window_is_enforced(self, framework):
-        _skip_unless_available(framework)
+        skip_unless_available(framework)
         from uniui import create_factory
 
         chart = create_factory(framework).create_chart()
@@ -247,7 +249,7 @@ class TestBackendsShareTheModel:
 
     @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
     def test_chart_set_error_reaches_the_shared_model(self, framework):
-        _skip_unless_available(framework)
+        skip_unless_available(framework)
         from uniui import create_factory
 
         chart = create_factory(framework).create_chart()
@@ -258,7 +260,7 @@ class TestBackendsShareTheModel:
 
     @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
     def test_chart_set_loading_reaches_the_shared_model(self, framework):
-        _skip_unless_available(framework)
+        skip_unless_available(framework)
         from uniui import create_factory
 
         chart = create_factory(framework).create_chart()
@@ -272,7 +274,7 @@ class TestBackendsShareTheModel:
     def test_chart_error_replaces_the_rendered_svg(self, framework):
         """Jupyter/Web render to an HTML/SVG string - verify the error
         message actually reaches it, not just the model."""
-        _skip_unless_available(framework)
+        skip_unless_available(framework)
         from uniui import create_factory
 
         chart = create_factory(framework).create_chart()
@@ -286,7 +288,7 @@ class TestBackendsShareTheModel:
 
     @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
     def test_gauge_range_rules_are_shared(self, framework):
-        _skip_unless_available(framework)
+        skip_unless_available(framework)
         from uniui import create_factory
 
         gauge = create_factory(framework).create_gauge()
@@ -296,21 +298,12 @@ class TestBackendsShareTheModel:
 
     @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
     def test_gauge_status_falls_back_to_ok(self, framework):
-        _skip_unless_available(framework)
+        skip_unless_available(framework)
         from uniui import create_factory
 
         gauge = create_factory(framework).create_gauge()
         gauge.set_status("bogus")
         assert _gauge_model(gauge).status == STATUS_OK
-
-
-def _skip_unless_available(framework):
-    module = {"qt": "PySide2", "jupyter": "ipywidgets", "web": "nicegui"}[framework]
-    pytest.importorskip(module)
-    if framework == "web":
-        from uniui import use
-
-        use("web")
 
 
 def _chart_model(adapter):

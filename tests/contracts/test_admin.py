@@ -79,34 +79,16 @@ class TestStatCardContract(_Common):
         sc.set_unit("users")
 
     @pytest.mark.contract
-    def test_set_trend_positive(self, factory):
+    @pytest.mark.parametrize("trend", [5.2, -3.1, 0.0])
+    def test_set_trend(self, factory, trend):
         sc = self.create_widget(factory)
-        sc.set_trend(5.2)
+        sc.set_trend(trend)
 
     @pytest.mark.contract
-    def test_set_trend_negative(self, factory):
+    @pytest.mark.parametrize("status", ["ok", "warn", "error"])
+    def test_set_status(self, factory, status):
         sc = self.create_widget(factory)
-        sc.set_trend(-3.1)
-
-    @pytest.mark.contract
-    def test_set_trend_zero(self, factory):
-        sc = self.create_widget(factory)
-        sc.set_trend(0.0)
-
-    @pytest.mark.contract
-    def test_set_status_ok(self, factory):
-        sc = self.create_widget(factory)
-        sc.set_status("ok")
-
-    @pytest.mark.contract
-    def test_set_status_warn(self, factory):
-        sc = self.create_widget(factory)
-        sc.set_status("warn")
-
-    @pytest.mark.contract
-    def test_set_status_error(self, factory):
-        sc = self.create_widget(factory)
-        sc.set_status("error")
+        sc.set_status(status)
 
 
 class TestMetricListContract(_Common):
@@ -378,23 +360,18 @@ class TestBreadcrumbContract(_Common):
         return factory.create_breadcrumb()
 
     @pytest.mark.contract
-    def test_set_items_empty(self, factory):
-        bc = self.create_widget(factory)
-        bc.set_items([])
-
-    @pytest.mark.contract
-    def test_set_items_single(self, factory):
-        bc = self.create_widget(factory)
-        bc.set_items([{"label": "Home"}])
-
-    @pytest.mark.contract
-    def test_set_items_trail(self, factory):
-        bc = self.create_widget(factory)
-        bc.set_items([
+    @pytest.mark.parametrize("items", [
+        [],
+        [{"label": "Home"}],
+        [
             {"label": "Home", "path": "/"},
             {"label": "Users", "path": "/users"},
             {"label": "Alice"},
-        ])
+        ],
+    ], ids=["empty", "single", "trail"])
+    def test_set_items(self, factory, items):
+        bc = self.create_widget(factory)
+        bc.set_items(items)
 
     @pytest.mark.contract
     def test_set_items_replaces(self, factory):

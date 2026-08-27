@@ -213,6 +213,14 @@ class TestSelection:
 
 
 class TestPagination:
+    @pytest.fixture
+    def paged(self):
+        """A 5-row model with page_size=2, ready for page-navigation tests."""
+        model = TableModel()
+        model.set_rows([{"id": i} for i in range(5)])
+        model.set_page_size(2)
+        return model
+
     def test_disabled_by_default(self):
         model = TableModel()
         model.set_rows([{"id": i} for i in range(5)])
@@ -220,26 +228,17 @@ class TestPagination:
         assert model.page_count == 1
         assert model.display_rows() == model.sorted_rows()
 
-    def test_page_size_slices_rows(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        assert model.display_rows() == [{"id": 0}, {"id": 1}]
+    def test_page_size_slices_rows(self, paged):
+        assert paged.display_rows() == [{"id": 0}, {"id": 1}]
 
-    def test_set_page_navigates(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        model.set_page(1)
-        assert model.display_rows() == [{"id": 2}, {"id": 3}]
-        model.set_page(2)
-        assert model.display_rows() == [{"id": 4}]
+    def test_set_page_navigates(self, paged):
+        paged.set_page(1)
+        assert paged.display_rows() == [{"id": 2}, {"id": 3}]
+        paged.set_page(2)
+        assert paged.display_rows() == [{"id": 4}]
 
-    def test_page_count_rounds_up(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        assert model.page_count == 3
+    def test_page_count_rounds_up(self, paged):
+        assert paged.page_count == 3
 
     def test_page_count_is_at_least_one_for_zero_rows(self):
         model = TableModel()
@@ -248,44 +247,29 @@ class TestPagination:
         assert model.page_count == 1
         assert model.display_rows() == []
 
-    def test_set_page_clamps_to_the_last_page(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        model.set_page(99)
-        assert model.page == 2
-        assert model.display_rows() == [{"id": 4}]
+    def test_set_page_clamps_to_the_last_page(self, paged):
+        paged.set_page(99)
+        assert paged.page == 2
+        assert paged.display_rows() == [{"id": 4}]
 
-    def test_set_page_clamps_negative_to_zero(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        model.set_page(-1)
-        assert model.page == 0
+    def test_set_page_clamps_negative_to_zero(self, paged):
+        paged.set_page(-1)
+        assert paged.page == 0
 
-    def test_set_page_size_resets_to_the_first_page(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        model.set_page(2)
-        model.set_page_size(3)
-        assert model.page == 0
+    def test_set_page_size_resets_to_the_first_page(self, paged):
+        paged.set_page(2)
+        paged.set_page_size(3)
+        assert paged.page == 0
 
-    def test_new_rows_reset_to_the_first_page(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        model.set_page(2)
-        model.set_rows([{"id": i} for i in range(5)])
-        assert model.page == 0
+    def test_new_rows_reset_to_the_first_page(self, paged):
+        paged.set_page(2)
+        paged.set_rows([{"id": i} for i in range(5)])
+        assert paged.page == 0
 
-    def test_zero_page_size_disables_pagination(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        model.set_page_size(0)
-        assert model.page_size is None
-        assert len(model.display_rows()) == 5
+    def test_zero_page_size_disables_pagination(self, paged):
+        paged.set_page_size(0)
+        assert paged.page_size is None
+        assert len(paged.display_rows()) == 5
 
     def test_pagination_applies_after_sorting(self):
         model = TableModel()
@@ -304,13 +288,16 @@ class TestPagination:
         model.set_sort("id")
         assert model.page == 0
 
-    def test_row_at_indexes_into_the_current_page(self):
-        model = TableModel()
-        model.set_rows([{"id": i} for i in range(5)])
-        model.set_page_size(2)
-        model.set_page(1)
-        assert model.row_at(0) == {"id": 2}
-        assert model.row_at(2) is None, "index 2 is out of range for a 2-row page"
+    def test_row_at_indexes_into_the_current_page(self, paged):
+        paged.set_page(1)
+        assert paged.row_at(0) == {"id": 2}
+
+    @pytest.mark.parametrize("index", [-1, -5, 2, 99])
+    def test_row_at_out_of_range_on_a_page_returns_none(self, paged, index):
+        """Same boundary class as TestTableModel.test_row_at_out_of_range_returns_none,
+        but against a single 2-row page instead of the whole dataset."""
+        paged.set_page(1)
+        assert paged.row_at(index) is None
 
 
 class TestSorting:
@@ -695,11 +682,10 @@ class TestBackendsAgree:
         assert table._message.text == "No data"
 
     def test_qt_header_click_ignores_non_sortable_column(self):
-        table = self._qt()
-        table.set_columns(COLUMNS)  # none declared sortable
-        table.set_rows(self.ROWS)
+        table = self._qt()  # COLUMNS declares none of them sortable
+        before = table._table.item(0, 0).text()
         table._on_header_clicked(0)
-        assert table._model.sort_key is None
+        assert table._table.item(0, 0).text() == before
 
     def test_jupyter_header_click_sorts_via_bridge(self):
         table = self._jupyter()

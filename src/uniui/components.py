@@ -134,6 +134,15 @@ class ISidebar(IWidget):
         ...
 
     @abstractmethod
+    def add_group(self, label: str) -> None:
+        """Append a non-clickable section header.
+
+        Not addressable by ``set_active``/``on_select`` — it has no key, so
+        it can never become the active item or fire a selection callback.
+        """
+        ...
+
+    @abstractmethod
     def set_active(self, key: str) -> None:
         """Highlight the item with the given key as selected."""
         ...

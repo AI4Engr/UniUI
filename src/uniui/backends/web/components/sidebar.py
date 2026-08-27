@@ -34,6 +34,11 @@ class WebSidebarAdapter(_WebAdapter, ISidebar):
             )
         button.tooltip(item.label)
         self._buttons.append(button)
+    def add_group(self, label: str) -> None:
+        item = self._model.add_group(label)
+        with self._native:
+            header = ui.label(item.label.upper()).classes("uniui-nav-group")
+        self._buttons.append(header)
     def set_active(self, key: str) -> None:
         if not self._model.set_active(key): return
         for item, button in zip(self._model, self._buttons):
@@ -73,4 +78,7 @@ def sidebar_css() -> str:
         .uniui-web-sidebar .uniui-active .uniui-svg-icon {color:var(--uniui-accent)}
         .uniui-web-sidebar .uniui-collapsed .uniui-nav-label {display:none}
         .uniui-web-sidebar .uniui-collapsed .uniui-svg-icon {margin-right:0}
+        .uniui-web-sidebar .uniui-nav-group {width:100%;padding:8px 12px 4px;font-size:11px;font-weight:700;
+          letter-spacing:.04em;color:var(--uniui-text_muted)}
+        .uniui-web-sidebar .uniui-nav-group.uniui-collapsed {display:none}
 """

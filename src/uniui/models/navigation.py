@@ -25,11 +25,12 @@ SIDEBAR_MAX = _M["sidebar_max"]
 
 
 class NavItem(NamedTuple):
-    """One sidebar entry."""
+    """One sidebar entry, or a non-clickable group header when ``is_group``."""
 
     key: str
     label: str
     icon: str
+    is_group: bool = False
 
     def initial(self) -> str:
         """A one-character stand-in for the label when collapsed with no icon."""
@@ -76,6 +77,17 @@ class NavigationModel:
         self._items.append(item)
         return item
 
+    def add_group(self, label: str) -> NavItem:
+        """Append a non-clickable section header and return it.
+
+        A group header has no key: it isn't a navigation target, so it must
+        never be reachable through ``index_of``/``set_active``, the same way
+        a real item with an accidentally-blank key wouldn't be either.
+        """
+        item = NavItem("", str(label), "", is_group=True)
+        self._items.append(item)
+        return item
+
     def item_at(self, index: int) -> Optional[NavItem]:
         """The item at ``index``, or ``None``.
 
@@ -88,9 +100,13 @@ class NavigationModel:
         return None
 
     def index_of(self, key: str) -> int:
-        """The row of ``key``, or ``-1`` when it is not present."""
+        """The row of ``key``, or ``-1`` when it is not present.
+
+        Group headers are never matched, even by an (invalid) blank key -
+        they aren't addressable navigation targets.
+        """
         for index, item in enumerate(self._items):
-            if item.key == key:
+            if not item.is_group and item.key == key:
                 return index
         return -1
 

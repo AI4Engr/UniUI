@@ -1,7 +1,8 @@
 """Sidebar: the navigation rail, backed by the shared NavigationModel."""
 from __future__ import annotations
 
-from typing import Callable, List, Optional
+from html import escape
+from typing import Callable, List, Optional, Union
 
 import ipywidgets as widgets
 
@@ -19,7 +20,7 @@ class JupyterSidebarAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterS
         self._native = widgets.VBox()
         self._native.add_class("uniui-admin-sidebar")
         self._model = NavigationModel()
-        self._buttons: List[widgets.Button] = []
+        self._buttons: List[Union[widgets.Button, widgets.HTML]] = []
         self._select_cb: Optional[Callable[[str], None]] = None
 
     def get_native(self): return self._native
@@ -32,6 +33,14 @@ class JupyterSidebarAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterS
         button.tooltip = nav_item.label
         button.on_click(lambda _button, k=nav_item.key: self._on_select(k))
         self._buttons.append(button)
+        self._native.children = tuple(self._buttons)
+        self._refresh_button(len(self._buttons) - 1)
+
+    def add_group(self, label: str) -> None:
+        self._model.add_group(label)
+        header = widgets.HTML()
+        header.add_class("uniui-nav-group")
+        self._buttons.append(header)
         self._native.children = tuple(self._buttons)
         self._refresh_button(len(self._buttons) - 1)
 
@@ -66,7 +75,12 @@ class JupyterSidebarAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterS
 
     def _refresh_button(self, index: int) -> None:
         item = self._model.items[index]
-        self._buttons[index].description = self._model.label_for(item)
+        widget = self._buttons[index]
+        if item.is_group:
+            text = "" if self._model.collapsed else escape(item.label).upper()
+            widget.value = f"<div class='uniui-nav-group-label'>{text}</div>" if text else ""
+            return
+        widget.description = self._model.label_for(item)
 
     def _on_select(self, key: str) -> None:
         if self._select_cb:
@@ -101,6 +115,11 @@ def sidebar_css() -> str:
   color:white!important; background:var(--uniui-sidebar_active)!important;
 }}
 .uniui-admin-sidebar .uniui-active {{box-shadow:inset {M['sidebar_edge_width']}px 0 0 var(--uniui-sidebar_edge)}}
+.uniui-admin-sidebar .uniui-nav-group {{width:100%; min-height:0}}
+.uniui-nav-group-label {{
+  padding:8px 11px 4px; font-size:11px; font-weight:700; letter-spacing:.04em;
+  color:var(--uniui-text_muted);
+}}
 .uniui-admin-sidebar .uniui-active button::before {{background:var(--uniui-accent)}}
 .uniui-splitter-widget {{
   width:6px; min-width:6px; flex:0 0 6px; align-self:stretch;

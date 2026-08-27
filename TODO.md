@@ -365,8 +365,8 @@ stat_card.bind_value(active_count)
 ### Pages and Navigation
 
 - [x] `AppShell`: top bar, sidebar, main content area, status bar
-- [ ] `Sidebar` / `NavMenu`: icons, grouping, selected state, collapsed state
-  - Icons/selected-state/collapsed-state all implemented and tested; item **grouping** (section headers) doesn't exist — `add_item` is a flat list on every backend.
+- [x] `Sidebar` / `NavMenu`: icons, grouping, selected state, collapsed state
+  - Done (2026-08-25): added `ISidebar.add_group(label)` — a non-clickable section header. `NavItem` gained an `is_group` flag; a group header lives in the same flat `_items` list as regular items (no separate index-mapping layer needed) but is invisible to `index_of`/`set_active`/`is_active`, so it can never become the active item or fire a selection callback even via an accidental blank-key lookup. Qt marks it non-selectable/non-enabled via item flags (verified real, not just visually implied, by checking the flags directly) with a smaller bold muted style; Jupyter renders it as a plain `HTML` header widget; Web as a `ui.label`. All three blank the header text when collapsed (Qt/Jupyter literally blank the text; Web reuses the same `uniui-collapsed` class every button already gets and hides it via CSS) — a section title has nowhere to fit in the icon-only rail. 26 new tests across the model and all three backends; verified by sabotaging both the model-level group exclusion and Qt's non-selectable flag, confirming 3 tests fail, before restoring each.
 - [x] `Page` / `Router` / `RouterView`: page registration, matching, navigation, and content area rendering — `src/uniui/routing.py`
 - [x] `Breadcrumb`: breadcrumb navigation
 - [ ] `Toolbar`: page title, primary actions, secondary actions — doesn't exist as a component

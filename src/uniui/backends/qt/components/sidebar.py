@@ -89,6 +89,23 @@ class QtSidebarAdapter(VisibilityMixin, EnableMixin, SizeMixin, ISidebar):
             item.setTextAlignment(QtCore.Qt.AlignCenter)
         self._list.addItem(item)
 
+    def add_group(self, label: str) -> None:
+        nav_item = self._model.add_group(label)
+        item = QtWidgets.QListWidgetItem(self._group_text(nav_item))
+        item.setFlags(item.flags() & ~(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled))
+        item.setSizeHint(QtCore.QSize(0, 28))
+        font = item.font()
+        font.setPixelSize(11)
+        font.setBold(True)
+        item.setFont(font)
+        self._list.addItem(item)
+
+    def _group_text(self, nav_item) -> str:
+        """Blank when collapsed - a section title has nowhere to fit in the
+        icon-only rail, so it collapses to just a thin, empty separator row
+        rather than trying to show anything."""
+        return "" if self._model.collapsed else nav_item.label.upper()
+
     def set_active(self, key: str) -> None:
         if self._model.set_active(key):
             self._list.blockSignals(True)
@@ -112,6 +129,9 @@ class QtSidebarAdapter(VisibilityMixin, EnableMixin, SizeMixin, ISidebar):
             self._list.setMaximumWidth(SIDEBAR_MAX)
         for i, nav_item in enumerate(self._model):
             item = self._list.item(i)
+            if nav_item.is_group:
+                item.setText(self._group_text(nav_item))
+                continue
             item.setText(self._item_text(nav_item))
             item.setTextAlignment(
                 QtCore.Qt.AlignCenter if collapsed else QtCore.Qt.AlignVCenter
@@ -134,6 +154,8 @@ class QtSidebarAdapter(VisibilityMixin, EnableMixin, SizeMixin, ISidebar):
     def apply_theme(self) -> None:
         self._list.setStyleSheet(_sidebar_style())
         for i, nav_item in enumerate(self._model):
+            if nav_item.is_group:
+                continue
             icon = nav_icon(
                 nav_item.icon, C["sidebar_fg"], C["sidebar_edge"]
             )

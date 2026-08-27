@@ -79,6 +79,55 @@ class TestLookup:
         assert [item.key for item in model] == model.keys
 
 
+class TestGroups:
+    def test_add_group_returns_a_group_item(self):
+        model = NavigationModel()
+        item = model.add_group("Section")
+        assert item.is_group is True
+        assert item.key == ""
+        assert item.label == "Section"
+
+    def test_regular_items_are_not_groups(self):
+        assert _model().items[0].is_group is False
+
+    def test_group_counts_toward_len_and_appears_in_items(self):
+        model = _model()
+        model.add_group("Section")
+        assert len(model) == 4
+        assert model.items[-1].label == "Section"
+
+    def test_index_of_never_matches_a_group_even_by_blank_key(self):
+        model = _model()
+        model.add_group("Section")
+        assert model.index_of("") == -1
+
+    def test_index_of_still_finds_a_real_item_after_a_group(self):
+        model = _model()
+        model.add_group("Section")
+        model.add_item("reports", "Reports", "reports")
+        assert model.index_of("reports") == 4
+
+    def test_set_active_cannot_target_a_group(self):
+        model = _model()
+        model.add_group("Section")
+        assert model.set_active("") is False
+        assert model.active == ""
+
+    def test_is_active_is_false_for_a_group(self):
+        model = _model()
+        model.add_group("Section")
+        model.set_active("users")
+        group = model.items[-1]
+        assert not model.is_active(group.key)
+
+    def test_group_label_is_hidden_when_collapsed(self):
+        model = _model()
+        group = model.add_group("Section")
+        assert model.label_for(group) == "Section"
+        model.set_collapsed(True)
+        assert model.label_for(group) == ""
+
+
 class TestActive:
     def test_no_item_is_active_initially(self):
         model = _model()
@@ -273,6 +322,91 @@ class TestBackendsAgree:
         ]
         sidebar.set_collapsed(True)
         assert [b.description for b in sidebar._buttons] == ["", "", ""]
+
+    def test_qt_group_header_is_not_clickable(self):
+        self._qt()
+        from uniui.qt_components import QtSidebarAdapter
+
+        sidebar = QtSidebarAdapter()
+        sidebar.add_item("dashboard", "Dashboard", "dashboard")
+        sidebar.add_group("Admin")
+        sidebar.add_item("settings", "Settings", "settings")
+        item = sidebar._list.item(1)
+        from PySide2 import QtCore
+        assert not (item.flags() & QtCore.Qt.ItemIsSelectable)
+        assert not (item.flags() & QtCore.Qt.ItemIsEnabled)
+
+    def test_qt_group_header_shows_the_label_uppercased(self):
+        self._qt()
+        from uniui.qt_components import QtSidebarAdapter
+
+        sidebar = QtSidebarAdapter()
+        sidebar.add_group("admin tools")
+        assert sidebar._list.item(0).text() == "ADMIN TOOLS"
+
+    def test_qt_group_header_blanks_when_collapsed(self):
+        self._qt()
+        from uniui.qt_components import QtSidebarAdapter
+
+        sidebar = QtSidebarAdapter()
+        sidebar.add_group("Admin")
+        sidebar.set_collapsed(True)
+        assert sidebar._list.item(0).text() == ""
+
+    def test_qt_group_does_not_shift_real_item_selection(self):
+        self._qt()
+        from uniui.qt_components import QtSidebarAdapter
+
+        sidebar = QtSidebarAdapter()
+        sidebar.add_item("dashboard", "Dashboard", "dashboard")
+        sidebar.add_group("Admin")
+        sidebar.add_item("settings", "Settings", "settings")
+        sidebar.set_active("settings")
+        assert sidebar._list.currentRow() == 2
+
+    def test_jupyter_group_header_renders_the_label_uppercased(self):
+        pytest.importorskip("ipywidgets")
+        from uniui.jupyter_components import JupyterSidebarAdapter
+
+        sidebar = JupyterSidebarAdapter()
+        sidebar.add_group("admin tools")
+        assert "ADMIN TOOLS" in sidebar._buttons[0].value
+
+    def test_jupyter_group_header_blanks_when_collapsed(self):
+        pytest.importorskip("ipywidgets")
+        from uniui.jupyter_components import JupyterSidebarAdapter
+
+        sidebar = JupyterSidebarAdapter()
+        sidebar.add_group("Admin")
+        sidebar.set_collapsed(True)
+        assert sidebar._buttons[0].value == ""
+
+    def test_jupyter_group_is_never_marked_active(self):
+        pytest.importorskip("ipywidgets")
+        from uniui.jupyter_components import JupyterSidebarAdapter
+
+        sidebar = JupyterSidebarAdapter()
+        sidebar.add_item("dashboard", "Dashboard", "dashboard")
+        sidebar.add_group("Admin")
+        sidebar.set_active("dashboard")
+        assert "uniui-active" not in sidebar._buttons[1]._dom_classes
+
+    def test_web_group_header_renders_the_label_uppercased(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebSidebarAdapter
+
+        sidebar = WebSidebarAdapter()
+        sidebar.add_group("admin tools")
+        assert sidebar._buttons[0].text == "ADMIN TOOLS"
+
+    def test_web_group_gets_the_collapsed_class_like_every_button(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebSidebarAdapter
+
+        sidebar = WebSidebarAdapter()
+        sidebar.add_group("Admin")
+        sidebar.set_collapsed(True)
+        assert "uniui-collapsed" in sidebar._buttons[0]._classes
 
     def test_jupyter_collapsed_width_matches_the_model(self):
         pytest.importorskip("ipywidgets")

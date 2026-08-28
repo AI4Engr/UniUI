@@ -209,6 +209,20 @@ class TestBadgeRendering:
         else:
             assert "uniui-status-error" in native._classes
 
+    def test_qt_badge_has_a_fixed_small_height(self):
+        """Regression: without a fixed height, a QLabel stretches to fill
+        whatever row it's placed in - the pill background then paints that
+        whole stretched rect, turning a small badge into a large block next
+        to taller header siblings."""
+        skip_unless_available("qt")
+        from PySide2 import QtWidgets
+        from uniui import create_factory
+
+        badge = create_factory("qt").create_badge()
+        native = badge.get_native()
+        assert native.sizePolicy().verticalPolicy() == QtWidgets.QSizePolicy.Fixed
+        assert native.sizeHint().height() <= 24
+
     def test_qt_status_color_changes_with_status(self):
         skip_unless_available("qt")
         from uniui import create_factory

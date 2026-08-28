@@ -7,6 +7,7 @@ from PySide2 import QtCore, QtWidgets
 
 from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import ISidebar
+from ....icons import ADMIN_ICON_NAMES
 from ....models.navigation import (
     SIDEBAR_COLLAPSED, SIDEBAR_MAX, SIDEBAR_MIN, NavigationModel,
 )
@@ -157,12 +158,18 @@ class QtSidebarAdapter(VisibilityMixin, EnableMixin, SizeMixin, ISidebar):
     def _item_text(self, nav_item) -> str:
         """The list-item text, which depends on how the icon is drawn.
 
-        Named icons become a real ``QIcon``, so the item carries the label
-        alone. Anything else is an emoji rendered as text, so it has to be
-        folded into the string - and it is what stands in for the label when
-        the sidebar is collapsed.
+        Named icons (from the shared ``ADMIN_ICON_NAMES`` registry - the
+        same check ``add_item`` uses to decide whether to call ``setIcon``)
+        become a real ``QIcon``, so the item carries the label alone.
+        Anything else is treated as an emoji rendered as text, so it has to
+        be folded into the string - and it is what stands in for the label
+        when the sidebar is collapsed. This used to check a separately
+        hand-maintained set of three names that fell out of sync with the
+        real icon registry, so any icon added later (e.g. "components")
+        rendered as literal icon-name text glued to the label instead of a
+        real icon.
         """
-        if nav_item.icon in {"dashboard", "users", "settings"}:
+        if nav_item.icon in ADMIN_ICON_NAMES:
             return self._model.label_for(nav_item)
         if self._model.collapsed:
             return nav_item.icon or nav_item.initial()

@@ -449,6 +449,16 @@ Backend implementation:
 - [ ] `Toast` / `Notification`
 - [ ] `Loading` / `Skeleton`
 
+## P1: Components Showcase (Component Gallery)
+
+> Added 2026-08-25, from an external design review (codex) of `examples/admin_demo.py`. Once the Dashboard's last-polish pass (sidebar label bug, Beta badge sizing, live chart, Process card DPI check) is done, Dashboard is frozen as a stable demo page — no more redesign time there. This becomes the next priority: a dedicated `examples/component_gallery.py` (or a "Components" route inside `admin_demo.py`) that demonstrates UniUI's own component library, organized by category, each with a live/interactive demo rather than a static screenshot.
+
+- [ ] **Phase 1 — showcase what already exists** (buildable immediately, no new components needed): `Card`, `Badge`, `ProgressBar`, `Table` (sorting/selection/pagination/format, all shipped this session), `Chart` (line/bar/area + loading/error), `Gauge`, `Sidebar` (incl. grouping), `Breadcrumb`, `Button`, `LineEdit`, `TextArea`, `ComboBox`, `Dropdown`, `TabWidget`, `GroupBox`, `Grid`/`Wrap`/`ScrollView`/`SplitPane`/`Overlay`. Organize by category (Buttons, Inputs, Data Display, Navigation, Layout) with a left-side sub-nav or tabs, not one long stacked page.
+- [ ] **Phase 2 — fill gaps one component at a time**, adding each to the gallery as it ships rather than waiting for all of them: `Checkbox`, `RadioGroup`, `NumberInput`, `DateInput`, `Switch`, `Slider` (Inputs); `Avatar`, `List`, `Tree`, `Tag`, `Skeleton`, `Empty state` (Data Display — `Tag` may just be `Badge` restyled, check before building new); `Toast`/`Notification`, `Alert`, `Spinner`, `Confirmation` (Feedback); `Dialog`/`Modal` (blocking, unlike the existing non-modal `Drawer`), `Popover`, `Tooltip`, `Context Menu`, `Dropdown Menu` (Overlays — each needs a real `[Open ...]` trigger button in the gallery, not a screenshot); `Tabs` (may already be covered by `TabWidget`), `Menu`, `Pagination` (standalone), `Segmented Control` (Navigation); `Split View`/`Resizable Panel`/`Stack`/`Master-Detail` (Layout — check overlap with existing `SplitPane`/`Overlay` first).
+- [ ] Design tokens: extend the `space_1..6`/`text_xs..lg` scale added 2026-08-25 (`theme.py`) to cover every remaining hardcoded literal across Qt Admin components (progress_bar.py height/radius, primitives/styles.py radius/padding, app_shell.py header margins/viewport margins) — audit found only 9 real `M[...]` call sites before this session's sidebar/card work, everything else was ad hoc per-widget.
+- [ ] Responsive/DPI test pass across the gallery specifically (not just Dashboard): 1280×800, 1024×700, maximized; 100%/125%/150% DPI. Check clipping, text elide, minimum size, scrollbar behavior, card wrapping, toolbar overflow, table column behavior, sidebar collapse — via layout/size-policy fixes, not hardcoded pixel positions.
+- [ ] Principle carried over from this session's Table/Chart/Sidebar work: fix shared components (e.g. `Card`'s padding), not per-page patches — every page using the shared component picks up the fix automatically.
+
 ## P1: Chart Support
 
 ### Chart Common API

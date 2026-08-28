@@ -8,6 +8,7 @@ Run:
 """
 import sys
 import os
+import random
 import time
 import threading
 
@@ -15,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from uniui import (
     use, parse_args_ui, show_ui, State, Computed, bind_text, TaskRunner,
-    LayoutSpec, LayoutItem,
+    LayoutSpec, LayoutItem, schedule_after,
 )
 import uniui
 from uniui import theme_runtime
@@ -295,6 +296,24 @@ def dashboard_page(ctx):
 
     refresh_btn.clicked.connect(_refresh)
     _refresh()
+
+    # A light periodic tick so the chart is visibly a live native component,
+    # not a static screenshot - a small random walk, not real monitoring.
+    # Navigating away from this page (uncached route) deletes the Qt chart
+    # widget; schedule_after keeps firing regardless, so the tick stops
+    # itself the first time it touches a deleted widget instead of
+    # rescheduling forever into a torn-down page.
+    _live_state = {"value": 62}
+
+    def _live_tick():
+        try:
+            _live_state["value"] = max(20, min(120, _live_state["value"] + random.randint(-6, 8)))
+            chart.append_data(time.strftime("%H:%M:%S"), [_live_state["value"]])
+        except Exception:
+            return  # page/chart was torn down; stop rescheduling
+        schedule_after(1500, _live_tick)
+
+    schedule_after(1500, _live_tick)
 
     # Orders table
     tbl = f.create_table()
@@ -704,6 +723,18 @@ def _browser_dashboard_page(_ctx):
 
     refresh_btn.connect(refresh)
     refresh()
+
+    _live_state = {"value": 62}
+
+    def _live_tick():
+        try:
+            _live_state["value"] = max(20, min(120, _live_state["value"] + random.randint(-6, 8)))
+            chart.append_data(time.strftime("%H:%M:%S"), [_live_state["value"]])
+        except Exception:
+            return  # page/chart was torn down; stop rescheduling
+        schedule_after(1500, _live_tick)
+
+    schedule_after(1500, _live_tick)
 
     table = f.create_table()
     table.set_columns([

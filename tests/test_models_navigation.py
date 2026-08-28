@@ -283,6 +283,22 @@ class TestBackendsAgree:
         QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         return QtWidgets
 
+    def test_qt_named_icon_does_not_leak_into_the_item_text(self):
+        """Regression: the icon-name-vs-real-icon check used to be a
+        hand-maintained set of three names that fell out of sync with the
+        real icon registry (ADMIN_ICON_NAMES) - any icon added later (e.g.
+        "components") rendered as literal text glued onto the label instead
+        of becoming a real icon."""
+        self._qt()
+        from uniui.qt_components import QtSidebarAdapter
+        from uniui.icons import ADMIN_ICON_NAMES
+
+        sidebar = QtSidebarAdapter()
+        for name in ADMIN_ICON_NAMES:
+            sidebar.add_item(name, name.title(), name)
+        for i, name in enumerate(ADMIN_ICON_NAMES):
+            assert sidebar._list.item(i).text() == name.title()
+
     def test_qt_ignores_an_unknown_active_key(self):
         self._qt()
         from uniui.qt_components import QtSidebarAdapter

@@ -31,8 +31,19 @@ class QtMetricListAdapter(VisibilityMixin, EnableMixin, SizeMixin, IMetricList):
             row = QtWidgets.QWidget()
             row_layout = QtWidgets.QHBoxLayout(row)
             row_layout.setContentsMargins(0, 8, 0, 8)
-            label = QtWidgets.QLabel(str(item.get("label", "")))
-            value = QtWidgets.QLabel(str(item.get("value", "")))
+            label_text = str(item.get("label", ""))
+            value_text = str(item.get("value", ""))
+            label = QtWidgets.QLabel(label_text)
+            value = QtWidgets.QLabel(value_text)
+            # Let Qt shrink the label below its natural text width on a
+            # narrow card instead of the sizeHint forcing the row (and so
+            # the whole card) wider than the space actually available - a
+            # tooltip keeps the full text reachable either way.
+            label.setMinimumWidth(0)
+            label.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
+            label.setToolTip(label_text)
+            value.setMinimumWidth(0)
+            value.setToolTip(value_text)
             value.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
             row_layout.addWidget(label, stretch=1)
             row_layout.addWidget(value)

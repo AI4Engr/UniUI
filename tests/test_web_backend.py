@@ -202,6 +202,7 @@ def test_nicegui_is_lazy_imported():
         ("hello.py", b"Hello UniUI"),
         ("quick_start.py", b"BMI Calculator"),
         ("examples/sysmon.py", b"System Monitor"),
+        ("examples/component_gallery.py", b"Component Gallery"),
     ],
 )
 def test_web_server_smoke(script, expected_title):

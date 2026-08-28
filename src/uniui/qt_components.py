@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from uniui.components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
 )
 from uniui.backends.qt.factory import QtWidgetFactory
 from uniui.backends.qt.primitives import _BaseQtWidgetFactory
@@ -46,6 +46,7 @@ from uniui.backends.qt.styles import (
 from uniui.backends.qt.components import (
     QtAppShellAdapter,
     QtBadgeAdapter,
+    QtProgressBarAdapter,
     QtBreadcrumbAdapter,
     QtCardAdapter,
     QtChartAdapter,
@@ -75,6 +76,7 @@ __all__ = [
     "QtWidgetFactory",
     "QtAppShellAdapter",
     "QtBadgeAdapter",
+    "QtProgressBarAdapter",
     "QtBreadcrumbAdapter",
     "QtCardAdapter",
     "QtChartAdapter",

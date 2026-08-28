@@ -22,12 +22,12 @@ from __future__ import annotations
 
 from ...components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
 )
 from .components import (
     QtAppShellAdapter, QtBadgeAdapter, QtBreadcrumbAdapter, QtCardAdapter,
     QtChartAdapter, QtDrawerAdapter, QtGaugeAdapter, QtMetricListAdapter,
-    QtSidebarAdapter, QtStatCardAdapter, QtTableAdapter,
+    QtProgressBarAdapter, QtSidebarAdapter, QtStatCardAdapter, QtTableAdapter,
 )
 from .primitives import _BaseQtWidgetFactory
 
@@ -39,6 +39,7 @@ class QtWidgetFactory(_BaseQtWidgetFactory):
     def createStatCard(self)   -> IStatCard:   return QtStatCardAdapter()
     def createMetricList(self) -> IMetricList: return QtMetricListAdapter()
     def createBadge(self)      -> IBadge:      return QtBadgeAdapter()
+    def createProgressBar(self) -> IProgressBar: return QtProgressBarAdapter()
     def createTable(self)      -> ITable:      return QtTableAdapter()
     def createSidebar(self)    -> ISidebar:    return QtSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return QtAppShellAdapter()

@@ -15,7 +15,7 @@ from __future__ import annotations
 from .backends.registry import _create_factory, _get_factory
 from .components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
 )
 from .core import (
     IButton, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout, IImage,
@@ -213,6 +213,14 @@ def Badge(text: str = "", status: str = "neutral") -> IBadge:
         badge.set_text(text)
     badge.set_status(status)
     return badge
+
+
+def ProgressBar(value: float = 0, status: str = "neutral") -> IProgressBar:
+    """Create a progress bar."""
+    bar = _get_factory().create_progress_bar()
+    bar.set_value(value)
+    bar.set_status(status)
+    return bar
 
 
 def Table(columns=None, rows=None) -> ITable:

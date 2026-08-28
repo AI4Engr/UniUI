@@ -647,6 +647,10 @@ class IWidgetFactory(ABC):
         """Create a status badge/tag (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Badge not supported on this platform")
 
+    def createProgressBar(self) -> "IProgressBar":
+        """Create a progress bar (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("ProgressBar not supported on this platform")
+
     def createTable(self) -> "ITable":
         """Create a tabular data table (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Table not supported on this platform")
@@ -705,6 +709,7 @@ _SNAKE_ALIASES = {
     "createStatCard":   "create_stat_card",
     "createMetricList": "create_metric_list",
     "createBadge":      "create_badge",
+    "createProgressBar": "create_progress_bar",
     "createTable":      "create_table",
     "createSidebar":    "create_sidebar",
     "createAppShell":   "create_app_shell",

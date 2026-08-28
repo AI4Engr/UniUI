@@ -7,6 +7,7 @@ from .chart import JupyterChartAdapter
 from .drawer import JupyterDrawerAdapter
 from .gauge import JupyterGaugeAdapter
 from .metric_list import JupyterMetricListAdapter
+from .progress_bar import JupyterProgressBarAdapter
 from .sidebar import JupyterSidebarAdapter
 from .stat_card import JupyterStatCardAdapter
 from .table import JupyterTableAdapter
@@ -20,6 +21,7 @@ __all__ = [
     "JupyterDrawerAdapter",
     "JupyterGaugeAdapter",
     "JupyterMetricListAdapter",
+    "JupyterProgressBarAdapter",
     "JupyterSidebarAdapter",
     "JupyterStatCardAdapter",
     "JupyterTableAdapter",

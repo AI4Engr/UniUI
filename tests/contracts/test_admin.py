@@ -7,7 +7,7 @@ from tests.contract_framework import CommonCapabilitiesContractTest as _Common
 from tests.contract_framework import skip_unless_available
 from uniui import (
     APP_SHELL, BADGE, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
-    METRIC_LIST, SIDEBAR, STAT_CARD, TABLE,
+    METRIC_LIST, PROGRESS_BAR, SIDEBAR, STAT_CARD, TABLE,
 )
 
 
@@ -153,6 +153,25 @@ class TestBadgeContract(_Common):
         badge = self.create_widget(factory)
         badge.set_status("Delivered")
         assert badge._status == "ok"
+
+
+class TestProgressBarContract(_Common):
+    widget_kind = PROGRESS_BAR
+
+    def create_widget(self, factory):
+        return factory.create_progress_bar()
+
+    @pytest.mark.contract
+    @pytest.mark.parametrize("value", [0, 42, 100, -5, 150])
+    def test_set_value_clamps_to_0_100(self, factory, value):
+        bar = self.create_widget(factory)
+        bar.set_value(value)  # must not raise regardless of range
+
+    @pytest.mark.contract
+    @pytest.mark.parametrize("status", ["ok", "warn", "error", "neutral", "mystery"])
+    def test_set_status(self, factory, status):
+        bar = self.create_widget(factory)
+        bar.set_status(status)
 
 
 class TestBadgeRendering:
@@ -539,3 +558,35 @@ class TestDrawerContract(_Common):
         assert drawer.is_open()
         drawer.toggle()
         assert not drawer.is_open()
+
+
+class TestProgressBarRendering:
+    @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+    def test_value_reaches_the_native_widget(self, framework):
+        skip_unless_available(framework)
+        from uniui import create_factory
+
+        bar = create_factory(framework).create_progress_bar()
+        bar.set_value(75)
+        native = bar.get_native()
+        if framework == "qt":
+            assert native.value() == 75
+        elif framework == "jupyter":
+            assert native.value == 75.0
+        else:
+            assert native.value == 0.75
+
+    @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+    def test_value_clamps_out_of_range(self, framework):
+        skip_unless_available(framework)
+        from uniui import create_factory
+
+        bar = create_factory(framework).create_progress_bar()
+        bar.set_value(150)
+        native = bar.get_native()
+        if framework == "qt":
+            assert native.value() == 100
+        elif framework == "jupyter":
+            assert native.value == 100.0
+        else:
+            assert native.value == 1.0

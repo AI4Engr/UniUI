@@ -12,6 +12,7 @@ from .chart import QtChartAdapter, _ChartWidget
 from .drawer import QtDrawerAdapter
 from .gauge import QtGaugeAdapter, _GaugeWidget
 from .metric_list import QtMetricListAdapter
+from .progress_bar import QtProgressBarAdapter
 from .sidebar import QtSidebarAdapter, _sidebar_style
 from .stat_card import QtStatCardAdapter
 from .table import (
@@ -30,6 +31,7 @@ __all__ = [
     "QtDrawerAdapter",
     "QtGaugeAdapter",
     "QtMetricListAdapter",
+    "QtProgressBarAdapter",
     "QtSidebarAdapter",
     "QtStatCardAdapter",
     "QtTableAdapter",

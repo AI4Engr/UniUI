@@ -77,6 +77,21 @@ class IBadge(IWidget):
         ...
 
 
+class IProgressBar(IWidget):
+    """Horizontal progress indicator, 0-100."""
+
+    @abstractmethod
+    def set_value(self, value: float) -> None:
+        """Percent complete, clamped to [0, 100]."""
+        ...
+
+    @abstractmethod
+    def set_status(self, status: str) -> None:
+        """Any raw value; classified via models.status.classify_status
+        (falls back to 'neutral' for anything unrecognized)."""
+        ...
+
+
 class ITable(IWidget):
     """Tabular data display with columns, rows, loading and error states."""
 

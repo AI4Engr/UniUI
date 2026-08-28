@@ -241,10 +241,14 @@ def dashboard_page(ctx):
 
     metrics = f.create_metric_list()
     metrics.set_items(_DETAIL_METRICS)
+    disk_usage = f.create_progress_bar(); disk_usage.set_value(62); disk_usage.set_status("warn")
+    metrics_body = f.create_vbox()
+    metrics_body.add_item(metrics)
+    metrics_body.add_item(disk_usage)
     metrics_card = f.create_card()
     metrics_card.set_title("Process")
     metrics_card.set_subtitle("Runtime signals at a glance")
-    metrics_card.set_content(metrics)
+    metrics_card.set_content(metrics_body)
 
     visual_row = QtWidgets.QWidget()
     visual_layout = QtWidgets.QHBoxLayout(visual_row)
@@ -665,8 +669,10 @@ def _browser_dashboard_page(_ctx):
     chart_card.set_subtitle("Keeps the latest 24 points"); chart_card.set_content(chart)
 
     metrics = f.create_metric_list(); metrics.set_items(_DETAIL_METRICS)
+    disk_usage = f.create_progress_bar(); disk_usage.set_value(62); disk_usage.set_status("warn")
+    metrics_body = f.create_vbox(); metrics_body.add_item(metrics); metrics_body.add_item(disk_usage)
     metrics_card = f.create_card(); metrics_card.set_title("Process")
-    metrics_card.set_subtitle("Runtime signals at a glance"); metrics_card.set_content(metrics)
+    metrics_card.set_subtitle("Runtime signals at a glance"); metrics_card.set_content(metrics_body)
 
     visuals = f.create_wrap(); visuals.set_spec(LayoutSpec(gap=14))
     visuals.add_item(gauge_card); visuals.add_item(chart_card); visuals.add_item(metrics_card)

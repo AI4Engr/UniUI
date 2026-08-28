@@ -1055,7 +1055,7 @@ def _main_browser(framework):
     from uniui.display import show_ui
 
     shell = create_admin_ui(framework)
-    show_ui(shell, title="UniUI Admin Demo", width=1180, height=780)
+    show_ui(shell, title="UniUI Admin Demo", width=1280, height=780)
 
 
 # ---------------------------------------------------------------------------
@@ -1321,7 +1321,7 @@ def main():
 
     router.push("/dashboard")
 
-    show_ui(shell, title="UniUI Admin Demo", width=1180, height=780,
+    show_ui(shell, title="UniUI Admin Demo", width=1280, height=780,
             stylesheet=_admin_stylesheet())
 
 

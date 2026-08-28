@@ -97,7 +97,7 @@ METRICS: Dict[str, Any] = {
     "radius_large": 14,
     "header_height": 60,
     "footer_height": 36,
-    "sidebar_expanded": 236,
+    "sidebar_expanded": 212,
     "sidebar_collapsed": 72,
     "sidebar_min": 168,
     "sidebar_max": 360,
@@ -108,7 +108,26 @@ METRICS: Dict[str, Any] = {
     "card_padding": 18,
     "control_height": 38,
     "stat_value_size": 26,
-    "stat_label_size": 11,
+    "stat_label_size": 12,
+
+    # -- Systematic spacing scale -----------------------------------------
+    # Widget-level margins/gaps should reference these instead of a literal
+    # pixel count, so the whole Admin surface moves together when the scale
+    # changes rather than needing a per-widget hunt.
+    "space_1": 4,
+    "space_2": 8,
+    "space_3": 12,
+    "space_4": 16,
+    "space_5": 24,
+    "space_6": 32,
+
+    # -- Typography scale ---------------------------------------------------
+    # Secondary/muted text defaulted to whatever a widget's author picked
+    # (9-12px scattered across components); this gives them one shared floor.
+    "text_xs": 11,
+    "text_sm": 12,
+    "text_base": 13,
+    "text_lg": 15,
 }
 
 

@@ -27,7 +27,7 @@ def _value_qss() -> str:
 
 
 def _unit_qss() -> str:
-    return f"color: {C['text_muted']}; font-size: 11px; background: transparent;"
+    return f"color: {C['text_muted']}; font-size: {M['stat_label_size']}px; background: transparent;"
 
 
 class QtStatCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, IStatCard):
@@ -105,7 +105,7 @@ class QtStatCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, IStatCard):
         color = C[self._TREND_COLORS.get(style, style)]
         self._trend_lbl.setText(text)
         self._trend_lbl.setStyleSheet(
-            f"color: {color}; font-size: 11px; font-weight: 600; "
+            f"color: {color}; font-size: {M['stat_label_size']}px; font-weight: 600; "
             "background: transparent;"
         )
 

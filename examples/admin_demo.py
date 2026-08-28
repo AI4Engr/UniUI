@@ -243,6 +243,7 @@ def dashboard_page(ctx):
     metrics.set_items(_DETAIL_METRICS)
     disk_usage = f.create_progress_bar(); disk_usage.set_value(62); disk_usage.set_status("warn")
     metrics_body = f.create_vbox()
+    metrics_body.set_spec(LayoutSpec(gap=10))
     metrics_body.add_item(metrics)
     metrics_body.add_item(disk_usage)
     metrics_card = f.create_card()
@@ -257,7 +258,10 @@ def dashboard_page(ctx):
     visual_layout.addWidget(gauge_card.get_native(), stretch=1)
     visual_layout.addWidget(chart_card.get_native(), stretch=2)
     visual_layout.addWidget(metrics_card.get_native(), stretch=1)
-    visual_row.setFixedHeight(250)
+    # A fixed height clipped the Process card once it grew a progress bar
+    # below the metric list - let the row grow to fit its tallest card
+    # instead of clamping every card to a number picked for the old content.
+    visual_row.setMinimumHeight(290)
 
     runner = TaskRunner()
 
@@ -670,7 +674,8 @@ def _browser_dashboard_page(_ctx):
 
     metrics = f.create_metric_list(); metrics.set_items(_DETAIL_METRICS)
     disk_usage = f.create_progress_bar(); disk_usage.set_value(62); disk_usage.set_status("warn")
-    metrics_body = f.create_vbox(); metrics_body.add_item(metrics); metrics_body.add_item(disk_usage)
+    metrics_body = f.create_vbox(); metrics_body.set_spec(LayoutSpec(gap=10))
+    metrics_body.add_item(metrics); metrics_body.add_item(disk_usage)
     metrics_card = f.create_card(); metrics_card.set_title("Process")
     metrics_card.set_subtitle("Runtime signals at a glance"); metrics_card.set_content(metrics_body)
 
@@ -1110,6 +1115,14 @@ QToolButton[headerButton="1"] {
     border-radius: 7px; padding: 5px 8px; min-width: 18px; min-height: 18px;
 }
 QToolButton[headerButton="1"]:hover { background: %(surface_subtle)s; color: %(text)s; }
+QLineEdit[headerSearch="1"] {
+    background: %(surface_subtle)s; border: 1px solid transparent;
+    border-radius: 7px; padding: 5px 10px; font-size: 12px;
+    color: %(text_muted)s;
+}
+QLineEdit[headerSearch="1"]:focus {
+    background: %(bg)s; border: 1px solid %(border)s; color: %(text)s;
+}
 """ % p
 
 
@@ -1150,17 +1163,16 @@ def main():
             super().__init__()
             self._responsive_widgets = None
 
-        def set_responsive_widgets(self, product, search, theme):
-            self._responsive_widgets = (product, search, theme)
+        def set_responsive_widgets(self, product, search):
+            self._responsive_widgets = (product, search)
 
         def resizeEvent(self, event):
             super().resizeEvent(event)
             if self._responsive_widgets is None:
                 return
-            product, search, theme = self._responsive_widgets
+            product, search = self._responsive_widgets
             width = event.size().width()
             product.setVisible(width >= 650)
-            theme.setVisible(width >= 720)
             search.setVisible(width >= 850)
 
     header_w = _ResponsiveTopBar()
@@ -1213,19 +1225,21 @@ def main():
     hl.addWidget(breadcrumb.get_native(), stretch=1)
 
     global_search = QtWidgets.QLineEdit()
+    global_search.setProperty("headerSearch", "1")
     global_search.setPlaceholderText("Search…")
-    global_search.setMaximumWidth(210)
+    global_search.setMaximumWidth(180)
     search_action = global_search.addAction(
         _header_icon("search", get_admin_palette()["text_muted"]),
         QtWidgets.QLineEdit.LeadingPosition,
     )
     hl.addWidget(global_search)
 
-    theme_btn = QtWidgets.QPushButton("Dark mode")
-    theme_btn.setProperty("buttonRole", "secondary")
+    theme_btn = QtWidgets.QToolButton()
+    theme_btn.setProperty("headerButton", "1")
+    theme_btn.setToolTip("Toggle dark mode")
     theme_btn.setCursor(QtCore.Qt.PointingHandCursor)
     hl.addWidget(theme_btn)
-    header_w.set_responsive_widgets(logo, global_search, theme_btn)
+    header_w.set_responsive_widgets(logo, global_search)
 
     bell = QtWidgets.QToolButton()
     bell.setProperty("headerButton", "1")
@@ -1298,8 +1312,8 @@ def main():
         theme_btn.setIcon(_header_icon(
             "light_mode" if dark else "dark_mode", icon_color
         ))
+        theme_btn.setToolTip("Switch to light mode" if dark else "Switch to dark mode")
         shell.get_native().setStyleSheet(_admin_stylesheet())
-        theme_btn.setText("Light mode" if dark else "Dark mode")
 
     def _apply_theme(dark: bool):
         set_admin_theme(dark)

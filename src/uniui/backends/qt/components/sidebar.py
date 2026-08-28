@@ -13,7 +13,24 @@ from ....models.navigation import (
 from ....state import Handle, safe_call
 from ..runtime import C, M, nav_icon, track_themed
 
+
+def _rgba(hex_color: str, alpha: float) -> str:
+    """A hex color as an rgba() string at ``alpha`` opacity.
+
+    Used to tint the sidebar's own foreground/accent colors for hover and
+    selected states, instead of a second opaque swatch: a low-alpha wash
+    reads as a subtle highlight on both a dark rail and a light one (e.g.
+    the "sand" theme), where a fixed opaque color would need re-tuning per
+    theme to avoid looking either invisible or like a heavy block.
+    """
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r},{g},{b},{alpha})"
+
+
 def _sidebar_style() -> str:
+    hover_tint = _rgba(C["sidebar_fg"], 0.08)
+    selected_tint = _rgba(C["sidebar_edge"], 0.14)
     return f"""
     QListWidget {{
         background: {C['sidebar_bg']};
@@ -30,10 +47,10 @@ def _sidebar_style() -> str:
         margin: 2px 10px;
     }}
     QListWidget::item:hover {{
-        background: {C['sidebar_hover']};
+        background: {hover_tint};
     }}
     QListWidget::item:selected {{
-        background: {C['sidebar_act']};
+        background: {selected_tint};
         color: {C['sidebar_act_fg']};
         border-left: {M['sidebar_edge_width']}px solid {C['sidebar_edge']};
     }}
@@ -42,7 +59,7 @@ def _sidebar_style() -> str:
         background: transparent;
     }}
     QListWidget::item:selected:active {{
-        background: {C['sidebar_act']};
+        background: {selected_tint};
         color: {C['sidebar_act_fg']};
         border-left: {M['sidebar_edge_width']}px solid {C['sidebar_edge']};
     }}

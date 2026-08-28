@@ -31,7 +31,7 @@ def test_admin_token_accessors_return_copies():
 def test_admin_metrics_define_cross_backend_shell_sizes():
     assert ADMIN_METRICS["header_height"] == 60
     assert ADMIN_METRICS["footer_height"] == 36
-    assert ADMIN_METRICS["sidebar_expanded"] == 236
+    assert ADMIN_METRICS["sidebar_expanded"] == 212
     assert ADMIN_METRICS["sidebar_collapsed"] == 72
     assert ADMIN_METRICS["sidebar_min"] < ADMIN_METRICS["sidebar_expanded"]
     assert ADMIN_METRICS["sidebar_expanded"] < ADMIN_METRICS["sidebar_max"]

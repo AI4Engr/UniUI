@@ -5,7 +5,7 @@ from PySide2 import QtCore, QtWidgets
 
 from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import ICard
-from ..runtime import C, as_widget, clear_layout, label_widget, track_themed
+from ..runtime import C, M, as_widget, clear_layout, label_widget, track_themed
 from ..styles import card_style
 
 class QtCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, ICard):
@@ -19,8 +19,9 @@ class QtCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, ICard):
         self._frame.setStyleSheet(card_style())
 
         outer = QtWidgets.QVBoxLayout(self._frame)
-        outer.setContentsMargins(22, 20, 22, 20)
-        outer.setSpacing(12)
+        pad = M["card_padding"]
+        outer.setContentsMargins(pad, pad, pad, pad)
+        outer.setSpacing(M["card_gap"])
 
         # Header row: title/subtitle on the left, optional action on the right.
         header = QtWidgets.QWidget()
@@ -37,7 +38,7 @@ class QtCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, ICard):
 
         self._title_lbl = label_widget("", bold=True, size=16)
         self._title_lbl.hide()
-        self._subtitle_lbl = label_widget("", size=12, color=C["text_muted"])
+        self._subtitle_lbl = label_widget("", size=M["text_sm"], color=C["text_muted"])
         self._subtitle_lbl.hide()
         title_layout.addWidget(self._title_lbl)
         title_layout.addWidget(self._subtitle_lbl)
@@ -87,5 +88,5 @@ class QtCardAdapter(VisibilityMixin, EnableMixin, SizeMixin, ICard):
             f"color: {C['text']}; font-size: 16px; font-weight: 700; background: transparent;"
         )
         self._subtitle_lbl.setStyleSheet(
-            f"color: {C['text_muted']}; font-size: 12px; background: transparent;"
+            f"color: {C['text_muted']}; font-size: {M['text_sm']}px; background: transparent;"
         )

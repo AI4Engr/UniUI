@@ -11,12 +11,13 @@ from __future__ import annotations
 
 from ...components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .components import (
     WebAppShellAdapter, WebBadgeAdapter, WebBreadcrumbAdapter, WebCardAdapter,
     WebChartAdapter, WebDrawerAdapter, WebGaugeAdapter, WebMetricListAdapter,
     WebProgressBarAdapter, WebSidebarAdapter, WebStatCardAdapter, WebTableAdapter,
+    WebToastAdapter,
 )
 from .primitives import _BaseNiceGUIWidgetFactory
 
@@ -29,6 +30,7 @@ class NiceGUIWidgetFactory(_BaseNiceGUIWidgetFactory):
     def createMetricList(self) -> IMetricList: return WebMetricListAdapter()
     def createBadge(self)      -> IBadge:      return WebBadgeAdapter()
     def createProgressBar(self) -> IProgressBar: return WebProgressBarAdapter()
+    def createToast(self)      -> IToast:      return WebToastAdapter()
     def createTable(self)      -> ITable:      return WebTableAdapter()
     def createSidebar(self)    -> ISidebar:    return WebSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return WebAppShellAdapter()

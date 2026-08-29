@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from uniui.components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from uniui.backends.web.factory import NiceGUIWidgetFactory
 from uniui.backends.web.primitives import _BaseNiceGUIWidgetFactory
@@ -45,6 +45,7 @@ from uniui.backends.web.components import (
     WebAppShellAdapter,
     WebBadgeAdapter,
     WebProgressBarAdapter,
+    WebToastAdapter,
     WebBreadcrumbAdapter,
     WebCardAdapter,
     WebChartAdapter,
@@ -67,6 +68,7 @@ __all__ = [
     "WebCardAdapter", "WebStatCardAdapter", "WebMetricListAdapter",
     "WebBadgeAdapter",
     "WebProgressBarAdapter",
+    "WebToastAdapter",
     "WebTableAdapter", "WebSidebarAdapter", "WebAppShellAdapter",
     "WebBreadcrumbAdapter", "WebGaugeAdapter", "WebChartAdapter",
     "WebDrawerAdapter",

@@ -10,6 +10,7 @@ from .metric_list import WebMetricListAdapter
 from .progress_bar import WebProgressBarAdapter
 from .sidebar import WebSidebarAdapter
 from .stat_card import WebStatCardAdapter
+from .toast import WebToastAdapter
 from .table import WebTableAdapter
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "WebProgressBarAdapter",
     "WebSidebarAdapter",
     "WebStatCardAdapter",
+    "WebToastAdapter",
     "WebTableAdapter",
 ]

@@ -117,6 +117,7 @@ def css() -> str:
     from .components.sidebar import sidebar_css
     from .components.stat_card import stat_card_css
     from .components.table import table_css
+    from .components.toast import toast_css
     from .demo_styles import _demo_css, _demo_page_css
 
     p = get_palette()
@@ -162,6 +163,7 @@ def css() -> str:
 {stat_card_css()}
 {metric_list_css()}
 {table_css()}
+{toast_css()}
 {gauge_css()}
 {drawer_css()}
 {sidebar_css()}

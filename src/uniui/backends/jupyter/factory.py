@@ -8,13 +8,14 @@ from __future__ import annotations
 
 from ...components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .components import (
     JupyterAppShellAdapter, JupyterBadgeAdapter, JupyterBreadcrumbAdapter,
     JupyterCardAdapter, JupyterChartAdapter, JupyterDrawerAdapter,
     JupyterGaugeAdapter, JupyterMetricListAdapter, JupyterSidebarAdapter,
     JupyterProgressBarAdapter, JupyterStatCardAdapter, JupyterTableAdapter,
+    JupyterToastAdapter,
 )
 from .primitives import _BaseJupyterWidgetFactory
 
@@ -27,6 +28,7 @@ class JupyterWidgetFactory(_BaseJupyterWidgetFactory):
     def createMetricList(self) -> IMetricList: return JupyterMetricListAdapter()
     def createBadge(self)      -> IBadge:      return JupyterBadgeAdapter()
     def createProgressBar(self) -> IProgressBar: return JupyterProgressBarAdapter()
+    def createToast(self)      -> IToast:      return JupyterToastAdapter()
     def createTable(self)      -> ITable:      return JupyterTableAdapter()
     def createSidebar(self)    -> ISidebar:    return JupyterSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return JupyterAppShellAdapter()

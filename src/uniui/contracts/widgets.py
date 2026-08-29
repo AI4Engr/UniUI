@@ -651,6 +651,10 @@ class IWidgetFactory(ABC):
         """Create a progress bar (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("ProgressBar not supported on this platform")
 
+    def createToast(self) -> "IToast":
+        """Create a toast notification banner (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Toast not supported on this platform")
+
     def createTable(self) -> "ITable":
         """Create a tabular data table (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Table not supported on this platform")
@@ -710,6 +714,7 @@ _SNAKE_ALIASES = {
     "createMetricList": "create_metric_list",
     "createBadge":      "create_badge",
     "createProgressBar": "create_progress_bar",
+    "createToast":      "create_toast",
     "createTable":      "create_table",
     "createSidebar":    "create_sidebar",
     "createAppShell":   "create_app_shell",

@@ -99,6 +99,7 @@ def admin_css() -> str:
     from .components.sidebar import sidebar_css
     from .components.stat_card import stat_card_css
     from .components.table import status_pill_css, table_css
+    from .components.toast import toast_css
     from .demo_styles import _demo_css, _demo_trailer_css
 
     return (
@@ -116,6 +117,7 @@ def admin_css() -> str:
         + gauge_css()
         + drawer_css()
         + status_pill_css()
+        + toast_css()
         + _demo_trailer_css()
         + app_shell_responsive_css()
     )

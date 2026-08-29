@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from uniui.components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from uniui.backends.jupyter.factory import JupyterWidgetFactory
 from uniui.backends.jupyter.primitives import _BaseJupyterWidgetFactory
@@ -41,6 +41,7 @@ from uniui.backends.jupyter.components import (
     JupyterAppShellAdapter,
     JupyterBadgeAdapter,
     JupyterProgressBarAdapter,
+    JupyterToastAdapter,
     JupyterBreadcrumbAdapter,
     JupyterCardAdapter,
     JupyterChartAdapter,
@@ -63,6 +64,7 @@ __all__ = [
     "JupyterCardAdapter", "JupyterStatCardAdapter", "JupyterMetricListAdapter",
     "JupyterBadgeAdapter",
     "JupyterProgressBarAdapter",
+    "JupyterToastAdapter",
     "JupyterTableAdapter", "JupyterSidebarAdapter", "JupyterAppShellAdapter",
     "JupyterBreadcrumbAdapter", "JupyterGaugeAdapter", "JupyterChartAdapter",
     "JupyterDrawerAdapter",

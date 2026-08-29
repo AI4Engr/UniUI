@@ -10,6 +10,7 @@ from .metric_list import JupyterMetricListAdapter
 from .progress_bar import JupyterProgressBarAdapter
 from .sidebar import JupyterSidebarAdapter
 from .stat_card import JupyterStatCardAdapter
+from .toast import JupyterToastAdapter
 from .table import JupyterTableAdapter
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "JupyterProgressBarAdapter",
     "JupyterSidebarAdapter",
     "JupyterStatCardAdapter",
+    "JupyterToastAdapter",
     "JupyterTableAdapter",
 ]

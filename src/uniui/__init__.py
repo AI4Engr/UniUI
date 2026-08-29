@@ -73,7 +73,7 @@ from .routing import (
 # Admin component interfaces
 from .components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 
 # Value parsing helpers
@@ -102,6 +102,7 @@ from .facade import (
     AppShell, Badge, Breadcrumb, Button, Card, Chart, Column, ComboBox, Drawer,
     Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit, MetricList,
     Overlay, ProgressBar, Row, ScrollView, Sidebar, SplitPane, StatCard, Table, TabWidget,
+    Toast,
     TextArea, UniUI, VBox, Wrap, Grid,
 )
 
@@ -131,6 +132,7 @@ STAT_CARD = 'stat_card'
 METRIC_LIST = 'metric_list'
 BADGE = 'badge'
 PROGRESS_BAR = 'progress_bar'
+TOAST = 'toast'
 TABLE = 'table'
 SIDEBAR = 'sidebar'
 APP_SHELL = 'app_shell'
@@ -170,6 +172,7 @@ __all__ = [
     'IMetricList',
     'IBadge',
     'IProgressBar',
+    'IToast',
     'ITable',
     'ISidebar',
     'IAppShell',
@@ -199,6 +202,7 @@ __all__ = [
     'MetricList',
     'Badge',
     'ProgressBar',
+    'Toast',
     'Table',
     'Sidebar',
     'AppShell',
@@ -222,7 +226,7 @@ __all__ = [
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
-    'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
+    'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TOAST', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
 
     # Framework selection

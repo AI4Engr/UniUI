@@ -7,7 +7,7 @@ from tests.contract_framework import CommonCapabilitiesContractTest as _Common
 from tests.contract_framework import skip_unless_available
 from uniui import (
     APP_SHELL, BADGE, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
-    METRIC_LIST, PROGRESS_BAR, SIDEBAR, STAT_CARD, TABLE,
+    METRIC_LIST, PROGRESS_BAR, SIDEBAR, STAT_CARD, TABLE, TOAST,
 )
 
 
@@ -172,6 +172,113 @@ class TestProgressBarContract(_Common):
     def test_set_status(self, factory, status):
         bar = self.create_widget(factory)
         bar.set_status(status)
+
+
+class TestToastContract(_Common):
+    widget_kind = TOAST
+
+    def create_widget(self, factory):
+        return factory.create_toast()
+
+    @pytest.mark.contract
+    def test_notify_does_not_raise(self, factory):
+        toast = self.create_widget(factory)
+        toast.notify("Saved successfully", status="ok")
+
+    @pytest.mark.contract
+    @pytest.mark.parametrize("status", ["ok", "warn", "error", "neutral", "mystery"])
+    def test_notify_accepts_any_status(self, factory, status):
+        toast = self.create_widget(factory)
+        toast.notify("message", status=status)
+
+    @pytest.mark.contract
+    def test_dismiss_without_a_prior_notify_does_not_raise(self, factory):
+        toast = self.create_widget(factory)
+        toast.dismiss()
+
+    @pytest.mark.contract
+    def test_dismiss_after_notify_does_not_raise(self, factory):
+        toast = self.create_widget(factory)
+        toast.notify("message")
+        toast.dismiss()
+
+
+class TestToastRendering:
+    def test_qt_notify_and_dismiss_toggle_visibility(self):
+        skip_unless_available("qt")
+        from uniui import create_factory
+
+        toast = create_factory("qt").create_toast()
+        native = toast.get_native()
+        assert native.isHidden() is True
+        toast.notify("Saved successfully", status="ok")
+        assert native.isHidden() is False
+        assert native.text() == "Saved successfully"
+        toast.dismiss()
+        assert native.isHidden() is True
+
+    def test_jupyter_notify_and_dismiss_toggle_visibility(self):
+        skip_unless_available("jupyter")
+        from uniui import create_factory
+
+        toast = create_factory("jupyter").create_toast()
+        native = toast.get_native()
+        assert native.layout.display == "none"
+        toast.notify("Saved successfully", status="ok")
+        assert native.layout.display is None
+        assert "Saved successfully" in native.value
+        toast.dismiss()
+        assert native.layout.display == "none"
+
+    def test_web_notify_reaches_the_native_content(self):
+        skip_unless_available("web")
+        from uniui import create_factory
+
+        toast = create_factory("web").create_toast()
+        toast.notify("Saved successfully", status="ok")
+        native = toast.get_native()
+        content = getattr(native, "content", None) or native._props.get("innerHTML", "")
+        assert "Saved successfully" in content
+
+    def test_jupyter_a_stale_auto_dismiss_does_not_hide_a_newer_message(self):
+        """Regression guard: a second notify() before the first's timer
+        fires must not let that first timer hide the *new* message once it
+        finally goes off."""
+        skip_unless_available("jupyter")
+        from unittest.mock import patch
+        from uniui import create_factory
+
+        toast = create_factory("jupyter").create_toast()
+        pending = []
+        with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: pending.append(cb)):
+            toast.notify("first", status="warn")
+            stale_dismiss = pending[-1]
+            toast.notify("second", status="error")
+
+        stale_dismiss()  # simulate the first message's timer firing late
+
+        native = toast.get_native()
+        assert native.layout.display is None, "must still be showing 'second'"
+        assert "second" in native.value
+
+    def test_web_a_stale_auto_dismiss_does_not_hide_a_newer_message(self):
+        skip_unless_available("web")
+        from unittest.mock import patch
+        from uniui import create_factory
+
+        toast = create_factory("web").create_toast()
+        pending = []
+        with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: pending.append(cb)):
+            toast.notify("first", status="warn")
+            stale_dismiss = pending[-1]
+            toast.notify("second", status="error")
+
+        stale_dismiss()
+
+        native = toast.get_native()
+        assert native.visible is True, "the stale timer must not hide the newer message"
+        content = getattr(native, "content", None) or native._props.get("innerHTML", "")
+        assert "second" in content
 
 
 class TestBadgeRendering:

@@ -15,7 +15,7 @@ from __future__ import annotations
 from .backends.registry import _create_factory, _get_factory
 from .components import (
     IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
-    IMetricList, IProgressBar, ISidebar, IStatCard, ITable,
+    IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .core import (
     IButton, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout, IImage,
@@ -221,6 +221,11 @@ def ProgressBar(value: float = 0, status: str = "neutral") -> IProgressBar:
     bar.set_value(value)
     bar.set_status(status)
     return bar
+
+
+def Toast() -> IToast:
+    """Create a toast notification banner. Call .notify(message, status) to show it."""
+    return _get_factory().create_toast()
 
 
 def Table(columns=None, rows=None) -> ITable:

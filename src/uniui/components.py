@@ -92,6 +92,32 @@ class IProgressBar(IWidget):
         ...
 
 
+class IToast(IWidget):
+    """A transient status banner that shows a message and auto-dismisses.
+
+    Renders inline wherever it's placed in the widget tree (like every
+    other UniUI widget) rather than floating over the whole window as a
+    corner popup - that's a real gap, not a design choice; see TODO.md for
+    the floating-overlay upgrade path. A single Toast instance is meant to
+    be created once and reused for every notification via ``notify()``,
+    not recreated per message.
+    """
+
+    @abstractmethod
+    def notify(self, message: str, status: str = "neutral", duration: int = 3000) -> None:
+        """Show ``message`` for ``duration`` ms, then auto-hide.
+
+        A call while already showing replaces the message and restarts the
+        dismiss timer - it does not stack multiple toasts.
+        """
+        ...
+
+    @abstractmethod
+    def dismiss(self) -> None:
+        """Hide immediately and cancel any pending auto-dismiss timer."""
+        ...
+
+
 class ITable(IWidget):
     """Tabular data display with columns, rows, loading and error states."""
 

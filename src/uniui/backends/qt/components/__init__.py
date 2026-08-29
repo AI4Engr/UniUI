@@ -15,6 +15,7 @@ from .metric_list import QtMetricListAdapter
 from .progress_bar import QtProgressBarAdapter
 from .sidebar import QtSidebarAdapter, _sidebar_style
 from .stat_card import QtStatCardAdapter
+from .toast import QtToastAdapter
 from .table import (
     QtTableAdapter,
     _StatusPillDelegate,
@@ -34,6 +35,7 @@ __all__ = [
     "QtProgressBarAdapter",
     "QtSidebarAdapter",
     "QtStatCardAdapter",
+    "QtToastAdapter",
     "QtTableAdapter",
     "_ChartWidget",
     "_GaugeWidget",

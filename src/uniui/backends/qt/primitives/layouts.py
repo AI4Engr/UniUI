@@ -57,6 +57,14 @@ class QTTabWidget(QtWidgets.QTabWidget):
     """Qt Tab Widget - native implementation"""
     def __init__(self):
         super().__init__()
+        # Every tab widget in practice ends up nested inside a Card or other
+        # locally-styled ancestor, which blocks the app-wide stylesheet
+        # cascade (same issue the combo popup QSS works around) - style it
+        # directly so QTabBar::tab padding/font metrics are always applied,
+        # not silently falling back to the native style's tighter sizeHint.
+        from .styles import apply_base_style
+
+        apply_base_style(self)
 
     def addTab(self, item, tab_name):
         super().addTab(ensure_qwidget(item), tab_name)

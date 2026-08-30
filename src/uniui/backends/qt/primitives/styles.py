@@ -15,7 +15,7 @@ from __future__ import annotations
 import weakref
 from typing import Set
 
-from PySide2 import QtWidgets
+from PySide2 import QtCore, QtWidgets
 
 from ..runtime import get_palette as get_admin_palette
 from ..styles import scrollbar_rules as _scrollbar_rules
@@ -93,8 +93,18 @@ def _combo_popup_stylesheet() -> str:
 
 
 def apply_combo_popup_style(combo) -> None:
-    """Style one QComboBox's dropdown popup and track it for theme refresh."""
+    """Style one QComboBox's dropdown popup and track it for theme refresh.
+
+    The popup is a separate top-level window, so its rounded corners (set in
+    ``_COMBO_POPUP_QSS``) only clip the QSS-painted rectangle -- without
+    ``WA_TranslucentBackground`` on the popup's own window, Qt still paints
+    the native opaque rectangular window surface underneath, which shows
+    through as square black slivers behind the rounded corners.
+    """
     combo.setStyleSheet(_combo_popup_stylesheet())
+    view = combo.view()
+    view.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
+    view.window().setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
     _STYLED_COMBOS.add(combo)
 
 

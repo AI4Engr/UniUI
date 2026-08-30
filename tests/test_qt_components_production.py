@@ -101,6 +101,44 @@ def test_qt_drawer_and_offscreen_visual_render_smoke():
         set_motion_enabled(True); drawer.get_native().hide(); root.close()
 
 
+def test_qt_combo_popup_window_is_translucent_to_avoid_square_corners():
+    """The popup's rounded QSS corners only render correctly if the popup's
+    own top-level window is translucent - otherwise Qt paints an opaque
+    rectangular window surface behind it, showing as black slivers in the
+    corners the border-radius clips. See styles.apply_combo_popup_style."""
+    pytest.importorskip("PySide2")
+    from PySide2 import QtCore, QtWidgets
+    from uniui import create_factory
+
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    combo = create_factory("qt").create_combo_box()
+    native = combo.get_native()
+    view = native.view()
+    assert view.testAttribute(QtCore.Qt.WA_TranslucentBackground)
+    assert view.window().testAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+
+def test_qt_tab_widget_gets_its_own_stylesheet_even_when_nested_in_a_card():
+    """A QTabWidget nested inside Card's locally-styled QFrame doesn't
+    receive the app-wide stylesheet cascade (same issue as the combo popup)
+    -- it must carry its own QSS so QTabBar::tab padding/font aren't left to
+    the native style's tighter sizeHint, which clips tab labels."""
+    pytest.importorskip("PySide2")
+    from PySide2 import QtWidgets
+
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    from uniui import create_factory
+
+    card = create_factory("qt").create_card()
+    tabs = create_factory("qt").create_tab_widget()
+    label = create_factory("qt").create_label()
+    label.set_text("Activity")
+    tabs.add_tab(label, "Activity")
+    card.set_content(tabs)
+
+    assert tabs.get_native().styleSheet() != ""
+
+
 def test_qt_factory_enables_high_dpi_before_application_creation():
     repo_root = Path(__file__).resolve().parents[1]
     for scale in ("1", "1.25", "1.5", "2"):

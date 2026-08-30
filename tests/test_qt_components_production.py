@@ -124,7 +124,7 @@ def test_qt_combo_popup_has_no_border_radius_and_no_translucency():
 def test_qt_tab_widget_gets_its_own_stylesheet_even_when_nested_in_a_card():
     """A QTabWidget nested inside Card's locally-styled QFrame doesn't
     receive the app-wide stylesheet cascade (same issue as the combo popup)
-    -- it must carry its own QSS so QTabBar::tab padding/font aren't left to
+    -- it must carry its own QSS so QTabBar::tab font/border aren't left to
     the native style's tighter sizeHint, which clips tab labels."""
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
@@ -140,6 +140,23 @@ def test_qt_tab_widget_gets_its_own_stylesheet_even_when_nested_in_a_card():
     card.set_content(tabs)
 
     assert tabs.get_native().styleSheet() != ""
+
+
+def test_qt_tab_bar_qss_has_no_padding_property_that_clips_labels():
+    """PySide2's Windows-style tab painting computes the text-drawing rect
+    differently from the sizeHint contents rect once a QSS `padding` is set
+    on QTabBar::tab, clipping both edges of the label - confirmed by
+    hands-on repro: "Activity" rendered with both its leading "A" and
+    trailing "y" cut off. min-width/height give equivalent visual spacing
+    without touching that broken code path, so `padding` must not come
+    back here."""
+    import re
+
+    from uniui.backends.qt.primitives.styles import base_stylesheet
+
+    qss = re.sub(r"/\*.*?\*/", "", base_stylesheet(), flags=re.DOTALL)
+    tab_bar_rule = qss.split("QTabBar::tab {", 1)[1].split("}", 1)[0]
+    assert "padding" not in tab_bar_rule
 
 
 def test_qt_factory_enables_high_dpi_before_application_creation():

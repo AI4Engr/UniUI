@@ -238,11 +238,18 @@ QTabWidget::pane {
     padding-top: 14px;
 }
 QTabBar::tab {
+    /* No `padding` here: PySide2's Windows-style tab painting computes the
+       text-drawing rect differently from the sizeHint contents rect once a
+       QSS `padding` is set, clipping both edges of the label (confirmed by
+       hands-on repro - "Activity" lost both its leading "A" and trailing
+       "y"). `min-width`/`height` reproduce the same visual spacing without
+       touching the padding-based content-rect path. */
     background: transparent;
     color: %(text_muted)s;
     font-size: 13px;
     font-weight: 600;
-    padding: 9px 16px;
+    min-width: 80px;
+    height: 30px;
     border: none;
     border-bottom: 2px solid transparent;
 }

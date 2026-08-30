@@ -164,6 +164,19 @@ def dashboard_page(ctx):
         "Refresh data",
     )
 
+    live_updates = f.create_switch()
+    live_updates.set_checked(True)
+    live_label = f.create_label()
+    live_label.set_text("Live updates")
+    live_row = QtWidgets.QWidget()
+    live_row_layout = QtWidgets.QHBoxLayout(live_row)
+    live_row_layout.setContentsMargins(0, 0, 0, 0)
+    live_row_layout.setSpacing(8)
+    live_row_layout.addWidget(live_updates.get_native())
+    live_row_layout.addWidget(live_label.get_native())
+    live_row_layout.addStretch()
+    layout.addWidget(live_row)
+
     # Stat cards
     sc_users   = f.create_stat_card()
     sc_orders  = f.create_stat_card()
@@ -307,8 +320,9 @@ def dashboard_page(ctx):
 
     def _live_tick():
         try:
-            _live_state["value"] = max(20, min(120, _live_state["value"] + random.randint(-6, 8)))
-            chart.append_data(time.strftime("%H:%M:%S"), [_live_state["value"]])
+            if live_updates.is_checked():
+                _live_state["value"] = max(20, min(120, _live_state["value"] + random.randint(-6, 8)))
+                chart.append_data(time.strftime("%H:%M:%S"), [_live_state["value"]])
         except Exception:
             return  # page/chart was torn down; stop rescheduling
         schedule_after(1500, _live_tick)
@@ -659,6 +673,16 @@ def _browser_dashboard_page(_ctx):
         "Refresh data",
     )
 
+    live_updates = f.create_switch()
+    live_updates.set_checked(True)
+    live_label = f.create_label()
+    live_label.set_text("Live updates")
+    live_row = f.create_hbox()
+    live_row.set_spec(LayoutSpec(gap=8))
+    live_row.add_item(live_updates)
+    live_row.add_item(live_label)
+    page.add_item(live_row)
+
     cards = []
     for label, status in (
         ("Active Users", "ok"), ("Orders", "ok"),
@@ -728,8 +752,9 @@ def _browser_dashboard_page(_ctx):
 
     def _live_tick():
         try:
-            _live_state["value"] = max(20, min(120, _live_state["value"] + random.randint(-6, 8)))
-            chart.append_data(time.strftime("%H:%M:%S"), [_live_state["value"]])
+            if live_updates.is_checked():
+                _live_state["value"] = max(20, min(120, _live_state["value"] + random.randint(-6, 8)))
+                chart.append_data(time.strftime("%H:%M:%S"), [_live_state["value"]])
         except Exception:
             return  # page/chart was torn down; stop rescheduling
         schedule_after(1500, _live_tick)

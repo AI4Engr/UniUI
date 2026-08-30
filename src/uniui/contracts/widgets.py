@@ -703,6 +703,10 @@ class IWidgetFactory(ABC):
         """Create a toast notification banner (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Toast not supported on this platform")
 
+    def createCarousel(self) -> "ICarousel":
+        """Create an image carousel (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Carousel not supported on this platform")
+
     def createTable(self) -> "ITable":
         """Create a tabular data table (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Table not supported on this platform")
@@ -765,6 +769,7 @@ _SNAKE_ALIASES = {
     "createBadge":      "create_badge",
     "createProgressBar": "create_progress_bar",
     "createToast":      "create_toast",
+    "createCarousel":   "create_carousel",
     "createTable":      "create_table",
     "createSidebar":    "create_sidebar",
     "createAppShell":   "create_app_shell",

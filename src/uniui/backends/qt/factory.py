@@ -21,14 +21,14 @@ longer defines it.
 from __future__ import annotations
 
 from ...components import (
-    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, ICarousel, IChart, IDrawer, IGauge,
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .components import (
     QtAppShellAdapter, QtBadgeAdapter, QtBreadcrumbAdapter, QtCardAdapter,
-    QtChartAdapter, QtDrawerAdapter, QtGaugeAdapter, QtMetricListAdapter,
-    QtProgressBarAdapter, QtSidebarAdapter, QtStatCardAdapter, QtTableAdapter,
-    QtToastAdapter,
+    QtCarouselAdapter, QtChartAdapter, QtDrawerAdapter, QtGaugeAdapter,
+    QtMetricListAdapter, QtProgressBarAdapter, QtSidebarAdapter,
+    QtStatCardAdapter, QtTableAdapter, QtToastAdapter,
 )
 from .primitives import _BaseQtWidgetFactory
 
@@ -42,6 +42,7 @@ class QtWidgetFactory(_BaseQtWidgetFactory):
     def createBadge(self)      -> IBadge:      return QtBadgeAdapter()
     def createProgressBar(self) -> IProgressBar: return QtProgressBarAdapter()
     def createToast(self)      -> IToast:      return QtToastAdapter()
+    def createCarousel(self)   -> ICarousel:   return QtCarouselAdapter()
     def createTable(self)      -> ITable:      return QtTableAdapter()
     def createSidebar(self)    -> ISidebar:    return QtSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return QtAppShellAdapter()

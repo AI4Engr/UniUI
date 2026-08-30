@@ -118,6 +118,49 @@ class IToast(IWidget):
         ...
 
 
+class ICarousel(IWidget):
+    """An image slideshow with prev/next navigation and optional auto-advance.
+
+    Slides are local image file paths, not URLs - the Jupyter backend's
+    underlying ``ipywidgets.Image`` has no URL-loading support (same
+    constraint as ``IImage.set_image`` vs ``set_image_from_url``), so a
+    Carousel that needs to work identically everywhere has to stick to the
+    lowest common denominator.
+    """
+
+    @abstractmethod
+    def set_images(self, paths: List[str]) -> None:
+        """Replace all slides. Resets to the first slide."""
+        ...
+
+    @abstractmethod
+    def next_slide(self) -> None:
+        """Advance to the next slide, wrapping around at the end."""
+        ...
+
+    @abstractmethod
+    def previous_slide(self) -> None:
+        """Go back to the previous slide, wrapping around at the start."""
+        ...
+
+    @abstractmethod
+    def get_current_index(self) -> int: ...
+
+    @abstractmethod
+    def set_current_index(self, index: int) -> None: ...
+
+    @abstractmethod
+    def set_auto_advance(self, enabled: bool, interval_ms: int = 3000) -> None:
+        """Start or stop automatically calling ``next_slide()`` on a timer."""
+        ...
+
+    @abstractmethod
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        """Register a callback fired whenever the current slide changes,
+        whether from navigation, auto-advance, or set_current_index()."""
+        ...
+
+
 class ITable(IWidget):
     """Tabular data display with columns, rows, loading and error states."""
 

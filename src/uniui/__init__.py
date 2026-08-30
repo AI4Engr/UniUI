@@ -74,7 +74,7 @@ from .routing import (
 
 # Admin component interfaces
 from .components import (
-    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, ICarousel, IChart, IDrawer, IGauge,
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 
@@ -101,10 +101,10 @@ from .backends.registry import (
 
 # Convenience constructors and the legacy facade class
 from .facade import (
-    AppShell, Badge, Breadcrumb, Button, Card, Checkbox, Chart, Column, ComboBox,
-    Drawer, Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit, MetricList,
-    Overlay, ProgressBar, Row, ScrollView, Sidebar, SplitPane, StatCard, Switch,
-    Table, TabWidget, Toast,
+    AppShell, Badge, Breadcrumb, Button, Card, Carousel, Checkbox, Chart, Column,
+    ComboBox, Drawer, Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit,
+    MetricList, Overlay, ProgressBar, Row, ScrollView, Sidebar, SplitPane, StatCard,
+    Switch, Table, TabWidget, Toast,
     TextArea, UniUI, VBox, Wrap, Grid,
 )
 
@@ -137,6 +137,7 @@ METRIC_LIST = 'metric_list'
 BADGE = 'badge'
 PROGRESS_BAR = 'progress_bar'
 TOAST = 'toast'
+CAROUSEL = 'carousel'
 TABLE = 'table'
 SIDEBAR = 'sidebar'
 APP_SHELL = 'app_shell'
@@ -177,6 +178,7 @@ __all__ = [
     'IBadge',
     'IProgressBar',
     'IToast',
+    'ICarousel',
     'ITable',
     'ISidebar',
     'IAppShell',
@@ -209,6 +211,7 @@ __all__ = [
     'Badge',
     'ProgressBar',
     'Toast',
+    'Carousel',
     'Table',
     'Sidebar',
     'AppShell',
@@ -232,7 +235,7 @@ __all__ = [
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'CHECKBOX', 'SWITCH', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
-    'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TOAST', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
+    'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TOAST', 'CAROUSEL', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
 
     # Framework selection

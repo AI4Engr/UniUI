@@ -7,15 +7,15 @@ rather than in the root ``jupyter_components`` compatibility module.
 from __future__ import annotations
 
 from ...components import (
-    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, ICarousel, IChart, IDrawer, IGauge,
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .components import (
     JupyterAppShellAdapter, JupyterBadgeAdapter, JupyterBreadcrumbAdapter,
-    JupyterCardAdapter, JupyterChartAdapter, JupyterDrawerAdapter,
-    JupyterGaugeAdapter, JupyterMetricListAdapter, JupyterSidebarAdapter,
-    JupyterProgressBarAdapter, JupyterStatCardAdapter, JupyterTableAdapter,
-    JupyterToastAdapter,
+    JupyterCardAdapter, JupyterCarouselAdapter, JupyterChartAdapter,
+    JupyterDrawerAdapter, JupyterGaugeAdapter, JupyterMetricListAdapter,
+    JupyterSidebarAdapter, JupyterProgressBarAdapter, JupyterStatCardAdapter,
+    JupyterTableAdapter, JupyterToastAdapter,
 )
 from .primitives import _BaseJupyterWidgetFactory
 
@@ -29,6 +29,7 @@ class JupyterWidgetFactory(_BaseJupyterWidgetFactory):
     def createBadge(self)      -> IBadge:      return JupyterBadgeAdapter()
     def createProgressBar(self) -> IProgressBar: return JupyterProgressBarAdapter()
     def createToast(self)      -> IToast:      return JupyterToastAdapter()
+    def createCarousel(self)   -> ICarousel:   return JupyterCarouselAdapter()
     def createTable(self)      -> ITable:      return JupyterTableAdapter()
     def createSidebar(self)    -> ISidebar:    return JupyterSidebarAdapter()
     def createAppShell(self)   -> IAppShell:   return JupyterAppShellAdapter()

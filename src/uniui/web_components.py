@@ -21,7 +21,7 @@ had been installed. Reset it on ``backends.web.styles`` instead.
 from __future__ import annotations
 
 from uniui.components import (
-    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, ICarousel, IChart, IDrawer, IGauge,
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from uniui.backends.web.factory import NiceGUIWidgetFactory
@@ -46,6 +46,7 @@ from uniui.backends.web.components import (
     WebBadgeAdapter,
     WebProgressBarAdapter,
     WebToastAdapter,
+    WebCarouselAdapter,
     WebBreadcrumbAdapter,
     WebCardAdapter,
     WebChartAdapter,
@@ -69,6 +70,7 @@ __all__ = [
     "WebBadgeAdapter",
     "WebProgressBarAdapter",
     "WebToastAdapter",
+    "WebCarouselAdapter",
     "WebTableAdapter", "WebSidebarAdapter", "WebAppShellAdapter",
     "WebBreadcrumbAdapter", "WebGaugeAdapter", "WebChartAdapter",
     "WebDrawerAdapter",

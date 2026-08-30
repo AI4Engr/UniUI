@@ -3,6 +3,7 @@ from .app_shell import WebAppShellAdapter
 from .badge import WebBadgeAdapter
 from .breadcrumb import WebBreadcrumbAdapter
 from .card import WebCardAdapter
+from .carousel import WebCarouselAdapter
 from .chart import WebChartAdapter
 from .drawer import WebDrawerAdapter
 from .gauge import WebGaugeAdapter
@@ -18,6 +19,7 @@ __all__ = [
     "WebBadgeAdapter",
     "WebBreadcrumbAdapter",
     "WebCardAdapter",
+    "WebCarouselAdapter",
     "WebChartAdapter",
     "WebDrawerAdapter",
     "WebGaugeAdapter",

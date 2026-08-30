@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from .backends.registry import _create_factory, _get_factory
 from .components import (
-    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, ICarousel, IChart, IDrawer, IGauge,
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .core import (
@@ -246,6 +246,14 @@ def ProgressBar(value: float = 0, status: str = "neutral") -> IProgressBar:
 def Toast() -> IToast:
     """Create a toast notification banner. Call .notify(message, status) to show it."""
     return _get_factory().create_toast()
+
+
+def Carousel(images=None) -> ICarousel:
+    """Create an image carousel. Images are local file paths."""
+    carousel = _get_factory().create_carousel()
+    if images:
+        carousel.set_images(list(images))
+    return carousel
 
 
 def Table(columns=None, rows=None) -> ITable:

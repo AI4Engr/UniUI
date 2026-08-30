@@ -6,7 +6,7 @@ import pytest
 from tests.contract_framework import CommonCapabilitiesContractTest as _Common
 from tests.contract_framework import skip_unless_available
 from uniui import (
-    APP_SHELL, BADGE, BREADCRUMB, CARD, CHART, DRAWER, GAUGE,
+    APP_SHELL, BADGE, BREADCRUMB, CARD, CAROUSEL, CHART, DRAWER, GAUGE,
     METRIC_LIST, PROGRESS_BAR, SIDEBAR, STAT_CARD, TABLE, TOAST,
 )
 
@@ -279,6 +279,179 @@ class TestToastRendering:
         assert native.visible is True, "the stale timer must not hide the newer message"
         content = getattr(native, "content", None) or native._props.get("innerHTML", "")
         assert "second" in content
+
+
+def _make_png(path, width=10, height=10, color=(200, 200, 200)):
+    """A minimal valid solid-color PNG, written with only stdlib - no
+    Pillow dependency for what's otherwise just a couple of test fixtures."""
+    import struct
+    import zlib
+
+    def chunk(tag, data):
+        payload = tag + data
+        return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload))
+
+    row = b"\x00" + bytes(color) * width
+    raw = row * height
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n")
+        f.write(chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)))
+        f.write(chunk(b"IDAT", zlib.compress(raw)))
+        f.write(chunk(b"IEND", b""))
+
+
+@pytest.fixture
+def slide_paths(tmp_path):
+    paths = []
+    for i, color in enumerate([(255, 99, 71), (100, 149, 237), (60, 179, 113)]):
+        p = tmp_path / f"slide{i}.png"
+        _make_png(str(p), color=color)
+        paths.append(str(p))
+    return paths
+
+
+class TestCarouselContract(_Common):
+    widget_kind = CAROUSEL
+
+    def create_widget(self, factory):
+        return factory.create_carousel()
+
+    @pytest.mark.contract
+    def test_set_images_does_not_raise(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+
+    @pytest.mark.contract
+    def test_starts_at_index_zero(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        assert carousel.get_current_index() == 0
+
+    @pytest.mark.contract
+    def test_next_slide_wraps_around(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        for _ in range(len(slide_paths)):
+            carousel.next_slide()
+        assert carousel.get_current_index() == 0
+
+    @pytest.mark.contract
+    def test_previous_slide_wraps_around(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        carousel.previous_slide()
+        assert carousel.get_current_index() == len(slide_paths) - 1
+
+    @pytest.mark.contract
+    def test_set_current_index_roundtrip(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        carousel.set_current_index(2)
+        assert carousel.get_current_index() == 2
+
+    @pytest.mark.contract
+    def test_set_current_index_clamps_out_of_range(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        carousel.set_current_index(99)
+        assert carousel.get_current_index() == len(slide_paths) - 1
+
+    @pytest.mark.contract
+    def test_navigation_without_images_does_not_raise(self, factory):
+        carousel = self.create_widget(factory)
+        carousel.next_slide()
+        carousel.previous_slide()
+        carousel.set_current_index(0)
+
+    @pytest.mark.contract
+    def test_on_change_callback(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        called = []
+        carousel.on_change(lambda: called.append(1))
+
+        carousel.next_slide()
+
+        assert len(called) >= 1
+
+    @pytest.mark.contract
+    def test_on_change_dispose_stops_callback(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        called = []
+        handle = carousel.on_change(lambda: called.append(1))
+        handle.dispose()
+
+        carousel.next_slide()
+
+        assert called == []
+
+    @pytest.mark.contract
+    def test_set_auto_advance_does_not_raise(self, factory, slide_paths):
+        carousel = self.create_widget(factory)
+        carousel.set_images(slide_paths)
+        carousel.set_auto_advance(True, interval_ms=50)
+        carousel.set_auto_advance(False)
+
+
+class TestCarouselRendering:
+    def test_jupyter_a_stale_auto_advance_tick_does_not_reschedule(self, tmp_path):
+        """Regression guard: disabling auto-advance must invalidate any
+        already-scheduled tick, mirroring Toast's stale-timer guard."""
+        skip_unless_available("jupyter")
+        from unittest.mock import patch
+        from uniui import create_factory
+
+        paths = []
+        for i, color in enumerate([(255, 99, 71), (100, 149, 237)]):
+            p = tmp_path / f"slide{i}.png"
+            _make_png(str(p), color=color)
+            paths.append(str(p))
+
+        carousel = create_factory("jupyter").create_carousel()
+        carousel.set_images(paths)
+
+        pending = []
+        with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: pending.append(cb)):
+            carousel.set_auto_advance(True, interval_ms=500)
+            tick = pending.pop()
+            tick()
+            assert carousel.get_current_index() == 1
+
+            stale_tick = pending.pop()
+            carousel.set_auto_advance(False)
+            stale_tick()
+
+        assert carousel.get_current_index() == 1, "stale tick must not advance further"
+        assert pending == [], "stale tick must not reschedule itself"
+
+    def test_web_a_stale_auto_advance_tick_does_not_reschedule(self, tmp_path):
+        skip_unless_available("web")
+        from unittest.mock import patch
+        from uniui import create_factory
+
+        paths = []
+        for i, color in enumerate([(255, 99, 71), (100, 149, 237)]):
+            p = tmp_path / f"slide{i}.png"
+            _make_png(str(p), color=color)
+            paths.append(str(p))
+
+        carousel = create_factory("web").create_carousel()
+        carousel.set_images(paths)
+
+        pending = []
+        with patch("uniui.display.schedule_after", side_effect=lambda ms, cb: pending.append(cb)):
+            carousel.set_auto_advance(True, interval_ms=500)
+            tick = pending.pop()
+            tick()
+            assert carousel.get_current_index() == 1
+
+            stale_tick = pending.pop()
+            carousel.set_auto_advance(False)
+            stale_tick()
+
+        assert carousel.get_current_index() == 1, "stale tick must not advance further"
+        assert pending == [], "stale tick must not reschedule itself"
 
 
 class TestBadgeRendering:

@@ -3,6 +3,7 @@ from .app_shell import JupyterAppShellAdapter
 from .badge import JupyterBadgeAdapter
 from .breadcrumb import JupyterBreadcrumbAdapter
 from .card import JupyterCardAdapter
+from .carousel import JupyterCarouselAdapter
 from .chart import JupyterChartAdapter
 from .drawer import JupyterDrawerAdapter
 from .gauge import JupyterGaugeAdapter
@@ -18,6 +19,7 @@ __all__ = [
     "JupyterBadgeAdapter",
     "JupyterBreadcrumbAdapter",
     "JupyterCardAdapter",
+    "JupyterCarouselAdapter",
     "JupyterChartAdapter",
     "JupyterDrawerAdapter",
     "JupyterGaugeAdapter",

@@ -17,7 +17,7 @@ whatever theme was active when it was first imported.
 from __future__ import annotations
 
 from uniui.components import (
-    IAppShell, IBadge, IBreadcrumb, ICard, IChart, IDrawer, IGauge,
+    IAppShell, IBadge, IBreadcrumb, ICard, ICarousel, IChart, IDrawer, IGauge,
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from uniui.backends.qt.factory import QtWidgetFactory
@@ -48,6 +48,7 @@ from uniui.backends.qt.components import (
     QtBadgeAdapter,
     QtProgressBarAdapter,
     QtToastAdapter,
+    QtCarouselAdapter,
     QtBreadcrumbAdapter,
     QtCardAdapter,
     QtChartAdapter,
@@ -79,6 +80,7 @@ __all__ = [
     "QtBadgeAdapter",
     "QtProgressBarAdapter",
     "QtToastAdapter",
+    "QtCarouselAdapter",
     "QtBreadcrumbAdapter",
     "QtCardAdapter",
     "QtChartAdapter",

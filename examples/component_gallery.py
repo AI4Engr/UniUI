@@ -5,9 +5,9 @@ behavior (a click updates something visible), not a static screenshot.
 
 This started as Phase 1 of TODO.md's "P1: Components Showcase" (only
 components that already existed in UniUI) and now also covers Phase 2
-additions as they ship - currently just Toast. Components UniUI still
-doesn't have (Dialog, Checkbox, Tabs beyond TabWidget, ...) are deliberately
-absent rather than faked - see TODO.md for the phased plan to add them.
+additions as they ship: Toast, Checkbox, Switch, Carousel so far. Components
+UniUI still doesn't have (Dialog, Tabs beyond TabWidget, ...) are
+deliberately absent rather than faked - see TODO.md for the phased plan.
 
 Run:
     python examples/component_gallery.py --ui qt
@@ -19,8 +19,11 @@ Table, ...) rather than a Qt-specific hand-built path like admin_demo.py -
 the point of this page is exactly that the same code runs on all three
 backends unmodified.
 """
+import struct
 import sys
 import os
+import tempfile
+import zlib
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -29,10 +32,38 @@ from uniui import (
     Router, Route, RouterView, sync_breadcrumb,
     AppShell, Card, Badge, ProgressBar, StatCard, MetricList, Table, Chart, Gauge,
     Breadcrumb, Button, Label, LineEdit, TextArea, ComboBox, Dropdown,
-    Checkbox, Switch,
+    Checkbox, Switch, Carousel,
     TabWidget, GroupBox, VBox, HBox, Wrap, LayoutSpec, Toast,
 )
 import uniui
+
+
+def _make_placeholder_png(path, width, height, color):
+    """A minimal valid solid-color PNG, written with only stdlib - Carousel
+    needs real image files (no bundled sample assets and no network calls
+    from a demo), and this avoids adding a Pillow dependency just for that."""
+    def chunk(tag, data):
+        payload = tag + data
+        return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload))
+
+    row = b"\x00" + bytes(color) * width
+    raw = row * height
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n")
+        f.write(chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)))
+        f.write(chunk(b"IDAT", zlib.compress(raw)))
+        f.write(chunk(b"IEND", b""))
+
+
+def _carousel_demo_images():
+    tmpdir = tempfile.mkdtemp(prefix="uniui-gallery-")
+    colors = [(255, 99, 71), (100, 149, 237), (60, 179, 113), (238, 130, 238)]
+    paths = []
+    for i, color in enumerate(colors):
+        path = os.path.join(tmpdir, f"slide{i}.png")
+        _make_placeholder_png(path, 320, 160, color)
+        paths.append(path)
+    return paths
 
 _CATEGORIES = [
     ("overview", "Overview", "dashboard"),
@@ -231,8 +262,16 @@ def data_display_page(ctx):
 
     gauge = Gauge(label="Health", value=86, unit="%", status="ok")
 
+    carousel = Carousel(images=_carousel_demo_images())
+    carousel_index = Label("Slide 1 of 4")
+    carousel.on_change(lambda: carousel_index.set_text(
+        f"Slide {carousel.get_current_index() + 1} of 4"
+    ))
+    carousel_box = VBox(carousel, carousel_index)
+    carousel_box.set_spec(LayoutSpec(gap=6))
+
     return _page(
-        "Data Display", "Badge, ProgressBar, MetricList, Table, Chart, Gauge",
+        "Data Display", "Badge, ProgressBar, MetricList, Table, Chart, Gauge, Carousel",
         _section("Badge", "Reuses the same status vocabulary as Table's status column", badges),
         _section("Progress bar", "", progress),
         _section("Metric list", "", metrics),
@@ -242,6 +281,10 @@ def data_display_page(ctx):
         ),
         _section("Chart", "Line/bar/area, redraws on theme switch", chart),
         _section("Gauge", "Animated radial progress", gauge),
+        _section(
+            "Carousel", "Generated placeholder slides - use arrows/dots or the API to navigate",
+            carousel_box,
+        ),
     )
 
 

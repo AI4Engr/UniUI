@@ -8,6 +8,7 @@ from .app_shell import QtAppShellAdapter, _ResponsiveShellWidget
 from .badge import QtBadgeAdapter
 from .breadcrumb import QtBreadcrumbAdapter, _breadcrumb_button_style
 from .card import QtCardAdapter
+from .carousel import QtCarouselAdapter
 from .chart import QtChartAdapter, _ChartWidget
 from .drawer import QtDrawerAdapter
 from .gauge import QtGaugeAdapter, _GaugeWidget
@@ -28,6 +29,7 @@ __all__ = [
     "QtBadgeAdapter",
     "QtBreadcrumbAdapter",
     "QtCardAdapter",
+    "QtCarouselAdapter",
     "QtChartAdapter",
     "QtDrawerAdapter",
     "QtGaugeAdapter",

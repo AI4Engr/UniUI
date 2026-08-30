@@ -5,7 +5,8 @@ behavior (a click updates something visible), not a static screenshot.
 
 This started as Phase 1 of TODO.md's "P1: Components Showcase" (only
 components that already existed in UniUI) and now also covers Phase 2
-additions as they ship: Toast, Checkbox, Switch, Carousel so far. Components
+additions as they ship: Toast, Checkbox, Switch, Carousel, RadioGroup so far.
+Components
 UniUI still doesn't have (Dialog, Tabs beyond TabWidget, ...) are
 deliberately absent rather than faked - see TODO.md for the phased plan.
 
@@ -32,7 +33,7 @@ from uniui import (
     Router, Route, RouterView, sync_breadcrumb,
     AppShell, Card, Badge, ProgressBar, StatCard, MetricList, Table, Chart, Gauge,
     Breadcrumb, Button, Label, LineEdit, TextArea, ComboBox, Dropdown,
-    Checkbox, Switch, Carousel,
+    Checkbox, Switch, Carousel, RadioGroup,
     TabWidget, GroupBox, VBox, HBox, Wrap, LayoutSpec, Toast,
 )
 import uniui
@@ -203,13 +204,22 @@ def inputs_page(ctx):
     toggles.set_spec(LayoutSpec(gap=6))
     _sync_toggle_echo()
 
+    radio_echo = Label("Selected: Small")
+    radio_group = RadioGroup(
+        options=["Small", "Medium", "Large"],
+        on_change=lambda: radio_echo.set_text(f"Selected: {radio_group.get_selected()}"),
+    )
+    radio_box = VBox(radio_group, radio_echo)
+    radio_box.set_spec(LayoutSpec(gap=6))
+
     return _page(
-        "Inputs", "LineEdit, TextArea, ComboBox, Dropdown, Checkbox, Switch",
+        "Inputs", "LineEdit, TextArea, ComboBox, Dropdown, Checkbox, Switch, RadioGroup",
         _section("Text input", "on_change fires on every keystroke", line_row),
         _section("Text area", "", text_area),
         _section("Choice controls", "ComboBox (editable) and Dropdown (fixed list)", pickers),
         _section("Disabled state", "Same widget, set_enabled(False)", disabled),
         _section("Toggle controls", "Checkbox and Switch share the same is_checked()/set_checked()/on_change contract", toggles),
+        _section("Radio group", "Exactly one option selected at a time", radio_box),
     )
 
 

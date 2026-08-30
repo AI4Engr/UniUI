@@ -9,7 +9,7 @@ only as string annotations on ``IWidgetFactory``, so importing
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Any, Callable, List, Optional
 
 from .exceptions import NotSupportedError
 from .layout import Breakpoints, DEFAULT_BREAKPOINTS, LayoutItem, LayoutSpec
@@ -263,6 +263,32 @@ class ISwitch(IWidget):
 
     @abstractmethod
     def set_checked(self, checked: bool) -> None:
+        pass
+
+    @abstractmethod
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        pass
+
+
+class IRadioGroup(IWidget):
+    """A set of mutually-exclusive options, exactly one selected at a time.
+
+    Options are plain strings, both the value and the displayed label -
+    matching :class:`IComboBox`/:class:`IDropdown`'s ``add_item(str)``
+    convention rather than inventing a separate value/label pair.
+    """
+
+    @abstractmethod
+    def set_options(self, options: List[str]) -> None:
+        """Replace all options. Selects the first one."""
+        pass
+
+    @abstractmethod
+    def get_selected(self) -> str:
+        pass
+
+    @abstractmethod
+    def set_selected(self, option: str) -> None:
         pass
 
     @abstractmethod
@@ -640,6 +666,10 @@ class IWidgetFactory(ABC):
         pass
 
     @abstractmethod
+    def createRadioGroup(self) -> IRadioGroup:
+        pass
+
+    @abstractmethod
     def createVBox(self) -> IVBoxLayout:
         pass
 
@@ -753,6 +783,7 @@ _SNAKE_ALIASES = {
     "createDropdown":   "create_dropdown",
     "createCheckbox":   "create_checkbox",
     "createSwitch":     "create_switch",
+    "createRadioGroup": "create_radio_group",
     "createVBox":       "create_vbox",       # irregular: not create_v_box
     "createHBox":       "create_hbox",       # irregular: not create_h_box
     "createTabWidget":  "create_tab_widget",

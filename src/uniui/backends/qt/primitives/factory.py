@@ -10,9 +10,10 @@ from PySide2 import QtCore
 
 from ....core import *
 from .inputs import (
-    QTCheckbox, QTComboBox, QTDropdown, QTLineEdit, QTPushButton, QTSwitch,
-    QTTextarea, QtButtonAdapter, QtCheckboxAdapter, QtComboBoxAdapter,
-    QtDropdownAdapter, QtLineEditAdapter, QtSwitchAdapter, QtTextAreaAdapter,
+    QTCheckbox, QTComboBox, QTDropdown, QTLineEdit, QTPushButton,
+    QTRadioGroup, QTSwitch, QTTextarea, QtButtonAdapter, QtCheckboxAdapter,
+    QtComboBoxAdapter, QtDropdownAdapter, QtLineEditAdapter,
+    QtRadioGroupAdapter, QtSwitchAdapter, QtTextAreaAdapter,
 )
 from .layouts import (
     QTHBoxLayout, QTTabWidget, QTVBoxLayout, QtGridAdapter, QtHBoxAdapter,
@@ -96,6 +97,10 @@ class _BaseQtWidgetFactory(IWidgetFactory):
     def createSwitch(self) -> ISwitch:
         native = QTSwitch()
         return QtSwitchAdapter(native)
+
+    def createRadioGroup(self) -> IRadioGroup:
+        native = QTRadioGroup()
+        return QtRadioGroupAdapter(native)
 
     def createVBox(self) -> IVBoxLayout:
         native = QTVBoxLayout()

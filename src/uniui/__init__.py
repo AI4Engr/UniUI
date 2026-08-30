@@ -37,6 +37,7 @@ from .core import (
     IDropdown,
     ICheckbox,
     ISwitch,
+    IRadioGroup,
     IVBoxLayout,
     IHBoxLayout,
     ITabWidget,
@@ -103,8 +104,8 @@ from .backends.registry import (
 from .facade import (
     AppShell, Badge, Breadcrumb, Button, Card, Carousel, Checkbox, Chart, Column,
     ComboBox, Drawer, Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit,
-    MetricList, Overlay, ProgressBar, Row, ScrollView, Sidebar, SplitPane, StatCard,
-    Switch, Table, TabWidget, Toast,
+    MetricList, Overlay, ProgressBar, RadioGroup, Row, ScrollView, Sidebar,
+    SplitPane, StatCard, Switch, Table, TabWidget, Toast,
     TextArea, UniUI, VBox, Wrap, Grid,
 )
 
@@ -121,6 +122,7 @@ COMBO_BOX = 'combo_box'
 DROPDOWN = 'dropdown'
 CHECKBOX = 'checkbox'
 SWITCH = 'switch'
+RADIO_GROUP = 'radio_group'
 VBOX = 'vbox'
 HBOX = 'hbox'
 TAB_WIDGET = 'tab_widget'
@@ -196,6 +198,7 @@ __all__ = [
     'Dropdown',
     'Checkbox',
     'Switch',
+    'RadioGroup',
     'VBox',
     'HBox',
     'Column',
@@ -233,7 +236,7 @@ __all__ = [
     # Backward compatibility
     'UniUI',
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
-    'COMBO_BOX', 'DROPDOWN', 'CHECKBOX', 'SWITCH', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
+    'COMBO_BOX', 'DROPDOWN', 'CHECKBOX', 'SWITCH', 'RADIO_GROUP', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
     'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TOAST', 'CAROUSEL', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
@@ -261,6 +264,7 @@ __all__ = [
     'IDropdown',
     'ICheckbox',
     'ISwitch',
+    'IRadioGroup',
     'IVBoxLayout',
     'IHBoxLayout',
     'IGrid',

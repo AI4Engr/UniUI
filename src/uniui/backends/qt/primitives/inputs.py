@@ -146,6 +146,55 @@ class QTSwitch(QtWidgets.QCheckBox):
     """
 
 
+class QTRadioGroup(QtWidgets.QWidget):
+    """Qt RadioGroup Widget - native implementation.
+
+    Qt has no single "radio group" control - compose QRadioButtons in a
+    QButtonGroup for mutual exclusivity, wrapped in a plain QWidget so the
+    shared VisibilityMixin/EnableMixin/SizeMixin camelCase protocol (which
+    expects one widget, not a bare QButtonGroup - QButtonGroup is a QObject,
+    not a QWidget, and has no show/hide/enabled/size surface at all) works
+    the same way it does for every other primitive.
+    """
+    def __init__(self):
+        super().__init__()
+        self._layout = QtWidgets.QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(6)
+        self._group = QtWidgets.QButtonGroup(self)
+        self._buttons: list = []
+
+    def setOptions(self, options):
+        for button in self._buttons:
+            self._group.removeButton(button)
+            self._layout.removeWidget(button)
+            button.deleteLater()
+        self._buttons = []
+        for option in options:
+            button = QtWidgets.QRadioButton(option)
+            self._group.addButton(button)
+            self._layout.addWidget(button)
+            self._buttons.append(button)
+        if self._buttons:
+            self._buttons[0].setChecked(True)
+
+    def getSelected(self):
+        for button in self._buttons:
+            if button.isChecked():
+                return button.text()
+        return ""
+
+    def setSelected(self, option):
+        for button in self._buttons:
+            if button.text() == option:
+                button.setChecked(True)
+                return
+
+    def connect(self, function):
+        self._group.buttonToggled.connect(function)
+
+    def disconnect(self, function):
+        self._group.buttonToggled.disconnect(function)
 class QTPushButton(QtWidgets.QPushButton):
     """Qt Push Button Widget - native implementation"""
     def __init__(self):
@@ -400,3 +449,25 @@ class QtSwitchAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, ISwi
         wrapper = lambda _checked: safe_call(callback, backend="qt", component="Switch", method="on_change")
         self._native.toggled.connect(wrapper)
         return Handle(lambda: self._native.toggled.disconnect(wrapper))
+class QtRadioGroupAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, IRadioGroup):
+    """Qt RadioGroup adapter - implements snake_case interface convention"""
+
+    def set_options(self, options) -> None:
+        self._native.setOptions(list(options))
+
+    def get_selected(self) -> str:
+        return self._native.getSelected()
+
+    def set_selected(self, option: str) -> None:
+        self._native.setSelected(option)
+
+    def on_change(self, callback) -> Handle:
+        # QButtonGroup.buttonToggled fires for both the button being
+        # unchecked (checked=False) and the one being checked (checked=True)
+        # on every selection change - only forward the "checked" half so
+        # callers see exactly one call per actual selection change.
+        def wrapper(_button, checked):
+            if checked:
+                safe_call(callback, backend="qt", component="RadioGroup", method="on_change")
+        self._native.connect(wrapper)
+        return Handle(lambda: self._native.disconnect(wrapper))

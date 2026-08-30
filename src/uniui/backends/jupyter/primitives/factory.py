@@ -16,7 +16,8 @@ from .inputs import (
     JupyterCheckboxAdapter, JupyterComboBox, JupyterComboBoxAdapter,
     JupyterButtonAdapter, JupyterDropdown, JupyterDropdownAdapter,
     JupyterLineEdit, JupyterLineEditAdapter, JupyterPushButton,
-    JupyterSwitchAdapter, JupyterTextarea, JupyterTextAreaAdapter,
+    JupyterRadioGroupAdapter, JupyterSwitchAdapter, JupyterTextarea,
+    JupyterTextAreaAdapter,
 )
 from .layouts import (
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
@@ -74,6 +75,10 @@ class _BaseJupyterWidgetFactory(IWidgetFactory):
     def createSwitch(self) -> ISwitch:
         native = widgets.ToggleButton()
         return JupyterSwitchAdapter(native)
+
+    def createRadioGroup(self) -> IRadioGroup:
+        native = widgets.RadioButtons(options=())
+        return JupyterRadioGroupAdapter(native)
 
     def createVBox(self) -> IVBoxLayout:
         native = widgets.VBox()

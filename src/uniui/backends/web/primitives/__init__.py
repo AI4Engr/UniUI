@@ -14,8 +14,8 @@ from .factory import _BaseNiceGUIWidgetFactory
 from .helpers import _plain_html, _set_enabled, _style_size
 from .inputs import (
     WebButtonAdapter, WebCheckboxAdapter, WebComboBoxAdapter,
-    WebDropdownAdapter, WebLineEditAdapter, WebSwitchAdapter,
-    WebTextAreaAdapter, _WebSelectAdapter,
+    WebDropdownAdapter, WebLineEditAdapter, WebRadioGroupAdapter,
+    WebSwitchAdapter, WebTextAreaAdapter, _WebSelectAdapter,
 )
 from .layouts import (
     WebGridAdapter, WebHBoxAdapter, WebOverlayAdapter, WebScrollViewAdapter,
@@ -44,6 +44,7 @@ __all__ = [
     "WebLabelAdapter",
     "WebLineEditAdapter",
     "WebOverlayAdapter",
+    "WebRadioGroupAdapter",
     "WebScrollViewAdapter",
     "WebSplitPaneAdapter",
     "WebSwitchAdapter",

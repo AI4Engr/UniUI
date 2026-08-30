@@ -14,7 +14,8 @@ from .inputs import (
     JupyterButtonAdapter, JupyterCheckboxAdapter, JupyterComboBox,
     JupyterComboBoxAdapter, JupyterDropdown, JupyterDropdownAdapter,
     JupyterLineEdit, JupyterLineEditAdapter, JupyterPushButton,
-    JupyterSwitchAdapter, JupyterTextAreaAdapter, JupyterTextarea,
+    JupyterRadioGroupAdapter, JupyterSwitchAdapter, JupyterTextAreaAdapter,
+    JupyterTextarea,
 )
 from .layouts import (
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
@@ -57,6 +58,7 @@ __all__ = [
     "JupyterOverlay",
     "JupyterOverlayAdapter",
     "JupyterPushButton",
+    "JupyterRadioGroupAdapter",
     "JupyterScrollView",
     "JupyterScrollViewAdapter",
     "JupyterSplitPane",

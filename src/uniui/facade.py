@@ -19,8 +19,8 @@ from .components import (
 )
 from .core import (
     IButton, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
-    IImage, ILabel, ILineEdit, IOverlay, IScrollView, ISplitPane, ISwitch,
-    ITabWidget, ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
+    IImage, ILabel, ILineEdit, IOverlay, IRadioGroup, IScrollView, ISplitPane,
+    ISwitch, ITabWidget, ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
 )
 
 
@@ -102,6 +102,16 @@ def Switch(checked: bool = False, on_change=None) -> ISwitch:
     if on_change:
         switch.on_change(on_change)
     return switch
+
+
+def RadioGroup(options=None, on_change=None) -> IRadioGroup:
+    """Create a radio group widget"""
+    radio_group = _get_factory().create_radio_group()
+    if options:
+        radio_group.set_options(list(options))
+    if on_change:
+        radio_group.on_change(on_change)
+    return radio_group
 
 
 def VBox(*children) -> IVBoxLayout:
@@ -363,6 +373,7 @@ class UniUI:
         'dropdown':    'create_dropdown',
         'checkbox':    'create_checkbox',
         'switch':      'create_switch',
+        'radio_group': 'create_radio_group',
         'vbox':        'create_vbox',
         'hbox':        'create_hbox',
         'tab_widget':  'create_tab_widget',
@@ -398,6 +409,7 @@ class UniUI:
     def dropdown(self) -> IDropdown:  return self._factory.create_dropdown()
     def checkbox(self) -> ICheckbox:  return self._factory.create_checkbox()
     def switch(self) -> ISwitch:      return self._factory.create_switch()
+    def radio_group(self) -> IRadioGroup: return self._factory.create_radio_group()
     def vbox(self) -> IVBoxLayout:    return self._factory.create_vbox()
     def hbox(self) -> IHBoxLayout:    return self._factory.create_hbox()
     def tab_widget(self) -> ITabWidget: return self._factory.create_tab_widget()

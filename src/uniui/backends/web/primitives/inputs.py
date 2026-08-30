@@ -280,3 +280,33 @@ class WebCheckboxAdapter(_WebToggleAdapter, ICheckbox):
 class WebSwitchAdapter(_WebToggleAdapter, ISwitch):
     def __init__(self):
         super().__init__(ui.switch())
+class WebRadioGroupAdapter(_WebAdapter, IRadioGroup):
+    def __init__(self):
+        self._callbacks: List[Callable[[], None]] = []
+        native = ui.radio([])
+        super().__init__(native)
+        native.on_value_change(lambda _event: self._emit_change())
+
+    def _emit_change(self) -> None:
+        for callback in list(self._callbacks):
+            safe_call(callback, backend="web", component="RadioGroup", method="on_change")
+
+    def set_options(self, options: list) -> None:
+        options = list(options)
+        self._native.options = options
+        # Assigning .options after construction does not auto-select the
+        # first entry (confirmed empirically: .value stays None) - select
+        # it explicitly to match IRadioGroup.set_options's documented
+        # "selects the first one", same gap as the Jupyter backend.
+        self._native.set_value(options[0] if options else None)
+        self._native.update()
+
+    def get_selected(self) -> str:
+        return self._native.value or ""
+
+    def set_selected(self, option: str) -> None:
+        self._native.set_value(option)
+
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        self._callbacks.append(callback)
+        return _list_handle(self._callbacks, callback)

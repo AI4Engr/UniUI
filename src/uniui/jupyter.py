@@ -46,6 +46,7 @@ from .backends.jupyter.primitives import (
     JupyterHBoxAdapter, JupyterHBoxLayout, JupyterImage, JupyterImageAdapter,
     JupyterLabel, JupyterLabelAdapter, JupyterLineEdit, JupyterLineEditAdapter,
     JupyterOverlay, JupyterOverlayAdapter, JupyterPushButton,
+    JupyterRadioGroupAdapter,
     JupyterScrollView, JupyterScrollViewAdapter, JupyterSplitPane,
     JupyterSplitPaneAdapter, JupyterSwitchAdapter, JupyterTabWidget,
     JupyterTabWidgetAdapter, JupyterTextAreaAdapter, JupyterTextarea,

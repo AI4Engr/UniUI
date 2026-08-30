@@ -35,12 +35,13 @@ from PySide2.QtCore import Qt
 
 from .backends.qt.primitives import (
     QTCheckbox, QTComboBox, QTDropdown, QTGroupBox, QTHBoxLayout, QTImage,
-    QTLabel, QTLineEdit, QTPushButton, QTSwitch, QTTabWidget, QTTextarea,
-    QTVBoxLayout, QtButtonAdapter, QtCheckboxAdapter, QtComboBoxAdapter,
-    QtDropdownAdapter, QtGridAdapter, QtGroupBoxAdapter, QtHBoxAdapter,
-    QtImageAdapter, QtLabelAdapter, QtLineEditAdapter, QtOverlayAdapter,
-    QtScrollViewAdapter, QtSplitPaneAdapter, QtSwitchAdapter,
-    QtTabWidgetAdapter, QtTextAreaAdapter, QtVBoxAdapter, QtWrapAdapter,
+    QTLabel, QTLineEdit, QTPushButton, QTRadioGroup, QTSwitch, QTTabWidget,
+    QTTextarea, QTVBoxLayout, QtButtonAdapter, QtCheckboxAdapter,
+    QtComboBoxAdapter, QtDropdownAdapter, QtGridAdapter, QtGroupBoxAdapter,
+    QtHBoxAdapter, QtImageAdapter, QtLabelAdapter, QtLineEditAdapter,
+    QtOverlayAdapter, QtRadioGroupAdapter, QtScrollViewAdapter,
+    QtSplitPaneAdapter, QtSwitchAdapter, QtTabWidgetAdapter,
+    QtTextAreaAdapter, QtVBoxAdapter, QtWrapAdapter,
     _BaseQtWidgetFactory, _QFlowLayout, _ResizeNotifier,
     check_connection, convert_control_text, has_method,
 )

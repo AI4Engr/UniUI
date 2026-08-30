@@ -524,3 +524,32 @@ class JupyterSwitchAdapter(NativeMixin, JupyterVisibilityMixin, JupyterEnableMix
             safe_call(callback, backend="jupyter", component="Switch", method="on_change")
         self._native.observe(wrapper, names="value")
         return Handle(lambda: self._native.unobserve(wrapper, names="value"))
+class JupyterRadioGroupAdapter(NativeMixin, JupyterVisibilityMixin, JupyterEnableMixin,
+                               JupyterSizeMixin, IRadioGroup):
+    """Jupyter RadioGroup adapter - implements snake_case interface convention.
+
+    Wraps a stock ``ipywidgets.RadioButtons`` directly - it already has the
+    exact set_options/get_selected/set_selected semantics via ``.options``/
+    ``.value``.
+    """
+
+    def set_options(self, options: List[str]) -> None:
+        options = list(options)
+        self._native.options = tuple(options)
+        # Unlike passing options= at construction time, assigning .options
+        # afterwards does NOT auto-select the first one (confirmed
+        # empirically: .value stays None) - select it explicitly to match
+        # IRadioGroup.set_options's documented "selects the first one".
+        self._native.value = options[0] if options else None
+
+    def get_selected(self) -> str:
+        return self._native.value or ""
+
+    def set_selected(self, option: str) -> None:
+        self._native.value = option
+
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        def wrapper(change):
+            safe_call(callback, backend="jupyter", component="RadioGroup", method="on_change")
+        self._native.observe(wrapper, names="value")
+        return Handle(lambda: self._native.unobserve(wrapper, names="value"))

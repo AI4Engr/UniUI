@@ -50,6 +50,7 @@ from .contracts.widgets import (
     ILayoutOnly,
     ILineEdit,
     IOverlay,
+    IRadioGroup,
     IScrollView,
     ISplitPane,
     ISwitch,

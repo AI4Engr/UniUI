@@ -15,7 +15,7 @@ from __future__ import annotations
 import weakref
 from typing import Set
 
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtWidgets
 
 from ..runtime import get_palette as get_admin_palette
 from ..styles import scrollbar_rules as _scrollbar_rules
@@ -95,16 +95,15 @@ def _combo_popup_stylesheet() -> str:
 def apply_combo_popup_style(combo) -> None:
     """Style one QComboBox's dropdown popup and track it for theme refresh.
 
-    The popup is a separate top-level window, so its rounded corners (set in
-    ``_COMBO_POPUP_QSS``) only clip the QSS-painted rectangle -- without
-    ``WA_TranslucentBackground`` on the popup's own window, Qt still paints
-    the native opaque rectangular window surface underneath, which shows
-    through as square black slivers behind the rounded corners.
+    Deliberately no ``WA_TranslucentBackground`` here: the popup is a
+    ``Qt::Popup``-flagged top-level window, and that combination is a known
+    bad interaction on Windows without desktop composition active - instead
+    of the square corners showing through as transparent, the *entire*
+    popup renders solid black. ``_COMBO_POPUP_QSS`` has no ``border-radius``
+    for the same reason: with square corners there's nothing to leak, so no
+    transparency trick is needed at all.
     """
     combo.setStyleSheet(_combo_popup_stylesheet())
-    view = combo.view()
-    view.setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
-    view.window().setAttribute(QtCore.Qt.WA_TranslucentBackground, True)
     _STYLED_COMBOS.add(combo)
 
 
@@ -125,7 +124,6 @@ QComboBox QAbstractItemView {
     background: %(surface)s;
     color: %(text)s;
     border: 1px solid %(border)s;
-    border-radius: 9px;
     outline: none;
     selection-background-color: %(accent)s;
     selection-color: white;
@@ -228,7 +226,6 @@ QComboBox QAbstractItemView {
     background: %(surface)s;
     color: %(text)s;
     border: 1px solid %(border)s;
-    border-radius: 9px;
     outline: none;
     selection-background-color: %(accent)s;
     selection-color: white;

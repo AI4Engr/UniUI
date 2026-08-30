@@ -101,11 +101,13 @@ def test_qt_drawer_and_offscreen_visual_render_smoke():
         set_motion_enabled(True); drawer.get_native().hide(); root.close()
 
 
-def test_qt_combo_popup_window_is_translucent_to_avoid_square_corners():
-    """The popup's rounded QSS corners only render correctly if the popup's
-    own top-level window is translucent - otherwise Qt paints an opaque
-    rectangular window surface behind it, showing as black slivers in the
-    corners the border-radius clips. See styles.apply_combo_popup_style."""
+def test_qt_combo_popup_has_no_border_radius_and_no_translucency():
+    """The popup is a Qt::Popup top-level window - WA_TranslucentBackground
+    on that combination is a known-bad interaction on Windows without
+    desktop composition (confirmed by hands-on repro: the whole popup
+    rendered solid black instead of showing rounded transparent corners).
+    Square corners avoid the problem entirely, so neither the QSS nor the
+    widget attribute should reappear. See styles.apply_combo_popup_style."""
     pytest.importorskip("PySide2")
     from PySide2 import QtCore, QtWidgets
     from uniui import create_factory
@@ -114,8 +116,9 @@ def test_qt_combo_popup_window_is_translucent_to_avoid_square_corners():
     combo = create_factory("qt").create_combo_box()
     native = combo.get_native()
     view = native.view()
-    assert view.testAttribute(QtCore.Qt.WA_TranslucentBackground)
-    assert view.window().testAttribute(QtCore.Qt.WA_TranslucentBackground)
+    assert "border-radius" not in native.styleSheet()
+    assert not view.testAttribute(QtCore.Qt.WA_TranslucentBackground)
+    assert not view.window().testAttribute(QtCore.Qt.WA_TranslucentBackground)
 
 
 def test_qt_tab_widget_gets_its_own_stylesheet_even_when_nested_in_a_card():

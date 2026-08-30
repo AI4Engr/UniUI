@@ -6,7 +6,7 @@ behavior (a click updates something visible), not a static screenshot.
 This started as Phase 1 of TODO.md's "P1: Components Showcase" (only
 components that already existed in UniUI) and now also covers Phase 2
 additions as they ship: Toast, Checkbox, Switch, Carousel, RadioGroup,
-NumberInput so far. Components
+NumberInput, Slider so far. Components
 UniUI still doesn't have (Dialog, Tabs beyond TabWidget, ...) are
 deliberately absent rather than faked - see TODO.md for the phased plan.
 
@@ -33,7 +33,7 @@ from uniui import (
     Router, Route, RouterView, sync_breadcrumb,
     AppShell, Card, Badge, ProgressBar, StatCard, MetricList, Table, Chart, Gauge,
     Breadcrumb, Button, Label, LineEdit, TextArea, ComboBox, Dropdown,
-    Checkbox, Switch, Carousel, RadioGroup, NumberInput,
+    Checkbox, Switch, Carousel, RadioGroup, NumberInput, Slider,
     TabWidget, GroupBox, VBox, HBox, Wrap, LayoutSpec, Toast,
 )
 import uniui
@@ -220,8 +220,16 @@ def inputs_page(ctx):
     number_box = VBox(number_input, number_echo)
     number_box.set_spec(LayoutSpec(gap=6))
 
+    slider_echo = Label("Value: 5")
+    slider = Slider(
+        value=5, minimum=0, maximum=10, step=0.5,
+        on_change=lambda: slider_echo.set_text(f"Value: {slider.get_value()}"),
+    )
+    slider_box = VBox(slider, slider_echo)
+    slider_box.set_spec(LayoutSpec(gap=6))
+
     return _page(
-        "Inputs", "LineEdit, TextArea, ComboBox, Dropdown, Checkbox, Switch, RadioGroup, NumberInput",
+        "Inputs", "LineEdit, TextArea, ComboBox, Dropdown, Checkbox, Switch, RadioGroup, NumberInput, Slider",
         _section("Text input", "on_change fires on every keystroke", line_row),
         _section("Text area", "", text_area),
         _section("Choice controls", "ComboBox (editable) and Dropdown (fixed list)", pickers),
@@ -229,6 +237,7 @@ def inputs_page(ctx):
         _section("Toggle controls", "Checkbox and Switch share the same is_checked()/set_checked()/on_change contract", toggles),
         _section("Radio group", "Exactly one option selected at a time", radio_box),
         _section("Number input", "A bounded, stepped numeric value - always a valid float, unlike LineEdit.get_value()", number_box),
+        _section("Slider", "Same range/step/value/on_change contract as NumberInput, dragged along a track", slider_box),
     )
 
 

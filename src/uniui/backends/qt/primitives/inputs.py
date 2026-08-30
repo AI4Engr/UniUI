@@ -209,6 +209,19 @@ class QTNumberInput(QtWidgets.QDoubleSpinBox):
         self.setRange(0.0, 100.0)
 
 
+class QTSlider(QtWidgets.QSlider):
+    """Qt Slider Widget - native implementation.
+
+    QSlider's range/value are integer ticks, not the float value ISlider's
+    contract promises - QtSliderAdapter maps float minimum/maximum/step to
+    an integer tick count and back, so this class itself stays a trivial
+    subclass (horizontal by default, matching every other toolkit's slider
+    default orientation).
+    """
+    def __init__(self):
+        super().__init__(QtCore.Qt.Horizontal)
+
+
 class QTPushButton(QtWidgets.QPushButton):
     """Qt Push Button Widget - native implementation"""
     def __init__(self):
@@ -502,5 +515,48 @@ class QtNumberInputAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin,
 
     def on_change(self, callback) -> Handle:
         wrapper = lambda _value: safe_call(callback, backend="qt", component="NumberInput", method="on_change")
+        self._native.valueChanged.connect(wrapper)
+        return Handle(lambda: self._native.valueChanged.disconnect(wrapper))
+class QtSliderAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, ISlider):
+    """Qt Slider adapter - implements snake_case interface convention.
+
+    QSlider only understands integer ticks - this adapter maps the float
+    minimum/maximum/step ISlider promises to an integer tick count (0..N)
+    on the native widget and back, so callers never see the tick scale.
+    """
+
+    def __init__(self, native_widget):
+        self._native = native_widget
+        self._minimum = 0.0
+        self._maximum = 100.0
+        self._step = 1.0
+        self._sync_native_range()
+
+    def _sync_native_range(self):
+        ticks = max(1, round((self._maximum - self._minimum) / self._step))
+        self._native.setRange(0, ticks)
+
+    def set_range(self, minimum: float, maximum: float) -> None:
+        current = self.get_value()
+        self._minimum, self._maximum = minimum, maximum
+        self._sync_native_range()
+        self.set_value(current)
+
+    def set_step(self, step: float) -> None:
+        current = self.get_value()
+        self._step = step or 1.0
+        self._sync_native_range()
+        self.set_value(current)
+
+    def get_value(self) -> float:
+        return self._minimum + self._native.value() * self._step
+
+    def set_value(self, value: float) -> None:
+        value = max(self._minimum, min(value, self._maximum))
+        ticks = round((value - self._minimum) / self._step)
+        self._native.setValue(ticks)
+
+    def on_change(self, callback) -> Handle:
+        wrapper = lambda _value: safe_call(callback, backend="qt", component="Slider", method="on_change")
         self._native.valueChanged.connect(wrapper)
         return Handle(lambda: self._native.valueChanged.disconnect(wrapper))

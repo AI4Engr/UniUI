@@ -580,3 +580,30 @@ class JupyterNumberInputAdapter(NativeMixin, JupyterVisibilityMixin, JupyterEnab
             safe_call(callback, backend="jupyter", component="NumberInput", method="on_change")
         self._native.observe(wrapper, names="value")
         return Handle(lambda: self._native.unobserve(wrapper, names="value"))
+class JupyterSliderAdapter(NativeMixin, JupyterVisibilityMixin, JupyterEnableMixin,
+                           JupyterSizeMixin, ISlider):
+    """Jupyter Slider adapter - implements snake_case interface convention.
+
+    Wraps a stock ``ipywidgets.FloatSlider`` directly - it already has the
+    exact range/step/value semantics via ``.min``/``.max``/``.step``/
+    ``.value``, including auto-clamping the value when the range shrinks.
+    """
+
+    def set_range(self, minimum: float, maximum: float) -> None:
+        self._native.min = minimum
+        self._native.max = maximum
+
+    def set_step(self, step: float) -> None:
+        self._native.step = step
+
+    def get_value(self) -> float:
+        return self._native.value
+
+    def set_value(self, value: float) -> None:
+        self._native.value = value
+
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        def wrapper(change):
+            safe_call(callback, backend="jupyter", component="Slider", method="on_change")
+        self._native.observe(wrapper, names="value")
+        return Handle(lambda: self._native.unobserve(wrapper, names="value"))

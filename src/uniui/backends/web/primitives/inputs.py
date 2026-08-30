@@ -345,3 +345,35 @@ class WebNumberInputAdapter(_WebAdapter, INumberInput):
     def on_change(self, callback: Callable[[], None]) -> Handle:
         self._callbacks.append(callback)
         return _list_handle(self._callbacks, callback)
+class WebSliderAdapter(_WebAdapter, ISlider):
+    def __init__(self):
+        self._callbacks: List[Callable[[], None]] = []
+        native = ui.slider(min=0, max=100, step=1, value=0)
+        super().__init__(native)
+        native.on_value_change(lambda _event: self._emit_change())
+
+    def _emit_change(self) -> None:
+        for callback in list(self._callbacks):
+            safe_call(callback, backend="web", component="Slider", method="on_change")
+
+    def set_range(self, minimum: float, maximum: float) -> None:
+        self._native.props(f"min={minimum} max={maximum}")
+        # Same gap as WebNumberInputAdapter.set_range - props() only sets
+        # the client-side display bound, not the server-side .value.
+        current = self.get_value()
+        clamped = max(minimum, min(current, maximum))
+        if clamped != current:
+            self.set_value(clamped)
+
+    def set_step(self, step: float) -> None:
+        self._native.props(f"step={step}")
+
+    def get_value(self) -> float:
+        return float(self._native.value or 0)
+
+    def set_value(self, value: float) -> None:
+        self._native.set_value(value)
+
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        self._callbacks.append(callback)
+        return _list_handle(self._callbacks, callback)

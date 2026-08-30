@@ -16,8 +16,8 @@ from .inputs import (
     JupyterCheckboxAdapter, JupyterComboBox, JupyterComboBoxAdapter,
     JupyterButtonAdapter, JupyterDropdown, JupyterDropdownAdapter,
     JupyterLineEdit, JupyterLineEditAdapter, JupyterNumberInputAdapter,
-    JupyterPushButton, JupyterRadioGroupAdapter, JupyterSwitchAdapter,
-    JupyterTextarea, JupyterTextAreaAdapter,
+    JupyterPushButton, JupyterRadioGroupAdapter, JupyterSliderAdapter,
+    JupyterSwitchAdapter, JupyterTextarea, JupyterTextAreaAdapter,
 )
 from .layouts import (
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
@@ -83,6 +83,10 @@ class _BaseJupyterWidgetFactory(IWidgetFactory):
     def createNumberInput(self) -> INumberInput:
         native = widgets.BoundedFloatText(value=0, min=0, max=100, step=1)
         return JupyterNumberInputAdapter(native)
+
+    def createSlider(self) -> ISlider:
+        native = widgets.FloatSlider(value=0, min=0, max=100, step=1)
+        return JupyterSliderAdapter(native)
 
     def createVBox(self) -> IVBoxLayout:
         native = widgets.VBox()

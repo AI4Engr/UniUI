@@ -20,8 +20,8 @@ from .components import (
 from .core import (
     IButton, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
     IImage, ILabel, ILineEdit, INumberInput, IOverlay, IRadioGroup,
-    IScrollView, ISplitPane, ISwitch, ITabWidget, ITextArea, IVBoxLayout,
-    IWidget, IWrap, LayoutSpec,
+    IScrollView, ISlider, ISplitPane, ISwitch, ITabWidget, ITextArea,
+    IVBoxLayout, IWidget, IWrap, LayoutSpec,
 )
 
 
@@ -125,6 +125,18 @@ def NumberInput(value: float = 0, minimum: float = 0, maximum: float = 100,
     if on_change:
         number_input.on_change(on_change)
     return number_input
+
+
+def Slider(value: float = 0, minimum: float = 0, maximum: float = 100,
+           step: float = 1, on_change=None) -> ISlider:
+    """Create a slider widget"""
+    slider = _get_factory().create_slider()
+    slider.set_range(minimum, maximum)
+    slider.set_step(step)
+    slider.set_value(value)
+    if on_change:
+        slider.on_change(on_change)
+    return slider
 
 
 def VBox(*children) -> IVBoxLayout:
@@ -388,6 +400,7 @@ class UniUI:
         'switch':      'create_switch',
         'radio_group': 'create_radio_group',
         'number_input': 'create_number_input',
+        'slider':      'create_slider',
         'vbox':        'create_vbox',
         'hbox':        'create_hbox',
         'tab_widget':  'create_tab_widget',
@@ -425,6 +438,7 @@ class UniUI:
     def switch(self) -> ISwitch:      return self._factory.create_switch()
     def radio_group(self) -> IRadioGroup: return self._factory.create_radio_group()
     def number_input(self) -> INumberInput: return self._factory.create_number_input()
+    def slider(self) -> ISlider: return self._factory.create_slider()
     def vbox(self) -> IVBoxLayout:    return self._factory.create_vbox()
     def hbox(self) -> IHBoxLayout:    return self._factory.create_hbox()
     def tab_widget(self) -> ITabWidget: return self._factory.create_tab_widget()

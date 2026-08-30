@@ -13,7 +13,8 @@ from ....core import *
 from .inputs import (
     WebButtonAdapter, WebCheckboxAdapter, WebComboBoxAdapter,
     WebDropdownAdapter, WebLineEditAdapter, WebNumberInputAdapter,
-    WebRadioGroupAdapter, WebSwitchAdapter, WebTextAreaAdapter,
+    WebRadioGroupAdapter, WebSliderAdapter, WebSwitchAdapter,
+    WebTextAreaAdapter,
 )
 from .layouts import (
     WebGridAdapter, WebHBoxAdapter, WebOverlayAdapter, WebScrollViewAdapter,
@@ -65,6 +66,9 @@ class _BaseNiceGUIWidgetFactory(IWidgetFactory):
 
     def createNumberInput(self) -> INumberInput:
         return WebNumberInputAdapter()
+
+    def createSlider(self) -> ISlider:
+        return WebSliderAdapter()
 
     def createVBox(self) -> IVBoxLayout:
         return WebVBoxAdapter()

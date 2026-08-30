@@ -22,12 +22,18 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def factory(request):
-    """Session-scoped widget factory for the chosen UI framework."""
+    """Widget factory for the chosen UI framework.
+
+    Re-asserts ``use(framework)`` on every test, not just once per session:
+    other tests call ``use("web")``/``use("jupyter")`` directly and never
+    restore it, so a session-scoped fixture could hand out a factory that
+    doesn't match the facade functions' (``Label()``, ``VBox()``, ...)
+    active global backend depending on test order.
+    """
     framework = request.config.getoption("--ui")
-    if framework == "web":
-        use(framework)
+    use(framework)
     return create_factory(framework)
 
 

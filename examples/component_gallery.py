@@ -3,10 +3,11 @@ UniUI Component Gallery — a live, running showcase of shipped components,
 organized by category. Every example below is a real widget wired to real
 behavior (a click updates something visible), not a static screenshot.
 
-This is Phase 1 of TODO.md's "P1: Components Showcase": only components that
-already exist in UniUI. Components UniUI doesn't have yet (Toast, Dialog,
-Checkbox, Tabs beyond TabWidget, ...) are deliberately absent rather than
-faked - see TODO.md for the phased plan to add them.
+This started as Phase 1 of TODO.md's "P1: Components Showcase" (only
+components that already existed in UniUI) and now also covers Phase 2
+additions as they ship - currently just Toast. Components UniUI still
+doesn't have (Dialog, Checkbox, Tabs beyond TabWidget, ...) are deliberately
+absent rather than faked - see TODO.md for the phased plan to add them.
 
 Run:
     python examples/component_gallery.py --ui qt
@@ -28,7 +29,7 @@ from uniui import (
     Router, Route, RouterView, sync_breadcrumb,
     AppShell, Card, Badge, ProgressBar, StatCard, MetricList, Table, Chart, Gauge,
     Breadcrumb, Button, Label, LineEdit, TextArea, ComboBox, Dropdown,
-    TabWidget, GroupBox, VBox, HBox, Wrap, LayoutSpec,
+    TabWidget, GroupBox, VBox, HBox, Wrap, LayoutSpec, Toast,
 )
 import uniui
 
@@ -39,6 +40,7 @@ _CATEGORIES = [
     ("data-display", "Data Display", "components"),
     ("navigation", "Navigation", "components"),
     ("layout", "Layout", "components"),
+    ("feedback", "Feedback", "components"),
 ]
 
 
@@ -282,6 +284,48 @@ def layout_page(ctx):
     )
 
 
+# ---------------------------------------------------------------------------
+# Feedback
+# ---------------------------------------------------------------------------
+
+def feedback_page(ctx):
+    toast = Toast()
+
+    def show(status):
+        messages = {
+            "ok": "Saved successfully.",
+            "warn": "Check the highlighted fields.",
+            "error": "Something went wrong.",
+            "neutral": "Here's an update.",
+        }
+        toast.notify(messages[status], status=status)
+
+    triggers = HBox(
+        Button("Show success", on_click=lambda: show("ok")),
+        Button("Show warning", on_click=lambda: show("warn")),
+        Button("Show error", on_click=lambda: show("error")),
+        Button("Show neutral", on_click=lambda: show("neutral")),
+    )
+    triggers.set_spec(LayoutSpec(gap=12))
+
+    return _page(
+        "Feedback", "Toast — an inline, auto-dismissing status banner",
+        _section(
+            "Toast", "notify() replaces the message and restarts the 3s dismiss timer",
+            VBox(triggers, toast),
+        ),
+        _section(
+            "Note", "",
+            Label(
+                "This renders inline wherever it's placed in the tree, not "
+                "as a floating window-corner popup - that's a real gap, "
+                "not a design choice. See TODO.md for the floating-overlay "
+                "upgrade path."
+            ),
+        ),
+    )
+
+
 def not_found_page(ctx):
     return _page("Not found", f"No gallery page matches {ctx.path!r}.")
 
@@ -300,6 +344,7 @@ def build_gallery(framework="auto"):
         Route("/data-display", data_display_page, name="data-display"),
         Route("/navigation", navigation_page, name="navigation"),
         Route("/layout", layout_page, name="layout"),
+        Route("/feedback", feedback_page, name="feedback"),
         not_found=not_found_page,
         default="/overview",
     )

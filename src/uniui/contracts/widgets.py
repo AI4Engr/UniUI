@@ -230,6 +230,46 @@ class IComboBox(IWidget):
     @abstractmethod
     def is_enabled(self) -> bool:
         pass
+class ICheckbox(IWidget):
+    """Checkbox widget interface: a labeled, independently toggled boolean."""
+
+    @abstractmethod
+    def is_checked(self) -> bool:
+        pass
+
+    @abstractmethod
+    def set_checked(self, checked: bool) -> None:
+        pass
+
+    @abstractmethod
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        pass
+
+
+class ISwitch(IWidget):
+    """Switch widget interface: a labeled on/off toggle.
+
+    Same boolean contract as :class:`ICheckbox` - kept as a separate
+    interface (rather than a Checkbox visual variant) because most toolkits
+    treat them as distinct native controls (``ipywidgets.ToggleButton`` vs
+    ``Checkbox``, NiceGUI's ``ui.switch`` vs ``ui.checkbox``) with different
+    conventional uses: a checkbox for a form field, a switch for an
+    immediate on/off setting.
+    """
+
+    @abstractmethod
+    def is_checked(self) -> bool:
+        pass
+
+    @abstractmethod
+    def set_checked(self, checked: bool) -> None:
+        pass
+
+    @abstractmethod
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        pass
+
+
 class IDropdown(IWidget):
     """Dropdown widget interface"""
 
@@ -592,6 +632,14 @@ class IWidgetFactory(ABC):
         pass
 
     @abstractmethod
+    def createCheckbox(self) -> ICheckbox:
+        pass
+
+    @abstractmethod
+    def createSwitch(self) -> ISwitch:
+        pass
+
+    @abstractmethod
     def createVBox(self) -> IVBoxLayout:
         pass
 
@@ -699,6 +747,8 @@ _SNAKE_ALIASES = {
     "createTextArea":   "create_text_area",
     "createComboBox":   "create_combo_box",
     "createDropdown":   "create_dropdown",
+    "createCheckbox":   "create_checkbox",
+    "createSwitch":     "create_switch",
     "createVBox":       "create_vbox",       # irregular: not create_v_box
     "createHBox":       "create_hbox",       # irregular: not create_h_box
     "createTabWidget":  "create_tab_widget",

@@ -39,6 +39,7 @@ from .contracts.layout import (
 )
 from .contracts.widgets import (
     IButton,
+    ICheckbox,
     IComboBox,
     IDropdown,
     IGrid,
@@ -51,6 +52,7 @@ from .contracts.widgets import (
     IOverlay,
     IScrollView,
     ISplitPane,
+    ISwitch,
     ITabWidget,
     ITextArea,
     IVBoxLayout,

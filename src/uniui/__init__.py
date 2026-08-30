@@ -35,6 +35,8 @@ from .core import (
     ITextArea,
     IComboBox,
     IDropdown,
+    ICheckbox,
+    ISwitch,
     IVBoxLayout,
     IHBoxLayout,
     ITabWidget,
@@ -99,10 +101,10 @@ from .backends.registry import (
 
 # Convenience constructors and the legacy facade class
 from .facade import (
-    AppShell, Badge, Breadcrumb, Button, Card, Chart, Column, ComboBox, Drawer,
-    Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit, MetricList,
-    Overlay, ProgressBar, Row, ScrollView, Sidebar, SplitPane, StatCard, Table, TabWidget,
-    Toast,
+    AppShell, Badge, Breadcrumb, Button, Card, Checkbox, Chart, Column, ComboBox,
+    Drawer, Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit, MetricList,
+    Overlay, ProgressBar, Row, ScrollView, Sidebar, SplitPane, StatCard, Switch,
+    Table, TabWidget, Toast,
     TextArea, UniUI, VBox, Wrap, Grid,
 )
 
@@ -117,6 +119,8 @@ LINE_EDIT = 'line_edit'
 TEXT_AREA = 'text_area'
 COMBO_BOX = 'combo_box'
 DROPDOWN = 'dropdown'
+CHECKBOX = 'checkbox'
+SWITCH = 'switch'
 VBOX = 'vbox'
 HBOX = 'hbox'
 TAB_WIDGET = 'tab_widget'
@@ -188,6 +192,8 @@ __all__ = [
     'TextArea',
     'ComboBox',
     'Dropdown',
+    'Checkbox',
+    'Switch',
     'VBox',
     'HBox',
     'Column',
@@ -224,7 +230,7 @@ __all__ = [
     # Backward compatibility
     'UniUI',
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
-    'COMBO_BOX', 'DROPDOWN', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
+    'COMBO_BOX', 'DROPDOWN', 'CHECKBOX', 'SWITCH', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
     'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
     'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TOAST', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
@@ -250,6 +256,8 @@ __all__ = [
     'ITextArea',
     'IComboBox',
     'IDropdown',
+    'ICheckbox',
+    'ISwitch',
     'IVBoxLayout',
     'IHBoxLayout',
     'IGrid',

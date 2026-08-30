@@ -11,10 +11,10 @@ from __future__ import annotations
 from .factory import _BaseJupyterWidgetFactory, _mark_created_widgets
 from .helpers import convert_control_text
 from .inputs import (
-    JupyterButtonAdapter, JupyterComboBox, JupyterComboBoxAdapter,
-    JupyterDropdown, JupyterDropdownAdapter, JupyterLineEdit,
-    JupyterLineEditAdapter, JupyterPushButton, JupyterTextAreaAdapter,
-    JupyterTextarea,
+    JupyterButtonAdapter, JupyterCheckboxAdapter, JupyterComboBox,
+    JupyterComboBoxAdapter, JupyterDropdown, JupyterDropdownAdapter,
+    JupyterLineEdit, JupyterLineEditAdapter, JupyterPushButton,
+    JupyterSwitchAdapter, JupyterTextAreaAdapter, JupyterTextarea,
 )
 from .layouts import (
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
@@ -37,6 +37,7 @@ __all__ = [
     "_mark_created_widgets",
     "_refresh_widget_tree",
     "JupyterButtonAdapter",
+    "JupyterCheckboxAdapter",
     "JupyterComboBox",
     "JupyterComboBoxAdapter",
     "JupyterDropdown",
@@ -60,6 +61,7 @@ __all__ = [
     "JupyterScrollViewAdapter",
     "JupyterSplitPane",
     "JupyterSplitPaneAdapter",
+    "JupyterSwitchAdapter",
     "JupyterTabWidget",
     "JupyterTabWidgetAdapter",
     "JupyterTextAreaAdapter",

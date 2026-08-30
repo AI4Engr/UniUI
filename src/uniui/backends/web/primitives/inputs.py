@@ -250,3 +250,33 @@ class WebDropdownAdapter(_WebSelectAdapter, IDropdown):
         self.clear()
         for value in values:
             self.add_item(value)
+class _WebToggleAdapter(_WebAdapter):
+    """Shared body for WebCheckboxAdapter/WebSwitchAdapter - both are a
+    boolean ``.value`` NiceGUI element (``ui.checkbox``/``ui.switch``) with
+    an identical on_change contract, differing only in which element they
+    wrap."""
+
+    def __init__(self, native):
+        self._callbacks: List[Callable[[], None]] = []
+        super().__init__(native)
+        native.on_value_change(lambda _event: self._emit_change())
+
+    def _emit_change(self) -> None:
+        for callback in list(self._callbacks):
+            safe_call(callback, backend="web", component=type(self).__name__, method="on_change")
+
+    def is_checked(self) -> bool:
+        return bool(self._native.value)
+
+    def set_checked(self, checked: bool) -> None:
+        self._native.value = bool(checked)
+
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        self._callbacks.append(callback)
+        return _list_handle(self._callbacks, callback)
+class WebCheckboxAdapter(_WebToggleAdapter, ICheckbox):
+    def __init__(self):
+        super().__init__(ui.checkbox())
+class WebSwitchAdapter(_WebToggleAdapter, ISwitch):
+    def __init__(self):
+        super().__init__(ui.switch())

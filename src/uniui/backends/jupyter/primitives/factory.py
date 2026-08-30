@@ -13,10 +13,10 @@ from __future__ import annotations
 from ....core import *
 import ipywidgets as widgets
 from .inputs import (
-    JupyterComboBox, JupyterComboBoxAdapter, JupyterButtonAdapter,
-    JupyterDropdown, JupyterDropdownAdapter, JupyterLineEdit,
-    JupyterLineEditAdapter, JupyterPushButton, JupyterTextarea,
-    JupyterTextAreaAdapter,
+    JupyterCheckboxAdapter, JupyterComboBox, JupyterComboBoxAdapter,
+    JupyterButtonAdapter, JupyterDropdown, JupyterDropdownAdapter,
+    JupyterLineEdit, JupyterLineEditAdapter, JupyterPushButton,
+    JupyterSwitchAdapter, JupyterTextarea, JupyterTextAreaAdapter,
 )
 from .layouts import (
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
@@ -66,6 +66,14 @@ class _BaseJupyterWidgetFactory(IWidgetFactory):
     def createDropdown(self) -> IDropdown:
         native = JupyterDropdown()
         return JupyterDropdownAdapter(native)
+
+    def createCheckbox(self) -> ICheckbox:
+        native = widgets.Checkbox(indent=False)
+        return JupyterCheckboxAdapter(native)
+
+    def createSwitch(self) -> ISwitch:
+        native = widgets.ToggleButton()
+        return JupyterSwitchAdapter(native)
 
     def createVBox(self) -> IVBoxLayout:
         native = widgets.VBox()

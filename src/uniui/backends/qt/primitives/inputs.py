@@ -124,6 +124,28 @@ class QTDropdown(QtWidgets.QComboBox):
 
     def show(self):
         super().show()
+class QTCheckbox(QtWidgets.QCheckBox):
+    """Qt Checkbox Widget - native implementation.
+
+    A trivial subclass (QCheckBox already has the full isChecked/setChecked/
+    toggled/isEnabled/setEnabled/show/hide/isVisible/setFixedWidth camelCase
+    protocol the shared mixins expect) kept only so QSS can target
+    ``QTCheckbox`` specifically without also matching QTSwitch below.
+    """
+
+
+class QTSwitch(QtWidgets.QCheckBox):
+    """Qt Switch Widget - native implementation.
+
+    Qt has no native switch control - reuse QCheckBox's real boolean state
+    (isChecked/setChecked/toggled) rather than inventing a parallel one.
+    ``QtSwitchAdapter`` is a distinct interface from ``QtCheckboxAdapter``
+    (see ISwitch's docstring) even though the native widget is the same
+    class today; a track-and-thumb QSS/custom-paint treatment can replace
+    this without touching the adapter or interface.
+    """
+
+
 class QTPushButton(QtWidgets.QPushButton):
     """Qt Push Button Widget - native implementation"""
     def __init__(self):
@@ -352,3 +374,29 @@ class QtDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin, VisibilityMixin
         wrapper = lambda: safe_call(callback, backend="qt", component="Dropdown", method="on_change")
         self._native.connect(wrapper)
         return Handle(lambda: self._native.disconnect(wrapper))
+class QtCheckboxAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, ICheckbox):
+    """Qt Checkbox adapter - implements snake_case interface convention"""
+
+    def is_checked(self) -> bool:
+        return self._native.isChecked()
+
+    def set_checked(self, checked: bool) -> None:
+        self._native.setChecked(bool(checked))
+
+    def on_change(self, callback) -> Handle:
+        wrapper = lambda _checked: safe_call(callback, backend="qt", component="Checkbox", method="on_change")
+        self._native.toggled.connect(wrapper)
+        return Handle(lambda: self._native.toggled.disconnect(wrapper))
+class QtSwitchAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, ISwitch):
+    """Qt Switch adapter - implements snake_case interface convention"""
+
+    def is_checked(self) -> bool:
+        return self._native.isChecked()
+
+    def set_checked(self, checked: bool) -> None:
+        self._native.setChecked(bool(checked))
+
+    def on_change(self, callback) -> Handle:
+        wrapper = lambda _checked: safe_call(callback, backend="qt", component="Switch", method="on_change")
+        self._native.toggled.connect(wrapper)
+        return Handle(lambda: self._native.toggled.disconnect(wrapper))

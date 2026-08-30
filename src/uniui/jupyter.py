@@ -40,16 +40,16 @@ from IPython.display import display
 T = THEME
 
 from .backends.jupyter.primitives import (
-    JupyterButtonAdapter, JupyterComboBox, JupyterComboBoxAdapter,
-    JupyterDropdown, JupyterDropdownAdapter, JupyterGrid, JupyterGridAdapter,
-    JupyterGroupBox, JupyterGroupBoxAdapter, JupyterHBoxAdapter,
-    JupyterHBoxLayout, JupyterImage, JupyterImageAdapter, JupyterLabel,
-    JupyterLabelAdapter, JupyterLineEdit, JupyterLineEditAdapter,
+    JupyterButtonAdapter, JupyterCheckboxAdapter, JupyterComboBox,
+    JupyterComboBoxAdapter, JupyterDropdown, JupyterDropdownAdapter,
+    JupyterGrid, JupyterGridAdapter, JupyterGroupBox, JupyterGroupBoxAdapter,
+    JupyterHBoxAdapter, JupyterHBoxLayout, JupyterImage, JupyterImageAdapter,
+    JupyterLabel, JupyterLabelAdapter, JupyterLineEdit, JupyterLineEditAdapter,
     JupyterOverlay, JupyterOverlayAdapter, JupyterPushButton,
     JupyterScrollView, JupyterScrollViewAdapter, JupyterSplitPane,
-    JupyterSplitPaneAdapter, JupyterTabWidget, JupyterTabWidgetAdapter,
-    JupyterTextAreaAdapter, JupyterTextarea, JupyterVBoxAdapter,
-    JupyterVBoxLayout, JupyterWrap, JupyterWrapAdapter,
+    JupyterSplitPaneAdapter, JupyterSwitchAdapter, JupyterTabWidget,
+    JupyterTabWidgetAdapter, JupyterTextAreaAdapter, JupyterTextarea,
+    JupyterVBoxAdapter, JupyterVBoxLayout, JupyterWrap, JupyterWrapAdapter,
     _BaseJupyterWidgetFactory, _generate_jupyter_css, _mark_created_widgets,
     _refresh_widget_tree, convert_control_text, refresh_theme_jupyter,
 )

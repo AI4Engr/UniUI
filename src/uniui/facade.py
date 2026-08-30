@@ -18,9 +18,9 @@ from .components import (
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .core import (
-    IButton, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout, IImage,
-    ILabel, ILineEdit, IOverlay, IScrollView, ISplitPane, ITabWidget,
-    ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
+    IButton, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
+    IImage, ILabel, ILineEdit, IOverlay, IScrollView, ISplitPane, ISwitch,
+    ITabWidget, ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
 )
 
 
@@ -82,6 +82,26 @@ def Dropdown(items=None, on_change=None) -> IDropdown:
     if on_change:
         dropdown.on_change(on_change)
     return dropdown
+
+
+def Checkbox(checked: bool = False, on_change=None) -> ICheckbox:
+    """Create a checkbox widget"""
+    checkbox = _get_factory().create_checkbox()
+    if checked:
+        checkbox.set_checked(True)
+    if on_change:
+        checkbox.on_change(on_change)
+    return checkbox
+
+
+def Switch(checked: bool = False, on_change=None) -> ISwitch:
+    """Create a switch widget"""
+    switch = _get_factory().create_switch()
+    if checked:
+        switch.set_checked(True)
+    if on_change:
+        switch.on_change(on_change)
+    return switch
 
 
 def VBox(*children) -> IVBoxLayout:
@@ -333,6 +353,8 @@ class UniUI:
         'text_area':   'create_text_area',
         'combo_box':   'create_combo_box',
         'dropdown':    'create_dropdown',
+        'checkbox':    'create_checkbox',
+        'switch':      'create_switch',
         'vbox':        'create_vbox',
         'hbox':        'create_hbox',
         'tab_widget':  'create_tab_widget',
@@ -366,6 +388,8 @@ class UniUI:
     def text_area(self) -> ITextArea: return self._factory.create_text_area()
     def combo_box(self) -> IComboBox: return self._factory.create_combo_box()
     def dropdown(self) -> IDropdown:  return self._factory.create_dropdown()
+    def checkbox(self) -> ICheckbox:  return self._factory.create_checkbox()
+    def switch(self) -> ISwitch:      return self._factory.create_switch()
     def vbox(self) -> IVBoxLayout:    return self._factory.create_vbox()
     def hbox(self) -> IHBoxLayout:    return self._factory.create_hbox()
     def tab_widget(self) -> ITabWidget: return self._factory.create_tab_widget()

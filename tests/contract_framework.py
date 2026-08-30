@@ -120,6 +120,47 @@ class CommonCapabilitiesContractTest(WidgetContractTest):
         widget.set_minimum_height(30)
 
 
+class CheckedWidgetContractTest(WidgetContractTest):
+    """Contract for widgets with a boolean is_checked()/set_checked() state
+    and an on_change callback - shared by Checkbox and Switch, which have an
+    identical contract and differ only in native widget/typical use."""
+
+    @pytest.mark.contract
+    def test_default_unchecked(self, factory):
+        widget = self.create_widget(factory)
+        assert widget.is_checked() is False
+
+    @pytest.mark.contract
+    def test_set_checked_roundtrip(self, factory):
+        widget = self.create_widget(factory)
+        widget.set_checked(True)
+        assert widget.is_checked() is True
+        widget.set_checked(False)
+        assert widget.is_checked() is False
+
+    @pytest.mark.contract
+    def test_on_change_callback(self, factory):
+        widget = self.create_widget(factory)
+        called = []
+        widget.on_change(lambda: called.append(1))
+
+        widget.set_checked(True)
+        widget.set_checked(False)
+
+        assert len(called) >= 1
+
+    @pytest.mark.contract
+    def test_on_change_dispose_stops_callback(self, factory):
+        widget = self.create_widget(factory)
+        called = []
+        handle = widget.on_change(lambda: called.append(1))
+        handle.dispose()
+
+        widget.set_checked(True)
+
+        assert called == []
+
+
 class ValueWidgetContractTest(WidgetContractTest):
     """Contract for widgets that expose a numeric value via get_value()."""
 

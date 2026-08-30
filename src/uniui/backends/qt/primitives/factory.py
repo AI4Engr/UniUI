@@ -10,9 +10,9 @@ from PySide2 import QtCore
 
 from ....core import *
 from .inputs import (
-    QTComboBox, QTDropdown, QTLineEdit, QTPushButton, QTTextarea,
-    QtButtonAdapter, QtComboBoxAdapter, QtDropdownAdapter, QtLineEditAdapter,
-    QtTextAreaAdapter,
+    QTCheckbox, QTComboBox, QTDropdown, QTLineEdit, QTPushButton, QTSwitch,
+    QTTextarea, QtButtonAdapter, QtCheckboxAdapter, QtComboBoxAdapter,
+    QtDropdownAdapter, QtLineEditAdapter, QtSwitchAdapter, QtTextAreaAdapter,
 )
 from .layouts import (
     QTHBoxLayout, QTTabWidget, QTVBoxLayout, QtGridAdapter, QtHBoxAdapter,
@@ -88,6 +88,14 @@ class _BaseQtWidgetFactory(IWidgetFactory):
     def createDropdown(self) -> IDropdown:
         native = QTDropdown()
         return QtDropdownAdapter(native)
+
+    def createCheckbox(self) -> ICheckbox:
+        native = QTCheckbox()
+        return QtCheckboxAdapter(native)
+
+    def createSwitch(self) -> ISwitch:
+        native = QTSwitch()
+        return QtSwitchAdapter(native)
 
     def createVBox(self) -> IVBoxLayout:
         native = QTVBoxLayout()

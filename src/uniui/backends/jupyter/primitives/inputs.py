@@ -8,8 +8,9 @@ from IPython.display import display
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, JupyterEnableMixin, JupyterVisibilityMixin,
-    NativeMixin, SelectionMixin, SizeMixin, TextMixin, VisibilityMixin,
+    ClearMixin, EnableMixin, JupyterEnableMixin, JupyterSizeMixin,
+    JupyterVisibilityMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
+    VisibilityMixin,
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
@@ -484,3 +485,42 @@ class JupyterDropdownAdapter(NativeMixin, SelectionMixin, ClearMixin,
     def on_change(self, callback: Callable[[], None]) -> Handle:
         wrapper = self._native.connect(callback)
         return Handle(lambda: self._native.disconnect(wrapper))
+class JupyterCheckboxAdapter(NativeMixin, JupyterVisibilityMixin, JupyterEnableMixin,
+                             JupyterSizeMixin, ICheckbox):
+    """Jupyter Checkbox adapter - implements snake_case interface convention.
+
+    Wraps a stock ``ipywidgets.Checkbox`` directly - no custom native
+    wrapper class is needed since the Jupyter-flavored mixins operate on
+    ``.layout``/``.disabled``/``.value`` rather than a camelCase protocol.
+    """
+
+    def is_checked(self) -> bool:
+        return bool(self._native.value)
+
+    def set_checked(self, checked: bool) -> None:
+        self._native.value = bool(checked)
+
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        def wrapper(change):
+            safe_call(callback, backend="jupyter", component="Checkbox", method="on_change")
+        self._native.observe(wrapper, names="value")
+        return Handle(lambda: self._native.unobserve(wrapper, names="value"))
+class JupyterSwitchAdapter(NativeMixin, JupyterVisibilityMixin, JupyterEnableMixin,
+                           JupyterSizeMixin, ISwitch):
+    """Jupyter Switch adapter - implements snake_case interface convention.
+
+    Wraps a stock ``ipywidgets.ToggleButton`` - ipywidgets has no dedicated
+    "switch" widget; ToggleButton is the closest boolean on/off control.
+    """
+
+    def is_checked(self) -> bool:
+        return bool(self._native.value)
+
+    def set_checked(self, checked: bool) -> None:
+        self._native.value = bool(checked)
+
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        def wrapper(change):
+            safe_call(callback, backend="jupyter", component="Switch", method="on_change")
+        self._native.observe(wrapper, names="value")
+        return Handle(lambda: self._native.unobserve(wrapper, names="value"))

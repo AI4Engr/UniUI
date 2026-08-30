@@ -68,6 +68,8 @@ def test_snake_alias_dispatches_to_the_subclass_override():
         def createTextArea(self): return None
         def createComboBox(self): return None
         def createDropdown(self): return None
+        def createCheckbox(self): return None
+        def createSwitch(self): return None
         def createVBox(self): return "vbox"
         def createHBox(self): return None
         def createTabWidget(self): return None
@@ -95,6 +97,8 @@ def test_unsupported_widgets_still_raise_through_the_alias():
         def createTextArea(self): return None
         def createComboBox(self): return None
         def createDropdown(self): return None
+        def createCheckbox(self): return None
+        def createSwitch(self): return None
         def createVBox(self): return None
         def createHBox(self): return None
         def createTabWidget(self): return None

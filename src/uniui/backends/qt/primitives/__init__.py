@@ -11,9 +11,9 @@ from __future__ import annotations
 from .factory import _BaseQtWidgetFactory
 from .helpers import check_connection, convert_control_text, has_method
 from .inputs import (
-    QTComboBox, QTDropdown, QTLineEdit, QTPushButton, QTTextarea,
-    QtButtonAdapter, QtComboBoxAdapter, QtDropdownAdapter, QtLineEditAdapter,
-    QtTextAreaAdapter,
+    QTCheckbox, QTComboBox, QTDropdown, QTLineEdit, QTPushButton, QTSwitch,
+    QTTextarea, QtButtonAdapter, QtCheckboxAdapter, QtComboBoxAdapter,
+    QtDropdownAdapter, QtLineEditAdapter, QtSwitchAdapter, QtTextAreaAdapter,
 )
 from .layouts import (
     QTHBoxLayout, QTTabWidget, QTVBoxLayout, _QFlowLayout, _ResizeNotifier,
@@ -29,6 +29,7 @@ __all__ = [
     "_BaseQtWidgetFactory",
     "_QFlowLayout",
     "_ResizeNotifier",
+    "QTCheckbox",
     "QTComboBox",
     "QTDropdown",
     "QTGroupBox",
@@ -37,10 +38,12 @@ __all__ = [
     "QTLabel",
     "QTLineEdit",
     "QTPushButton",
+    "QTSwitch",
     "QTTabWidget",
     "QTTextarea",
     "QTVBoxLayout",
     "QtButtonAdapter",
+    "QtCheckboxAdapter",
     "QtComboBoxAdapter",
     "QtDropdownAdapter",
     "QtGridAdapter",
@@ -52,6 +55,7 @@ __all__ = [
     "QtOverlayAdapter",
     "QtScrollViewAdapter",
     "QtSplitPaneAdapter",
+    "QtSwitchAdapter",
     "QtTabWidgetAdapter",
     "QtTextAreaAdapter",
     "QtVBoxAdapter",

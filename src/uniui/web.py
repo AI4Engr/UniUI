@@ -26,6 +26,7 @@ from nicegui import ui
 
 from .core import (
     IButton,
+    ICheckbox,
     IComboBox,
     IDropdown,
     IGrid,
@@ -37,6 +38,7 @@ from .core import (
     IOverlay,
     IScrollView,
     ISplitPane,
+    ISwitch,
     ITabWidget,
     ITextArea,
     IVBoxLayout,
@@ -53,11 +55,12 @@ from .theme import THEME, is_dark
 T = THEME
 
 from .backends.web.primitives import (
-    WebButtonAdapter, WebComboBoxAdapter, WebDropdownAdapter, WebGridAdapter,
-    WebGroupBoxAdapter, WebHBoxAdapter, WebImageAdapter, WebLabelAdapter,
-    WebLineEditAdapter, WebOverlayAdapter, WebScrollViewAdapter,
-    WebSplitPaneAdapter, WebTabWidgetAdapter, WebTextAreaAdapter,
-    WebVBoxAdapter, WebWrapAdapter, _BaseNiceGUIWidgetFactory, _WebAdapter,
+    WebButtonAdapter, WebCheckboxAdapter, WebComboBoxAdapter,
+    WebDropdownAdapter, WebGridAdapter, WebGroupBoxAdapter, WebHBoxAdapter,
+    WebImageAdapter, WebLabelAdapter, WebLineEditAdapter, WebOverlayAdapter,
+    WebScrollViewAdapter, WebSplitPaneAdapter, WebSwitchAdapter,
+    WebTabWidgetAdapter, WebTextAreaAdapter, WebVBoxAdapter, WebWrapAdapter,
+    _BaseNiceGUIWidgetFactory, _WebAdapter,
     _WebSelectAdapter, _install_css, _plain_html, _set_enabled, _style_size,
     refresh_theme_web, schedule_after_web, set_backend_active,
 )

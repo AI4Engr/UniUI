@@ -34,12 +34,13 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Qt
 
 from .backends.qt.primitives import (
-    QTComboBox, QTDropdown, QTGroupBox, QTHBoxLayout, QTImage, QTLabel,
-    QTLineEdit, QTPushButton, QTTabWidget, QTTextarea, QTVBoxLayout,
-    QtButtonAdapter, QtComboBoxAdapter, QtDropdownAdapter, QtGridAdapter,
-    QtGroupBoxAdapter, QtHBoxAdapter, QtImageAdapter, QtLabelAdapter,
-    QtLineEditAdapter, QtOverlayAdapter, QtScrollViewAdapter,
-    QtSplitPaneAdapter, QtTabWidgetAdapter, QtTextAreaAdapter, QtVBoxAdapter,
-    QtWrapAdapter, _BaseQtWidgetFactory, _QFlowLayout, _ResizeNotifier,
+    QTCheckbox, QTComboBox, QTDropdown, QTGroupBox, QTHBoxLayout, QTImage,
+    QTLabel, QTLineEdit, QTPushButton, QTSwitch, QTTabWidget, QTTextarea,
+    QTVBoxLayout, QtButtonAdapter, QtCheckboxAdapter, QtComboBoxAdapter,
+    QtDropdownAdapter, QtGridAdapter, QtGroupBoxAdapter, QtHBoxAdapter,
+    QtImageAdapter, QtLabelAdapter, QtLineEditAdapter, QtOverlayAdapter,
+    QtScrollViewAdapter, QtSplitPaneAdapter, QtSwitchAdapter,
+    QtTabWidgetAdapter, QtTextAreaAdapter, QtVBoxAdapter, QtWrapAdapter,
+    _BaseQtWidgetFactory, _QFlowLayout, _ResizeNotifier,
     check_connection, convert_control_text, has_method,
 )

@@ -29,6 +29,7 @@ from uniui import (
     Router, Route, RouterView, sync_breadcrumb,
     AppShell, Card, Badge, ProgressBar, StatCard, MetricList, Table, Chart, Gauge,
     Breadcrumb, Button, Label, LineEdit, TextArea, ComboBox, Dropdown,
+    Checkbox, Switch,
     TabWidget, GroupBox, VBox, HBox, Wrap, LayoutSpec, Toast,
 )
 import uniui
@@ -153,12 +154,31 @@ def inputs_page(ctx):
     disabled = LineEdit("Read-only value")
     disabled.set_enabled(False)
 
+    toggle_echo = Label("Neither is checked")
+
+    def _sync_toggle_echo():
+        parts = []
+        if checkbox.is_checked():
+            parts.append("checkbox")
+        if switch.is_checked():
+            parts.append("switch")
+        toggle_echo.set_text(", ".join(parts) + " checked" if parts else "Neither is checked")
+
+    checkbox = Checkbox(on_change=_sync_toggle_echo)
+    switch = Switch(checked=True, on_change=_sync_toggle_echo)
+    toggle_row = HBox(checkbox, switch)
+    toggle_row.set_spec(LayoutSpec(gap=16))
+    toggles = VBox(toggle_row, toggle_echo)
+    toggles.set_spec(LayoutSpec(gap=6))
+    _sync_toggle_echo()
+
     return _page(
-        "Inputs", "LineEdit, TextArea, ComboBox, Dropdown",
+        "Inputs", "LineEdit, TextArea, ComboBox, Dropdown, Checkbox, Switch",
         _section("Text input", "on_change fires on every keystroke", line_row),
         _section("Text area", "", text_area),
         _section("Choice controls", "ComboBox (editable) and Dropdown (fixed list)", pickers),
         _section("Disabled state", "Same widget, set_enabled(False)", disabled),
+        _section("Toggle controls", "Checkbox and Switch share the same is_checked()/set_checked()/on_change contract", toggles),
     )
 
 

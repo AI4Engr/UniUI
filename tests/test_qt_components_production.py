@@ -181,3 +181,46 @@ def test_qt_factory_enables_high_dpi_before_application_creation():
             cwd=repo_root, env=env, capture_output=True, text=True,
         )
         assert result.returncode == 0, f"scale={scale}: {result.stderr}"
+
+
+def test_qt_admin_demo_settings_route_survives_repeated_visits_and_theme_toggle():
+    """Regression: settings_page binds labels to the module-level, permanent
+    _ADMIN_THEME state. Before the /settings route was marked cache=True,
+    every visit rebuilt the page and leaked one bind_text subscription
+    pointing at a QTLabel that gets deleted the moment the route is left --
+    the next theme toggle after that raised "Internal C++ object (QTLabel)
+    already deleted" for every leaked visit. Reproduced by visiting
+    /settings then navigating away twice (so a pre-fix run leaks two
+    subscriptions), forcing Qt's deferred deletion to actually run, then
+    toggling the theme and asserting nothing was logged to stderr."""
+    repo_root = Path(__file__).resolve().parents[1]
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root / "src") + os.pathsep + str(repo_root)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    script = """
+import sys
+sys.path.insert(0, "examples")
+from PySide2 import QtWidgets, QtCore
+import examples.admin_demo as demo
+from uniui.routing import RouterView
+
+app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+router = demo._build_qt_router()
+view = RouterView(router)
+for _ in range(2):
+    router.push_named("settings")
+    router.push_named("dashboard")
+for _ in range(5):
+    app.processEvents()
+QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.DeferredDelete)
+app.processEvents()
+demo._ADMIN_THEME.set("dark")
+print("OK")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=repo_root, env=env, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "already deleted" not in result.stderr, result.stderr
+    assert "OK" in result.stdout

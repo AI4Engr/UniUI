@@ -1021,7 +1021,14 @@ def create_admin_ui(framework="auto", debug=False):
         Route("/dashboard", _browser_dashboard_page, name="dashboard"),
         Route("/users", _browser_users_page, name="users"),
         Route("/components", _browser_components_page, name="components"),
-        Route("/settings", _browser_settings_page, name="settings"),
+        # Cached: settings_page binds labels to the module-level, permanent
+        # _ADMIN_THEME state. Rebuilding it on every visit (the default for
+        # uncached routes) would leak one bind_text subscription per visit,
+        # each pointing at a QTLabel that gets deleted the moment the route
+        # is left - the next theme toggle after that throws "Internal C++
+        # object already deleted" for every leaked visit. Caching means the
+        # page (and its one subscription) is built exactly once.
+        Route("/settings", _browser_settings_page, name="settings", cache=True),
         not_found=_browser_not_found_page,
     )
 
@@ -1186,6 +1193,25 @@ QLineEdit[headerSearch="1"]:focus {
 # Main
 # ---------------------------------------------------------------------------
 
+def _build_qt_router():
+    """The Qt router's route table - split out from main() so a test can
+    build it without also going through show_ui()'s blocking event loop."""
+    from uniui.routing import Router, Route
+
+    return Router(
+        Route("/dashboard",   dashboard_page,   name="dashboard"),
+        Route("/users",       users_page,       name="users"),
+        Route("/components",  components_page,  name="components"),
+        # Cached: see the matching comment on the browser router's
+        # /settings route above - settings_page binds labels to the
+        # permanent, module-level _ADMIN_THEME state, so rebuilding it on
+        # every visit would leak one subscription (pointing at an already-
+        # deleted QTLabel) per visit.
+        Route("/settings",    settings_page,    name="settings", cache=True),
+        not_found=not_found_page,
+    )
+
+
 def main():
     global _THEME_TOGGLE
 
@@ -1196,20 +1222,14 @@ def main():
         _main_browser(framework)
         return
 
-    from uniui.routing import Router, Route, RouterView, sync_breadcrumb
+    from uniui.routing import RouterView, sync_breadcrumb
     from uniui.qt_components import get_admin_palette, set_admin_theme
     from PySide2 import QtWidgets, QtCore
 
     _ADMIN_THEME.set("light")
     set_admin_theme(False)
 
-    router = Router(
-        Route("/dashboard",   dashboard_page,   name="dashboard"),
-        Route("/users",       users_page,       name="users"),
-        Route("/components",  components_page,  name="components"),
-        Route("/settings",    settings_page,    name="settings"),
-        not_found=not_found_page,
-    )
+    router = _build_qt_router()
 
     f = uniui._get_factory()
 

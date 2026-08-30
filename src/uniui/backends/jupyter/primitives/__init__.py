@@ -13,9 +13,9 @@ from .helpers import convert_control_text
 from .inputs import (
     JupyterButtonAdapter, JupyterCheckboxAdapter, JupyterComboBox,
     JupyterComboBoxAdapter, JupyterDropdown, JupyterDropdownAdapter,
-    JupyterLineEdit, JupyterLineEditAdapter, JupyterPushButton,
-    JupyterRadioGroupAdapter, JupyterSwitchAdapter, JupyterTextAreaAdapter,
-    JupyterTextarea,
+    JupyterLineEdit, JupyterLineEditAdapter, JupyterNumberInputAdapter,
+    JupyterPushButton, JupyterRadioGroupAdapter, JupyterSwitchAdapter,
+    JupyterTextAreaAdapter, JupyterTextarea,
 )
 from .layouts import (
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
@@ -55,6 +55,7 @@ __all__ = [
     "JupyterLabelAdapter",
     "JupyterLineEdit",
     "JupyterLineEditAdapter",
+    "JupyterNumberInputAdapter",
     "JupyterOverlay",
     "JupyterOverlayAdapter",
     "JupyterPushButton",

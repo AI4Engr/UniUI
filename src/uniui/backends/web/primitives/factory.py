@@ -12,8 +12,8 @@ from nicegui import ui
 from ....core import *
 from .inputs import (
     WebButtonAdapter, WebCheckboxAdapter, WebComboBoxAdapter,
-    WebDropdownAdapter, WebLineEditAdapter, WebRadioGroupAdapter,
-    WebSwitchAdapter, WebTextAreaAdapter,
+    WebDropdownAdapter, WebLineEditAdapter, WebNumberInputAdapter,
+    WebRadioGroupAdapter, WebSwitchAdapter, WebTextAreaAdapter,
 )
 from .layouts import (
     WebGridAdapter, WebHBoxAdapter, WebOverlayAdapter, WebScrollViewAdapter,
@@ -62,6 +62,9 @@ class _BaseNiceGUIWidgetFactory(IWidgetFactory):
 
     def createRadioGroup(self) -> IRadioGroup:
         return WebRadioGroupAdapter()
+
+    def createNumberInput(self) -> INumberInput:
+        return WebNumberInputAdapter()
 
     def createVBox(self) -> IVBoxLayout:
         return WebVBoxAdapter()

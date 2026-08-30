@@ -49,6 +49,7 @@ from .contracts.widgets import (
     ILabel,
     ILayoutOnly,
     ILineEdit,
+    INumberInput,
     IOverlay,
     IRadioGroup,
     IScrollView,

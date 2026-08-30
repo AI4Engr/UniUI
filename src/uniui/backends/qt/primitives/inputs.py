@@ -195,6 +195,20 @@ class QTRadioGroup(QtWidgets.QWidget):
 
     def disconnect(self, function):
         self._group.buttonToggled.disconnect(function)
+class QTNumberInput(QtWidgets.QDoubleSpinBox):
+    """Qt NumberInput Widget - native implementation.
+
+    QDoubleSpinBox already has the full isEnabled/setEnabled/show/hide/
+    isVisible/setFixedWidth camelCase protocol the shared mixins expect,
+    plus its own range/step/value surface - a trivial subclass, kept only
+    for naming symmetry with the other QTXxx native wrappers.
+    """
+    def __init__(self):
+        super().__init__()
+        self.setDecimals(4)
+        self.setRange(0.0, 100.0)
+
+
 class QTPushButton(QtWidgets.QPushButton):
     """Qt Push Button Widget - native implementation"""
     def __init__(self):
@@ -471,3 +485,22 @@ class QtRadioGroupAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, 
                 safe_call(callback, backend="qt", component="RadioGroup", method="on_change")
         self._native.connect(wrapper)
         return Handle(lambda: self._native.disconnect(wrapper))
+class QtNumberInputAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, INumberInput):
+    """Qt NumberInput adapter - implements snake_case interface convention"""
+
+    def set_range(self, minimum: float, maximum: float) -> None:
+        self._native.setRange(minimum, maximum)
+
+    def set_step(self, step: float) -> None:
+        self._native.setSingleStep(step)
+
+    def get_value(self) -> float:
+        return self._native.value()
+
+    def set_value(self, value: float) -> None:
+        self._native.setValue(value)
+
+    def on_change(self, callback) -> Handle:
+        wrapper = lambda _value: safe_call(callback, backend="qt", component="NumberInput", method="on_change")
+        self._native.valueChanged.connect(wrapper)
+        return Handle(lambda: self._native.valueChanged.disconnect(wrapper))

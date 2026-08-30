@@ -19,8 +19,9 @@ from .components import (
 )
 from .core import (
     IButton, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
-    IImage, ILabel, ILineEdit, IOverlay, IRadioGroup, IScrollView, ISplitPane,
-    ISwitch, ITabWidget, ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
+    IImage, ILabel, ILineEdit, INumberInput, IOverlay, IRadioGroup,
+    IScrollView, ISplitPane, ISwitch, ITabWidget, ITextArea, IVBoxLayout,
+    IWidget, IWrap, LayoutSpec,
 )
 
 
@@ -112,6 +113,18 @@ def RadioGroup(options=None, on_change=None) -> IRadioGroup:
     if on_change:
         radio_group.on_change(on_change)
     return radio_group
+
+
+def NumberInput(value: float = 0, minimum: float = 0, maximum: float = 100,
+                 step: float = 1, on_change=None) -> INumberInput:
+    """Create a number input widget"""
+    number_input = _get_factory().create_number_input()
+    number_input.set_range(minimum, maximum)
+    number_input.set_step(step)
+    number_input.set_value(value)
+    if on_change:
+        number_input.on_change(on_change)
+    return number_input
 
 
 def VBox(*children) -> IVBoxLayout:
@@ -374,6 +387,7 @@ class UniUI:
         'checkbox':    'create_checkbox',
         'switch':      'create_switch',
         'radio_group': 'create_radio_group',
+        'number_input': 'create_number_input',
         'vbox':        'create_vbox',
         'hbox':        'create_hbox',
         'tab_widget':  'create_tab_widget',
@@ -410,6 +424,7 @@ class UniUI:
     def checkbox(self) -> ICheckbox:  return self._factory.create_checkbox()
     def switch(self) -> ISwitch:      return self._factory.create_switch()
     def radio_group(self) -> IRadioGroup: return self._factory.create_radio_group()
+    def number_input(self) -> INumberInput: return self._factory.create_number_input()
     def vbox(self) -> IVBoxLayout:    return self._factory.create_vbox()
     def hbox(self) -> IHBoxLayout:    return self._factory.create_hbox()
     def tab_widget(self) -> ITabWidget: return self._factory.create_tab_widget()

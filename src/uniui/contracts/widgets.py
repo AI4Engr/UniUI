@@ -296,6 +296,36 @@ class IRadioGroup(IWidget):
         pass
 
 
+class INumberInput(IWidget):
+    """A numeric spinner: a bounded value with a step, not free-form text.
+
+    Distinct from :class:`ILineEdit`'s ``get_value()`` (which parses
+    whatever text the user typed and can raise ``InvalidValueError``) -
+    a NumberInput's value is always a valid float by construction, since
+    every backend's native control enforces the range/step itself.
+    """
+
+    @abstractmethod
+    def set_range(self, minimum: float, maximum: float) -> None:
+        pass
+
+    @abstractmethod
+    def set_step(self, step: float) -> None:
+        pass
+
+    @abstractmethod
+    def get_value(self) -> float:
+        pass
+
+    @abstractmethod
+    def set_value(self, value: float) -> None:
+        pass
+
+    @abstractmethod
+    def on_change(self, callback: Callable[[], None]) -> Handle:
+        pass
+
+
 class IDropdown(IWidget):
     """Dropdown widget interface"""
 
@@ -670,6 +700,10 @@ class IWidgetFactory(ABC):
         pass
 
     @abstractmethod
+    def createNumberInput(self) -> INumberInput:
+        pass
+
+    @abstractmethod
     def createVBox(self) -> IVBoxLayout:
         pass
 
@@ -784,6 +818,7 @@ _SNAKE_ALIASES = {
     "createCheckbox":   "create_checkbox",
     "createSwitch":     "create_switch",
     "createRadioGroup": "create_radio_group",
+    "createNumberInput": "create_number_input",
     "createVBox":       "create_vbox",       # irregular: not create_v_box
     "createHBox":       "create_hbox",       # irregular: not create_h_box
     "createTabWidget":  "create_tab_widget",

@@ -8,9 +8,9 @@ from IPython.display import display
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, JupyterEnableMixin, JupyterSizeMixin,
-    JupyterVisibilityMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
-    VisibilityMixin,
+    ClearMixin, EnableMixin, JupyterClassMixin, JupyterEnableMixin,
+    JupyterSizeMixin, JupyterVisibilityMixin, NativeMixin, SelectionMixin,
+    SizeMixin, TextMixin, VisibilityMixin,
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
@@ -342,7 +342,7 @@ class JupyterDropdown(widgets.Dropdown):
         old_content = list(self.options)
         old_content.sort()
         self.options = tuple(old_content)
-class JupyterButtonAdapter(NativeMixin, TextMixin, JupyterVisibilityMixin, EnableMixin, SizeMixin, IButton):
+class JupyterButtonAdapter(NativeMixin, TextMixin, JupyterVisibilityMixin, EnableMixin, SizeMixin, JupyterClassMixin, IButton):
     """Jupyter Button adapter - implements snake_case interface convention"""
 
     # IEventCapable

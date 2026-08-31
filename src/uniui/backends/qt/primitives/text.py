@@ -14,8 +14,8 @@ from PySide2.QtWidgets import (
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
-    VisibilityMixin,
+    ClassMixin, ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin,
+    TextMixin, VisibilityMixin,
 )
 from ....strategies import normalize_text, parse_float
 from .helpers import check_connection
@@ -83,7 +83,7 @@ class QTGroupBox(QtWidgets.QGroupBox):
 
     def setLayout(self, layout):
         super().setLayout(layout)
-class QtLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, ILabel):
+class QtLabelAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, ILabel):
     """Qt Label adapter - implements snake_case interface convention"""
 class QtImageAdapter(VisibilityMixin, EnableMixin, IImage):
     """Qt Image adapter - implements snake_case interface convention"""

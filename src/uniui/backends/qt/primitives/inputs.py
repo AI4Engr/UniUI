@@ -13,8 +13,8 @@ from PySide2.QtWidgets import (
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
-    VisibilityMixin,
+    ClassMixin, ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin,
+    TextMixin, VisibilityMixin,
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
@@ -304,7 +304,7 @@ class QTLineEdit(QtWidgets.QLineEdit):
 
     def setEnabled(self, flag):
         super().setEnabled(flag)
-class QtButtonAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, IButton):
+class QtButtonAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, IButton):
     """Qt Button adapter - implements snake_case interface convention"""
 
     # IEventCapable

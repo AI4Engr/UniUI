@@ -54,6 +54,12 @@ class IWidget(ABC):
     def set_minimum_height(self, height: int) -> None:
         pass
 
+    def add_class(self, name: str) -> None:
+        pass
+
+    def remove_class(self, name: str) -> None:
+        pass
+
 
 class ILayoutOnly(IWidget):
     """Marker for widgets whose native object is a pure layout manager, not
@@ -460,6 +466,18 @@ class IVBoxLayout(ILayoutOnly):
 
     def set_minimum_height(self, height: int) -> None:
         raise NotSupportedError("set_minimum_height() not supported on this layout")
+
+    # add_class/remove_class deliberately NOT overridden here: unlike
+    # show/hide/enabled/sizing, a "CSS-style class" is not universally
+    # meaningless on a layout-only native. Web's VBox/HBox is a real DOM
+    # element and Jupyter's is a real ipywidgets Box - both can carry a
+    # class same as any other widget, and admin_demo.py's
+    # uniui-demo-page/uniui-demo-heading classes are genuinely load-bearing
+    # there (real gap/width/flex-wrap CSS rules). Only Qt's native is a bare
+    # QLayout with nothing to tag, so QtVBoxAdapter/QtHBoxAdapter fall
+    # through to IWidget's inherited no-op instead of mixing in ClassMixin -
+    # this matches the old admin_demo.py `_add_class()` helper's existing
+    # silent-no-op-on-Qt behavior exactly, not a new exception.
 class IHBoxLayout(ILayoutOnly):
     """Horizontal box layout interface"""
 
@@ -525,6 +543,9 @@ class IHBoxLayout(ILayoutOnly):
 
     def set_minimum_height(self, height: int) -> None:
         raise NotSupportedError("set_minimum_height() not supported on this layout")
+
+    # add_class/remove_class deliberately NOT overridden - see IVBoxLayout's
+    # identical comment above.
 class ITabWidget(IWidget):
     """Tab widget interface"""
 
@@ -629,6 +650,9 @@ class IGrid(ILayoutOnly):
 
     def set_minimum_height(self, height: int) -> None:
         raise NotSupportedError("set_minimum_height() not supported on this Grid")
+
+    # add_class/remove_class deliberately NOT overridden - see IVBoxLayout's
+    # identical comment above.
 class IWrap(IWidget):
     """Wrapping flow layout — children wrap to next row when they overflow."""
 

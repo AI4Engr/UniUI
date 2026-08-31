@@ -52,3 +52,9 @@ class _WebAdapter:
 
     def is_visible(self) -> bool:
         return bool(self._native.visible)
+
+    def add_class(self, name: str) -> None:
+        self._native.classes(add=name)
+
+    def remove_class(self, name: str) -> None:
+        self._native.classes(remove=name)

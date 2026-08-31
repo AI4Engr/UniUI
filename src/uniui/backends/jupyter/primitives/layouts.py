@@ -8,9 +8,9 @@ from IPython.display import display
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, JupyterEnableMixin, JupyterSizeMixin,
-    JupyterVisibilityMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
-    VisibilityMixin,
+    ClearMixin, EnableMixin, JupyterClassMixin, JupyterEnableMixin,
+    JupyterSizeMixin, JupyterVisibilityMixin, NativeMixin, SelectionMixin,
+    SizeMixin, TextMixin, VisibilityMixin,
 )
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
@@ -332,7 +332,7 @@ class JupyterOverlay(widgets.VBox):
         if hasattr(active, 'layout'):
             active.layout.display = None
         self.children = (active,)
-class JupyterVBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IVBoxLayout):
+class JupyterVBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IVBoxLayout):
     """Jupyter VBox adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: widgets.VBox):
@@ -363,7 +363,7 @@ class JupyterVBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
 
     def clear(self):
         self._native.children = ()
-class JupyterHBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IHBoxLayout):
+class JupyterHBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IHBoxLayout):
     """Jupyter HBox adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: widgets.HBox):
@@ -424,7 +424,7 @@ class JupyterTabWidgetAdapter(NativeMixin, VisibilityMixin, JupyterEnableMixin, 
 
     def get_current_index(self) -> int:
         return self._native.currentIndex()
-class JupyterGridAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IGrid):
+class JupyterGridAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IGrid):
     """Jupyter Grid adapter."""
 
     def __init__(self, columns: int = 12):
@@ -445,7 +445,7 @@ class JupyterGridAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
 
     def clear(self) -> None:
         self._native.clear()
-class JupyterWrapAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IWrap):
+class JupyterWrapAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IWrap):
     """Jupyter Wrap adapter backed by a stock ipywidgets Box."""
 
     def __init__(self):

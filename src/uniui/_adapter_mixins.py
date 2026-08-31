@@ -80,6 +80,28 @@ class EnableMixin:
         return self.get_native().isEnabled()
 
 
+class ClassMixin:
+    """add_class / remove_class via a Qt dynamic property + QSS attribute
+    selector ([name="true"]), repolished so an already-applied stylesheet
+    picks up the change immediately. Verified empirically: hyphenated
+    property names work fine in PySide2's QSS parser, and multiple
+    independent boolean properties on one widget compose without collision
+    - no translation table or single combined "classes" property needed.
+    """
+
+    def add_class(self, name: str) -> None:
+        native = self.get_native()
+        native.setProperty(name, True)
+        native.style().unpolish(native)
+        native.style().polish(native)
+
+    def remove_class(self, name: str) -> None:
+        native = self.get_native()
+        native.setProperty(name, False)
+        native.style().unpolish(native)
+        native.style().polish(native)
+
+
 class ClearMixin:
     """clear()."""
 
@@ -153,9 +175,21 @@ class JupyterEnableMixin:
         return not getattr(self.get_native(), 'disabled', False)
 
 
+class JupyterClassMixin:
+    """add_class / remove_class via ipywidgets' own DOM class list."""
+
+    def add_class(self, name: str) -> None:
+        self.get_native().add_class(name)
+
+    def remove_class(self, name: str) -> None:
+        self.get_native().remove_class(name)
+
+
 __all__ = [
+    "ClassMixin",
     "ClearMixin",
     "EnableMixin",
+    "JupyterClassMixin",
     "JupyterEnableMixin",
     "JupyterSizeMixin",
     "JupyterVisibilityMixin",

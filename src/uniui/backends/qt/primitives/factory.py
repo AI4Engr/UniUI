@@ -18,8 +18,8 @@ from .inputs import (
 )
 from .layouts import (
     QTHBoxLayout, QTTabWidget, QTVBoxLayout, QtGridAdapter, QtHBoxAdapter,
-    QtOverlayAdapter, QtScrollViewAdapter, QtSplitPaneAdapter,
-    QtTabWidgetAdapter, QtVBoxAdapter, QtWrapAdapter,
+    QtOverlayAdapter, QtScrollViewAdapter, QtSeparatorAdapter,
+    QtSplitPaneAdapter, QtTabWidgetAdapter, QtVBoxAdapter, QtWrapAdapter,
 )
 from .text import (
     QTGroupBox, QTImage, QTLabel, QtGroupBoxAdapter, QtImageAdapter,
@@ -138,6 +138,11 @@ class _BaseQtWidgetFactory(IWidgetFactory):
 
     def createWrap(self) -> IWrap:
         return QtWrapAdapter()
+
+    def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
+        sep = QtSeparatorAdapter()
+        sep.set_orientation(orientation)
+        return sep
 
     def createScrollView(self) -> IScrollView:
         return QtScrollViewAdapter()

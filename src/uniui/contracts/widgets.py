@@ -472,7 +472,7 @@ class IVBoxLayout(ILayoutOnly):
     # meaningless on a layout-only native. Web's VBox/HBox is a real DOM
     # element and Jupyter's is a real ipywidgets Box - both can carry a
     # class same as any other widget, and admin_demo.py's
-    # uniui-demo-page/uniui-demo-heading classes are genuinely load-bearing
+    # uniui-page/uniui-page-heading classes are genuinely load-bearing
     # there (real gap/width/flex-wrap CSS rules). Only Qt's native is a bare
     # QLayout with nothing to tag, so QtVBoxAdapter/QtHBoxAdapter fall
     # through to IWidget's inherited no-op instead of mixing in ClassMixin -
@@ -665,6 +665,13 @@ class IWrap(IWidget):
 
     def clear(self) -> None:
         raise NotSupportedError("clear() not supported on this Wrap")
+class ISeparator(IWidget):
+    """A thin visual divider line."""
+
+    @abstractmethod
+    def set_orientation(self, orientation: str) -> None:
+        """'horizontal' or 'vertical'."""
+        pass
 class IScrollView(IWidget):
     """Scrollable container — wraps a single child with overflow scrolling."""
 
@@ -790,6 +797,10 @@ class IWidgetFactory(ABC):
         """Create wrap flow layout (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Wrap not supported on this platform")
 
+    def createSeparator(self, orientation: str = "horizontal") -> "ISeparator":
+        """Create a thin divider line (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Separator not supported on this platform")
+
     def createScrollView(self) -> "IScrollView":
         """Create scroll view container (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("ScrollView not supported on this platform")
@@ -886,6 +897,7 @@ _SNAKE_ALIASES = {
     "createGroupBox":   "create_group_box",
     "createGrid":       "create_grid",
     "createWrap":       "create_wrap",
+    "createSeparator":  "create_separator",
     "createScrollView": "create_scroll_view",
     "createSplitPane":  "create_split_pane",
     "createOverlay":    "create_overlay",

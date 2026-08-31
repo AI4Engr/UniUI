@@ -39,7 +39,7 @@ def debug_html(python_summary: str) -> str:
         ['body',root&&root.querySelector('.uniui-shell-body')],
         ['sidebar',root&&root.querySelector('.uniui-admin-sidebar')],
         ['content',root&&root.querySelector('.uniui-shell-content')],
-        ['page',root&&root.querySelector('.uniui-demo-page')]
+        ['page',root&&root.querySelector('.uniui-page')]
       ];
       out.textContent=targets.map(([name,el])=>{{
         if(!el)return name+': MISSING';
@@ -79,7 +79,7 @@ DEBUG_MEASURE_JS = r"""
     ['body', root.querySelector('.uniui-shell-body')],
     ['sidebar', root.querySelector('.uniui-admin-sidebar')],
     ['content', root.querySelector('.uniui-shell-content')],
-    ['page', root.querySelector('.uniui-demo-page')]
+    ['page', root.querySelector('.uniui-page')]
   ];
   const colors = {root:'#7c3aed', body:'#2563eb', content:'#dc2626', page:'#16a34a'};
   const lines = targets.map(([name, el]) => {

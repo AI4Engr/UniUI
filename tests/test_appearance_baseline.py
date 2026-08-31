@@ -26,8 +26,8 @@ def _decls(css: str, selector: str) -> str:
     """Return the concatenated declaration blocks for ``selector``.
 
     Matches the selector only when it appears as a complete selector in the
-    comma-separated prelude, so ``.uniui-demo-page`` does not match
-    ``.uniui-demo-page-header``.
+    comma-separated prelude, so ``.uniui-page`` does not match
+    ``.uniui-page-header``.
     """
     out = []
     for prelude, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -64,7 +64,7 @@ class TestJupyterAdminCss:
         is bounded by the shell instead. ``test_jupyter_components`` asserts
         the same thing from the other direction - keep both in step.
         """
-        decls = _norm(_decls(css, ".uniui-demo-page")).replace(" ", "")
+        decls = _norm(_decls(css, ".uniui-page")).replace(" ", "")
         assert "width:100%" in decls, "page no longer fills its parent"
         assert "max-width" not in decls, (
             "max-width reintroduced on the Jupyter page root; it constrains "
@@ -194,7 +194,7 @@ class TestWebAdminCss:
         return "\n".join(captured)
 
     def test_page_is_width_constrained(self, css):
-        decls = _norm(_decls(css, ".uniui-demo-page"))
+        decls = _norm(_decls(css, ".uniui-page"))
         assert "max-width" in decls
 
     def test_admin_shell_rule_present(self, css):

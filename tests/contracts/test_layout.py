@@ -5,8 +5,10 @@ These tests ensure layout containers behave consistently across backends.
 """
 import pytest
 
-from tests.contract_framework import WidgetContractTest
-from uniui import VBOX, HBOX, GRID, WRAP, SCROLL_VIEW, SPLIT_PANE, OVERLAY
+from tests.contract_framework import (
+    CommonCapabilitiesContractTest, WidgetContractTest, skip_unless_available,
+)
+from uniui import VBOX, HBOX, GRID, WRAP, SEPARATOR, SCROLL_VIEW, SPLIT_PANE, OVERLAY
 from uniui.core import ILayoutOnly, LayoutSpec, LayoutItem
 
 
@@ -281,6 +283,38 @@ class TestWrapContract(WidgetContractTest):
         wrap.clear()
 
 
+class TestSeparatorContract(CommonCapabilitiesContractTest):
+    """Contract tests for Separator — a thin divider line.
+
+    Like Wrap, Separator always wraps a real widget on every backend, so it
+    gets the full show/hide/enabled/size surface for free via
+    CommonCapabilitiesContractTest.
+    """
+
+    widget_kind = SEPARATOR
+
+    def create_widget(self, factory):
+        return factory.create_separator()
+
+    @pytest.mark.contract
+    def test_set_orientation_horizontal(self, factory):
+        """set_orientation('horizontal') must not raise."""
+        sep = self.create_widget(factory)
+        sep.set_orientation("horizontal")
+
+    @pytest.mark.contract
+    def test_set_orientation_vertical(self, factory):
+        """set_orientation('vertical') must not raise."""
+        sep = self.create_widget(factory)
+        sep.set_orientation("vertical")
+
+    @pytest.mark.contract
+    def test_default_orientation_is_horizontal(self, factory):
+        """create_separator() with no args defaults to horizontal."""
+        sep = factory.create_separator()
+        assert sep is not None
+
+
 class TestScrollViewContract(WidgetContractTest):
     """Contract tests for ScrollView."""
 
@@ -393,3 +427,50 @@ class TestOverlayContract(WidgetContractTest):
             ov.add_layer(lbl)
         ov.set_active_index(1)
         ov.set_active_index(0)
+
+
+class TestSeparatorRendering:
+    """Verify orientation actually reaches each backend's native widget, not
+    just the adapter's own state - the contract tests above only check the
+    latter."""
+
+    @pytest.mark.parametrize("framework", ["qt", "jupyter", "web"])
+    def test_set_orientation_reaches_the_native_widget(self, framework):
+        skip_unless_available(framework)
+        from uniui import create_factory
+
+        sep = create_factory(framework).create_separator()
+        native = sep.get_native()
+        if framework == "qt":
+            from PySide2 import QtWidgets
+            sep.set_orientation("vertical")
+            assert native.frameShape() == QtWidgets.QFrame.VLine
+            sep.set_orientation("horizontal")
+            assert native.frameShape() == QtWidgets.QFrame.HLine
+        elif framework == "jupyter":
+            sep.set_orientation("vertical")
+            assert native.layout.border_left
+            sep.set_orientation("horizontal")
+            assert native.layout.border_top
+        else:
+            sep.set_orientation("vertical")
+            assert "vertical" in native._props
+            sep.set_orientation("horizontal")
+            assert "vertical" not in native._props
+
+    def test_qt_separator_defaults_to_horizontal_line(self):
+        skip_unless_available("qt")
+        from PySide2 import QtWidgets
+        from uniui import create_factory
+
+        sep = create_factory("qt").create_separator()
+        assert sep.get_native().frameShape() == QtWidgets.QFrame.HLine
+
+    def test_qt_separator_create_with_vertical_orientation(self):
+        """create_separator('vertical') must reflect the VLine shape."""
+        skip_unless_available("qt")
+        from PySide2 import QtWidgets
+        from uniui import create_factory
+
+        sep = create_factory("qt").create_separator("vertical")
+        assert sep.get_native().frameShape() == QtWidgets.QFrame.VLine

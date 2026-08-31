@@ -304,15 +304,35 @@ class QTLineEdit(QtWidgets.QLineEdit):
 
     def setEnabled(self, flag):
         super().setEnabled(flag)
+_ICON_CLASS_PREFIX = "uniui-icon-"
+
+
 class QtButtonAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, IButton):
     """Qt Button adapter - implements snake_case interface convention"""
+
+    def add_class(self, name: str) -> None:
+        super().add_class(name)
+        if name.startswith(_ICON_CLASS_PREFIX):
+            self._apply_icon_class(name[len(_ICON_CLASS_PREFIX):])
+
+    def _apply_icon_class(self, icon_name: str) -> None:
+        """Paint the shared SVG icon set via QIcon, since Qt's QSS has no
+        mask-image/currentColor equivalent to the CSS trick Web/Jupyter use
+        (see notes/ - uniui-icon-* is otherwise a silent no-op on Qt)."""
+        from ..icons import admin_icon
+        from ..runtime import get_palette
+
+        try:
+            self._native.setIcon(admin_icon(icon_name, get_palette()["text_muted"]))
+        except KeyError:
+            pass  # unknown icon name - leave whatever icon is already set
 
     # IEventCapable
     def connect(self, callback) -> Handle:
         wrapper = lambda: safe_call(callback, backend="qt", component="Button", method="connect")
         self._native.connect(wrapper)
         return Handle(lambda: self._native.disconnect(wrapper))
-class QtLineEditAdapter(ILineEdit):
+class QtLineEditAdapter(ClassMixin, ILineEdit):
     """Qt LineEdit adapter - implements snake_case interface convention"""
 
     def __init__(self, native_widget: QTLineEdit):

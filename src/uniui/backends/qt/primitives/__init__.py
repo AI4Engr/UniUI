@@ -20,7 +20,8 @@ from .inputs import (
 from .layouts import (
     QTHBoxLayout, QTTabWidget, QTVBoxLayout, _QFlowLayout, _ResizeNotifier,
     QtGridAdapter, QtHBoxAdapter, QtOverlayAdapter, QtScrollViewAdapter,
-    QtSplitPaneAdapter, QtTabWidgetAdapter, QtVBoxAdapter, QtWrapAdapter,
+    QtSeparatorAdapter, QtSplitPaneAdapter, QtTabWidgetAdapter, QtVBoxAdapter,
+    QtWrapAdapter,
 )
 from .text import (
     QTGroupBox, QTImage, QTLabel, QtGroupBoxAdapter, QtImageAdapter,
@@ -61,6 +62,7 @@ __all__ = [
     "QtOverlayAdapter",
     "QtRadioGroupAdapter",
     "QtScrollViewAdapter",
+    "QtSeparatorAdapter",
     "QtSliderAdapter",
     "QtSplitPaneAdapter",
     "QtSwitchAdapter",

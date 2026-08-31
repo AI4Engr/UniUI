@@ -13,10 +13,11 @@ VBox/HBox/Grid are a deliberate exception to the "raise NotSupportedError"
 convention used for show/hide/set_enabled/sizing on those three: unlike
 those, a CSS-style class is NOT universally meaningless on a layout-only
 native - Web's and Jupyter's VBox/HBox/Grid are real DOM/ipywidgets
-elements that can carry a class same as any other widget, and
-admin_demo.py's uniui-demo-page/uniui-demo-heading classes are genuinely
-load-bearing there. Only Qt's native is a bare QLayout with nothing to
-tag, so it falls through to IWidget's inherited no-op rather than raising.
+elements that can carry a class same as any other widget, and the shared
+uniui-page/uniui-page-heading vocabulary (backends/jupyter/page_styles.py,
+backends/web/page_styles.py) is genuinely load-bearing there. Only Qt's
+native is a bare QLayout with nothing to tag, so it falls through to
+IWidget's inherited no-op rather than raising.
 """
 import pytest
 
@@ -36,13 +37,13 @@ class TestLabelClassContract(WidgetContractTest):
     @pytest.mark.contract
     def test_add_class_does_not_raise(self, factory):
         label = self.create_widget(factory)
-        label.add_class("uniui-demo-subtitle")
+        label.add_class("uniui-page-subtitle")
 
     @pytest.mark.contract
     def test_remove_class_does_not_raise(self, factory):
         label = self.create_widget(factory)
-        label.add_class("uniui-demo-subtitle")
-        label.remove_class("uniui-demo-subtitle")
+        label.add_class("uniui-page-subtitle")
+        label.remove_class("uniui-page-subtitle")
 
     @pytest.mark.contract
     def test_remove_class_without_prior_add_does_not_raise(self, factory):
@@ -75,8 +76,8 @@ class TestQtClassMixinNative:
 
         label = create_factory("qt").create_label()
         native = label.get_native()
-        label.add_class("uniui-demo-subtitle")
-        assert native.property("uniui-demo-subtitle") is True
+        label.add_class("uniui-page-subtitle")
+        assert native.property("uniui-page-subtitle") is True
 
     def test_remove_class_sets_boolean_property_false(self):
         skip_unless_available("qt")
@@ -84,9 +85,9 @@ class TestQtClassMixinNative:
 
         label = create_factory("qt").create_label()
         native = label.get_native()
-        label.add_class("uniui-demo-subtitle")
-        label.remove_class("uniui-demo-subtitle")
-        assert native.property("uniui-demo-subtitle") is False
+        label.add_class("uniui-page-subtitle")
+        label.remove_class("uniui-page-subtitle")
+        assert native.property("uniui-page-subtitle") is False
 
     def test_multiple_classes_are_independent_properties(self):
         skip_unless_available("qt")
@@ -122,11 +123,11 @@ class TestQtClassMixinNative:
         label = create_factory("qt").create_label()
         native = label.get_native()
         native.setStyleSheet(
-            'QLabel[uniui-demo-subtitle="true"] { font-size: 30pt; font-weight: 700; }'
+            'QLabel[uniui-page-subtitle="true"] { font-size: 30pt; font-weight: 700; }'
         )
         native.ensurePolished()  # force the initial polish before tagging
         before = native.font().bold()
-        label.add_class("uniui-demo-subtitle")
+        label.add_class("uniui-page-subtitle")
         native.ensurePolished()
         assert before is False
         assert native.font().bold() is True
@@ -142,12 +143,12 @@ class TestQtClassMixinNative:
         label = create_factory("qt").create_label()
         native = label.get_native()
         native.setStyleSheet(
-            'QLabel[uniui-demo-subtitle="true"] { font-size: 30pt; font-weight: 700; }'
+            'QLabel[uniui-page-subtitle="true"] { font-size: 30pt; font-weight: 700; }'
         )
-        label.add_class("uniui-demo-subtitle")
+        label.add_class("uniui-page-subtitle")
         native.ensurePolished()
         assert native.font().bold() is True
-        label.remove_class("uniui-demo-subtitle")
+        label.remove_class("uniui-page-subtitle")
         native.ensurePolished()
         assert native.font().bold() is False
 
@@ -162,10 +163,10 @@ class TestWebAndJupyterClassNative:
 
         label = create_factory("web").create_label()
         native = label.get_native()
-        label.add_class("uniui-demo-subtitle")
-        assert "uniui-demo-subtitle" in native._classes
-        label.remove_class("uniui-demo-subtitle")
-        assert "uniui-demo-subtitle" not in native._classes
+        label.add_class("uniui-page-subtitle")
+        assert "uniui-page-subtitle" in native._classes
+        label.remove_class("uniui-page-subtitle")
+        assert "uniui-page-subtitle" not in native._classes
 
     def test_jupyter_add_class_reaches_dom_classes(self):
         skip_unless_available("jupyter")
@@ -173,10 +174,10 @@ class TestWebAndJupyterClassNative:
 
         label = create_factory("jupyter").create_label()
         native = label.get_native()
-        label.add_class("uniui-demo-subtitle")
-        assert "uniui-demo-subtitle" in native._dom_classes
-        label.remove_class("uniui-demo-subtitle")
-        assert "uniui-demo-subtitle" not in native._dom_classes
+        label.add_class("uniui-page-subtitle")
+        assert "uniui-page-subtitle" in native._dom_classes
+        label.remove_class("uniui-page-subtitle")
+        assert "uniui-page-subtitle" not in native._dom_classes
 
 
 class TestLayoutOnlyClassBehavior:
@@ -193,16 +194,16 @@ class TestLayoutOnlyClassBehavior:
         from uniui import create_factory
 
         vbox = create_factory("qt").create_vbox()
-        vbox.add_class("uniui-demo-page")  # must not raise
-        vbox.remove_class("uniui-demo-page")  # must not raise
+        vbox.add_class("uniui-page")  # must not raise
+        vbox.remove_class("uniui-page")  # must not raise
 
     def test_qt_hbox_add_class_does_not_raise(self):
         skip_unless_available("qt")
         from uniui import create_factory
 
         hbox = create_factory("qt").create_hbox()
-        hbox.add_class("uniui-demo-heading")  # must not raise
-        hbox.remove_class("uniui-demo-heading")  # must not raise
+        hbox.add_class("uniui-page-heading")  # must not raise
+        hbox.remove_class("uniui-page-heading")  # must not raise
 
     def test_qt_grid_add_class_does_not_raise(self):
         skip_unless_available("qt")
@@ -246,8 +247,8 @@ class TestLayoutOnlyClassBehavior:
 
         vbox = create_factory("web").create_vbox()
         native = vbox.get_native()
-        vbox.add_class("uniui-demo-page")
-        assert "uniui-demo-page" in native._classes
+        vbox.add_class("uniui-page")
+        assert "uniui-page" in native._classes
 
     def test_jupyter_vbox_add_class_reaches_real_dom_class(self):
         skip_unless_available("jupyter")
@@ -255,5 +256,5 @@ class TestLayoutOnlyClassBehavior:
 
         vbox = create_factory("jupyter").create_vbox()
         native = vbox.get_native()
-        vbox.add_class("uniui-demo-page")
-        assert "uniui-demo-page" in native._dom_classes
+        vbox.add_class("uniui-page")
+        assert "uniui-page" in native._dom_classes

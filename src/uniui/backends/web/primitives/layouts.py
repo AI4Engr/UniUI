@@ -166,6 +166,19 @@ class WebWrapAdapter(_WebAdapter, IWrap):
 
     def clear(self) -> None:
         self._native.clear()
+class WebSeparatorAdapter(_WebAdapter, ISeparator):
+    """Web Separator adapter using NiceGUI's ui.separator (Quasar q-separator)."""
+
+    def __init__(self):
+        sep = ui.separator()
+        super().__init__(sep)
+        self.set_orientation("horizontal")
+
+    def set_orientation(self, orientation: str) -> None:
+        if orientation == "vertical":
+            self._native.props("vertical")
+        else:
+            self._native.props(remove="vertical")
 class WebScrollViewAdapter(_WebAdapter, IScrollView):
     """Web ScrollView adapter using NiceGUI ui.scroll_area."""
 

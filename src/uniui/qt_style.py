@@ -16,6 +16,7 @@ from .backends.qt.primitives.styles import (  # noqa: F401
     base_stylesheet,
     refresh_styled_widgets,
     scrollbar_stylesheet,
+    tag_native,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "base_stylesheet",
     "refresh_styled_widgets",
     "scrollbar_stylesheet",
+    "tag_native",
 ]

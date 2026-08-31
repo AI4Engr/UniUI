@@ -50,6 +50,7 @@ from .core import (
     IGrid,
     ILayoutOnly,
     IWrap,
+    ISeparator,
     IScrollView,
     ISplitPane,
     IOverlay,
@@ -107,8 +108,8 @@ from .facade import (
     AppShell, Badge, Breadcrumb, Button, Card, Carousel, Checkbox, Chart, Column,
     ComboBox, Drawer, Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit,
     MetricList, NumberInput, Overlay, ProgressBar, RadioGroup, Row, ScrollView,
-    Sidebar, Slider, SplitPane, StatCard, Switch, Table, TabWidget, Toast,
-    TextArea, UniUI, VBox, Wrap, Grid,
+    Separator, Sidebar, Slider, SplitPane, StatCard, Switch, Table, TabWidget,
+    Toast, TextArea, UniUI, VBox, Wrap, Grid,
 )
 
 
@@ -134,6 +135,7 @@ GROUP_BOX = 'group_box'
 IMAGE = 'image'
 GRID = 'grid'
 WRAP = 'wrap'
+SEPARATOR = 'separator'
 SCROLL_VIEW = 'scroll_view'
 SPLIT_PANE = 'split_pane'
 OVERLAY = 'overlay'
@@ -211,6 +213,7 @@ __all__ = [
     'Row',
     'Grid',
     'Wrap',
+    'Separator',
     'ScrollView',
     'SplitPane',
     'Overlay',
@@ -243,7 +246,7 @@ __all__ = [
     'UniUI',
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'CHECKBOX', 'SWITCH', 'RADIO_GROUP', 'NUMBER_INPUT', 'SLIDER', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
-    'GRID', 'WRAP', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
+    'GRID', 'WRAP', 'SEPARATOR', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
     'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TOAST', 'CAROUSEL', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
 
@@ -278,6 +281,7 @@ __all__ = [
     'IGrid',
     'ILayoutOnly',
     'IWrap',
+    'ISeparator',
     'IScrollView',
     'ISplitPane',
     'IOverlay',

@@ -18,7 +18,8 @@ from .inputs import (
 )
 from .layouts import (
     WebGridAdapter, WebHBoxAdapter, WebOverlayAdapter, WebScrollViewAdapter,
-    WebSplitPaneAdapter, WebTabWidgetAdapter, WebVBoxAdapter, WebWrapAdapter,
+    WebSeparatorAdapter, WebSplitPaneAdapter, WebTabWidgetAdapter,
+    WebVBoxAdapter, WebWrapAdapter,
 )
 from .state import set_backend_active
 from .text import WebGroupBoxAdapter, WebImageAdapter, WebLabelAdapter
@@ -87,6 +88,11 @@ class _BaseNiceGUIWidgetFactory(IWidgetFactory):
 
     def createWrap(self) -> IWrap:
         return WebWrapAdapter()
+
+    def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
+        sep = WebSeparatorAdapter()
+        sep.set_orientation(orientation)
+        return sep
 
     def createScrollView(self) -> IScrollView:
         return WebScrollViewAdapter()

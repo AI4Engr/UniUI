@@ -26,6 +26,19 @@ _STYLED_APPS: "weakref.WeakSet[QtWidgets.QApplication]" = weakref.WeakSet()
 _STYLED_COMBOS: "weakref.WeakSet[QtWidgets.QComboBox]" = weakref.WeakSet()
 
 
+def tag_native(native, class_name: str) -> None:
+    """Apply a uniui-* class to a raw native Qt widget with no IWidget
+    adapter (e.g. a custom QWidget subclass built outside the factory).
+
+    Same mechanism as ClassMixin.add_class (_adapter_mixins.py) - kept as a
+    free function here since a widget with no adapter has no get_native()/
+    self to hang the mixin method off of.
+    """
+    native.setProperty(class_name, True)
+    native.style().unpolish(native)
+    native.style().polish(native)
+
+
 def apply_app_style(app=None) -> None:
     """Apply the base widget stylesheet application-wide.
 
@@ -43,7 +56,83 @@ def apply_app_style(app=None) -> None:
 
 def base_stylesheet() -> str:
     """Return the QSS for the standard Qt controls in the active theme."""
-    return (_BASE_QSS % get_admin_palette()) + scrollbar_stylesheet()
+    palette = get_admin_palette()
+    return (
+        (_BASE_QSS % palette)
+        + (_page_css() % palette)
+        + (_shell_css() % palette)
+        + scrollbar_stylesheet()
+    )
+
+
+def _page_css() -> str:
+    """Generic 'uniui-page-*' typography, set via add_class()/setProperty().
+
+    The same semantic classes (uniui-page-subtitle, uniui-page-hint,
+    uniui-page-field-label) are styled in backends/jupyter/page_styles.py and
+    backends/web/page_styles.py - any app using add_class() with these names
+    gets matching styling for free via base_stylesheet(), not just
+    examples/admin_demo.py.
+    """
+    return """
+QLabel[uniui-page-subtitle="true"] {
+    color: %(text)s;
+    font-size: 18px;
+    font-weight: 650;
+}
+QLabel[uniui-page-hint="true"] {
+    color: %(text_muted)s;
+    background: %(surface_subtle)s;
+    border: 1px solid %(border)s;
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+QLabel[uniui-page-field-label="true"] {
+    color: %(text_muted)s;
+    font-size: 12px;
+    font-weight: 650;
+}
+"""
+
+
+def _shell_css() -> str:
+    """Admin-shell chrome ('uniui-shell-*'), set via add_class()/setProperty().
+
+    The same classes are styled in backends/jupyter/page_styles.py and
+    backends/web/page_styles.py for their own app-shell adapters - any Qt app
+    tagging its own header/footer widgets with these names gets matching
+    styling for free, not just examples/admin_demo.py.
+    """
+    return """
+QWidget[uniui-shell-topbar="true"] { background: %(header_bg)s; }
+QFrame[uniui-shell-separator="true"] { color: %(header_border)s; background: transparent; }
+QLabel[uniui-shell-logo-mark="true"] {
+    background: %(accent)s; color: white; border-radius: 8px;
+    font-size: 15px; font-weight: 800;
+}
+QLabel[uniui-shell-product="true"] { color: %(text)s; font-size: 15px; font-weight: 700; }
+QLabel[uniui-shell-avatar="true"] {
+    background: %(avatar_bg)s; color: %(avatar_fg)s;
+    border-radius: 16px; font-size: 11px; font-weight: 700;
+}
+QLabel[uniui-shell-status-ok="true"] { color: %(ok)s; font-size: 11px; }
+QLabel[uniui-shell-footer-meta="true"] { color: %(text_muted)s; font-size: 11px; }
+QLineEdit[uniui-shell-header-search="true"] {
+    background: %(surface_subtle)s; border: 1px solid transparent;
+    border-radius: 7px; padding: 5px 10px; font-size: 12px;
+    color: %(text_muted)s;
+}
+QLineEdit[uniui-shell-header-search="true"]:focus {
+    background: %(bg)s; border: 1px solid %(border)s; color: %(text)s;
+}
+QPushButton[uniui-shell-icon-button="true"] {
+    background: transparent; color: %(text_muted)s; border: none;
+    border-radius: 7px; padding: 5px 8px; min-width: 18px; min-height: 18px;
+}
+QPushButton[uniui-shell-icon-button="true"]:hover {
+    background: %(surface_subtle)s; color: %(text)s;
+}
+"""
 
 
 def apply_base_style(widget) -> None:

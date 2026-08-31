@@ -20,9 +20,9 @@ from .inputs import (
 from .layouts import (
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
     JupyterOverlay, JupyterOverlayAdapter, JupyterScrollView,
-    JupyterScrollViewAdapter, JupyterSplitPane, JupyterSplitPaneAdapter,
-    JupyterTabWidget, JupyterTabWidgetAdapter, JupyterVBoxAdapter,
-    JupyterVBoxLayout, JupyterWrap, JupyterWrapAdapter,
+    JupyterScrollViewAdapter, JupyterSeparatorAdapter, JupyterSplitPane,
+    JupyterSplitPaneAdapter, JupyterTabWidget, JupyterTabWidgetAdapter,
+    JupyterVBoxAdapter, JupyterVBoxLayout, JupyterWrap, JupyterWrapAdapter,
 )
 from .text import (
     JupyterGroupBox, JupyterGroupBoxAdapter, JupyterImage,
@@ -62,6 +62,7 @@ __all__ = [
     "JupyterRadioGroupAdapter",
     "JupyterScrollView",
     "JupyterScrollViewAdapter",
+    "JupyterSeparatorAdapter",
     "JupyterSliderAdapter",
     "JupyterSplitPane",
     "JupyterSplitPaneAdapter",

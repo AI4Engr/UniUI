@@ -465,6 +465,34 @@ class JupyterWrapAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
 
     def clear(self) -> None:
         self._native.children = ()
+class JupyterSeparatorAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, ISeparator):
+    """Jupyter Separator adapter backed by a stock ipywidgets Box.
+
+    ipywidgets has no dedicated separator widget, so a plain Box is styled
+    with a 1px border on the appropriate side to render a thin divider line.
+    """
+
+    def __init__(self):
+        self._native = widgets.Box()
+        self.set_orientation("horizontal")
+
+    def get_native(self):
+        return self._native
+
+    def set_orientation(self, orientation: str) -> None:
+        layout = self._native.layout
+        if orientation == "vertical":
+            layout.border_left = "1px solid var(--jp-border-color1, #ccc)"
+            layout.border_top = ""
+            layout.width = "0px"
+            layout.height = "auto"
+            layout.align_self = "stretch"
+        else:
+            layout.border_top = "1px solid var(--jp-border-color1, #ccc)"
+            layout.border_left = ""
+            layout.width = "auto"
+            layout.height = "0px"
+            layout.align_self = None
 class JupyterScrollViewAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, IScrollView):
     """Jupyter ScrollView adapter."""
 

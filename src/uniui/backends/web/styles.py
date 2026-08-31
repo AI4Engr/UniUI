@@ -100,7 +100,7 @@ def admin_css() -> str:
     from .components.stat_card import stat_card_css
     from .components.table import status_pill_css, table_css
     from .components.toast import toast_css
-    from .demo_styles import _demo_css, _demo_trailer_css
+    from .page_styles import _page_and_shell_css, _page_trailer_css
 
     return (
         shared_icon_css() + "\n"
@@ -113,12 +113,12 @@ def admin_css() -> str:
         + _input_css()
         + table_css()
         + breadcrumb_css()
-        + _demo_css()
+        + _page_and_shell_css()
         + gauge_css()
         + drawer_css()
         + status_pill_css()
         + toast_css()
-        + _demo_trailer_css()
+        + _page_trailer_css()
         + app_shell_responsive_css()
     )
 

@@ -20,8 +20,8 @@ from .components import (
 from .core import (
     IButton, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
     IImage, ILabel, ILineEdit, INumberInput, IOverlay, IRadioGroup,
-    IScrollView, ISlider, ISplitPane, ISwitch, ITabWidget, ITextArea,
-    IVBoxLayout, IWidget, IWrap, LayoutSpec,
+    IScrollView, ISeparator, ISlider, ISplitPane, ISwitch, ITabWidget,
+    ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
 )
 
 
@@ -193,6 +193,11 @@ def Wrap(spec: LayoutSpec = None) -> IWrap:
     if spec is not None:
         wrap.set_spec(spec)
     return wrap
+
+
+def Separator(orientation: str = "horizontal") -> ISeparator:
+    """Create a thin divider line."""
+    return _get_factory().create_separator(orientation)
 
 
 def ScrollView(content=None, max_height: int = None) -> IScrollView:

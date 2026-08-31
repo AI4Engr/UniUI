@@ -20,7 +20,8 @@ from .inputs import (
 )
 from .layouts import (
     WebGridAdapter, WebHBoxAdapter, WebOverlayAdapter, WebScrollViewAdapter,
-    WebSplitPaneAdapter, WebTabWidgetAdapter, WebVBoxAdapter, WebWrapAdapter,
+    WebSeparatorAdapter, WebSplitPaneAdapter, WebTabWidgetAdapter,
+    WebVBoxAdapter, WebWrapAdapter,
 )
 from .state import _install_css, set_backend_active
 from .text import WebGroupBoxAdapter, WebImageAdapter, WebLabelAdapter
@@ -48,6 +49,7 @@ __all__ = [
     "WebOverlayAdapter",
     "WebRadioGroupAdapter",
     "WebScrollViewAdapter",
+    "WebSeparatorAdapter",
     "WebSliderAdapter",
     "WebSplitPaneAdapter",
     "WebSwitchAdapter",

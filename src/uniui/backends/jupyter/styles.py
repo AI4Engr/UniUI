@@ -118,7 +118,7 @@ def css() -> str:
     from .components.stat_card import stat_card_css
     from .components.table import table_css
     from .components.toast import toast_css
-    from .demo_styles import _demo_css, _demo_page_css
+    from .page_styles import _page_and_shell_css, _page_field_css
 
     p = get_palette()
     variables = palette_declarations(p)
@@ -157,7 +157,7 @@ def css() -> str:
 .uniui-admin-shell .widget-tab .lm-StackedPanel {{
   border:none; background:transparent; padding:16px 2px 0;
 }}
-{_demo_css()}
+{_page_field_css()}
 {app_shell_css()}
 {card_css()}
 {stat_card_css()}
@@ -168,7 +168,7 @@ def css() -> str:
 {drawer_css()}
 {sidebar_css()}
 {breadcrumb_css()}
-{_demo_page_css()}
+{_page_and_shell_css()}
 {app_shell_responsive_css()}
 </style>
 """

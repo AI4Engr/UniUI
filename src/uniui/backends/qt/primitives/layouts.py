@@ -393,6 +393,21 @@ class QtWrapAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, IWrap):
             item = self._flow.takeAt(0)
             if item and item.widget():
                 item.widget().deleteLater()
+class QtSeparatorAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, ISeparator):
+    """Qt Separator adapter using QFrame's HLine/VLine shape."""
+
+    def __init__(self):
+        self._native = QtWidgets.QFrame()
+        self._native.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.set_orientation("horizontal")
+
+    def get_native(self):
+        return self._native
+
+    def set_orientation(self, orientation: str) -> None:
+        self._native.setFrameShape(
+            QtWidgets.QFrame.VLine if orientation == "vertical" else QtWidgets.QFrame.HLine
+        )
 class QtScrollViewAdapter(VisibilityMixin, EnableMixin, SizeMixin, IScrollView):
     """Qt ScrollView adapter using QScrollArea."""
 

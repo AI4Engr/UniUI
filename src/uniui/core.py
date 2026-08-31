@@ -53,6 +53,7 @@ from .contracts.widgets import (
     IOverlay,
     IRadioGroup,
     IScrollView,
+    ISeparator,
     ISlider,
     ISplitPane,
     ISwitch,

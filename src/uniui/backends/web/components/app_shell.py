@@ -75,11 +75,11 @@ def app_shell_responsive_css() -> str:
           .uniui-web-sidebar {{padding:16px 8px}}.uniui-web-sidebar .q-btn{{font-size:0;justify-content:center;padding:8px 4px}}
           .uniui-web-sidebar .uniui-svg-icon {{margin:0;width:20px;height:20px;flex-basis:20px}}
           .uniui-web-content {{padding:24px 20px}}
-          .uniui-demo-product {{display:none}}
+          .uniui-shell-product {{display:none}}
         }}
         @media(max-width:{DEFAULT_BREAKPOINTS.compact - 1}px) {{
           .uniui-web-body {{height:calc(100dvh - 60px)}}.uniui-web-content{{padding:20px 14px}}.uniui-web-footer{{display:none}}
-          .uniui-web-header{{padding:0 12px!important}}.uniui-demo-theme-button{{font-size:0;min-width:34px!important;padding:0!important}}
-          .uniui-demo-heading{{align-items:flex-start!important}}.uniui-demo-subtitle{{font-size:16px!important}}
+          .uniui-web-header{{padding:0 12px!important}}.uniui-shell-theme-button{{font-size:0;min-width:34px!important;padding:0!important}}
+          .uniui-page-heading{{align-items:flex-start!important}}.uniui-page-subtitle{{font-size:16px!important}}
         }}
         """

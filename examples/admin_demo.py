@@ -742,14 +742,6 @@ class _NativeWrap:
         return self._widget
 
 
-def _header_icon(name, color):
-    """Render a toolbar icon from the cross-backend Admin SVG source."""
-    from uniui.qt_icons import admin_icon
-
-    aliases = {"back": "arrow_back", "forward": "arrow_forward"}
-    return admin_icon(aliases.get(name, name), color, size=20)
-
-
 def main():
     global _THEME_TOGGLE
 
@@ -761,7 +753,7 @@ def main():
         return
 
     from uniui.routing import RouterView, sync_breadcrumb
-    from uniui.qt_components import get_admin_palette, set_admin_theme
+    from uniui.qt_components import set_admin_theme
     from uniui.qt_style import base_stylesheet, tag_native
     from PySide2 import QtWidgets, QtCore
 
@@ -773,32 +765,8 @@ def main():
     f = uniui._get_factory()
 
     # ── Product header ────────────────────────────────────────────────────────
-    class _ResponsiveTopBar(QtWidgets.QWidget):
-        def __init__(self):
-            super().__init__()
-            self._responsive_widgets = None
-
-        def set_responsive_widgets(self, product, search):
-            self._responsive_widgets = (product, search)
-
-        def resizeEvent(self, event):
-            super().resizeEvent(event)
-            if self._responsive_widgets is None:
-                return
-            product, search = self._responsive_widgets
-            width = event.size().width()
-            product.setVisible(width >= 650)
-            search.setVisible(width >= 850)
-
-    header_w = _ResponsiveTopBar()
-    tag_native(header_w, "uniui-shell-topbar")
-    header_w.setMinimumWidth(0)
-    header_w.setSizePolicy(
-        QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
-    )
-    hl = QtWidgets.QHBoxLayout(header_w)
-    hl.setContentsMargins(4, 0, 4, 0)
-    hl.setSpacing(7)
+    header_w = f.create_hbox()
+    header_w.set_spec(LayoutSpec(gap=7, padding=0))
 
     logo_mark = f.create_label()
     logo_mark.set_text("U")
@@ -806,19 +774,18 @@ def main():
     logo_mark_native = logo_mark.get_native()
     logo_mark_native.setAlignment(QtCore.Qt.AlignCenter)
     logo_mark_native.setFixedSize(32, 32)
-    hl.addWidget(logo_mark_native)
+    header_w.add_item(logo_mark)
     logo = f.create_label()
     logo.set_text("UniUI Admin")
     logo.add_class("uniui-shell-product")
-    logo_native = logo.get_native()
-    hl.addWidget(logo_native)
+    header_w.add_item(logo)
 
     beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
-    hl.addWidget(beta_badge.get_native())
+    header_w.add_item(beta_badge)
 
     sep = f.create_separator("vertical")
     sep.add_class("uniui-shell-separator")
-    hl.addWidget(sep.get_native())
+    header_w.add_item(sep)
 
     back = f.create_button(); forward = f.create_button()
     for btn, icon_name, tip in (
@@ -833,9 +800,8 @@ def main():
         btn_native.setCursor(QtCore.Qt.PointingHandCursor)
     back.connect(router.back)
     forward.connect(router.forward)
-    back_native, fwd_native = back.get_native(), forward.get_native()
-    hl.addWidget(back_native)
-    hl.addWidget(fwd_native)
+    header_w.add_item(back)
+    header_w.add_item(forward)
 
     # Breadcrumb in header
     breadcrumb = f.create_breadcrumb()
@@ -846,18 +812,15 @@ def main():
          {"label": ctx.name.replace("-", " ").title()}]
     ))
     breadcrumb.on_click(router.push)
-    hl.addWidget(breadcrumb.get_native(), stretch=1)
+    header_w.add_item_with_spec(breadcrumb, LayoutItem(breadcrumb, grow=1))
 
     global_search = f.create_line_edit()
     global_search.add_class("uniui-shell-header-search")
+    global_search.set_leading_icon("search")
     global_search_native = global_search.get_native()
     global_search_native.setPlaceholderText("Search…")
     global_search_native.setMaximumWidth(180)
-    search_action = global_search_native.addAction(
-        _header_icon("search", get_admin_palette()["text_muted"]),
-        QtWidgets.QLineEdit.LeadingPosition,
-    )
-    hl.addWidget(global_search_native)
+    header_w.add_item(global_search)
 
     theme_btn = f.create_button()
     theme_btn.set_text("")
@@ -866,8 +829,7 @@ def main():
     theme_btn_native = theme_btn.get_native()
     theme_btn_native.setToolTip("Toggle dark mode")
     theme_btn_native.setCursor(QtCore.Qt.PointingHandCursor)
-    hl.addWidget(theme_btn_native)
-    header_w.set_responsive_widgets(logo_native, global_search_native)
+    header_w.add_item(theme_btn)
 
     bell = f.create_button()
     bell.set_text("")
@@ -876,7 +838,7 @@ def main():
     bell_native = bell.get_native()
     bell_native.setToolTip("Notifications")
     bell_native.setCursor(QtCore.Qt.PointingHandCursor)
-    hl.addWidget(bell_native)
+    header_w.add_item(bell)
 
     avatar = f.create_label()
     avatar.set_text("AJ")
@@ -885,7 +847,16 @@ def main():
     avatar_native.setAlignment(QtCore.Qt.AlignCenter)
     avatar_native.setFixedSize(32, 32)
     avatar_native.setToolTip("Alice Johnson · Administrator")
-    hl.addWidget(avatar_native)
+    header_w.add_item(avatar)
+
+    def _sync_header_responsive(mode):
+        # Old thresholds (product hidden < 650px, search hidden < 850px)
+        # approximated onto DEFAULT_BREAKPOINTS' three-mode scheme (720/1200)
+        # since on_resize() reports a mode name, not a raw pixel width.
+        (logo.show() if mode != "compact" else logo.hide())
+        (global_search.show() if mode == "wide" else global_search.hide())
+
+    header_w.on_resize(_sync_header_responsive)
 
     # ── Sidebar + content ─────────────────────────────────────────────────────
     sidebar = f.create_sidebar()
@@ -909,7 +880,14 @@ def main():
 
     # ── AppShell ──────────────────────────────────────────────────────────────
     shell = f.create_app_shell()
-    shell.set_header(_NativeWrap(header_w))
+    shell.set_header(header_w)
+    # header_w's native is a bare QLayout (add_class() is a no-op on it, same
+    # as any IHBoxLayout on Qt) - tag the real QWidget set_header() already
+    # wrapped it in via parentWidget(), rather than calling as_widget() a
+    # second time here, which would create a SECOND wrapper and steal the
+    # layout away from the one set_header() just composed into the shell
+    # (deleting header_w's children along with the orphaned first wrapper).
+    tag_native(header_w.get_native().parentWidget(), "uniui-shell-topbar")
     shell.set_sidebar(sidebar)
     shell.set_content(content)
 
@@ -933,14 +911,16 @@ def main():
     shell.set_footer(_NativeWrap(footer))
 
     def _restyle_shell(dark: bool):
-        """Repaint chrome (icons, stylesheet, toggle label) from THEME as it
-        stands right now. Does not touch THEME itself -- set_admin_theme()
-        would force it back to the plain light/dark palette, clobbering a
-        named theme picked from the settings-page dropdown."""
-        _set_icon_class(back, "arrow_back")
-        _set_icon_class(forward, "arrow_forward")
-        _set_icon_class(bell, "notifications")
-        search_action.setIcon(_header_icon("search", get_admin_palette()["text_muted"]))
+        """Repaint chrome that doesn't retint itself automatically.
+
+        back/forward/bell/the search icon keep the same icon name across a
+        theme change, so QtButtonAdapter/QtLineEditAdapter's own
+        apply_theme() (registered via track_themed()) already repaints them
+        via sync_palette() - no manual re-call needed here. theme_btn is
+        the one exception: its icon NAME changes (dark_mode <-> light_mode)
+        depending on the new state, which apply_theme()'s "repaint with the
+        same name" can't infer on its own.
+        """
         _set_icon_class(theme_btn, "light_mode" if dark else "dark_mode")
         theme_btn_native.setToolTip("Switch to light mode" if dark else "Switch to dark mode")
         shell.get_native().setStyleSheet(base_stylesheet())

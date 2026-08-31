@@ -39,6 +39,48 @@ def test_qt_shell_responsive_geometry(width, sidebar_width, handle_width):
         root.close()
 
 
+def test_qt_wrap_sizes_ignored_policy_children_to_their_real_width():
+    """Regression: QtWrapAdapter's _QFlowLayout used to size children via
+    QWidgetItem.sizeHint(), which Qt zeroes out on any axis where the
+    widget's size policy is QSizePolicy.Ignored - several UniUI Qt
+    components (StatCard, Card, Table, MetricList labels) use Ignored
+    horizontally so an ordinary QVBoxLayout/QHBoxLayout parent can shrink
+    them below their natural width. Placed inside a Wrap instead, every
+    such child collapsed to width 0 and effectively disappeared (caught by
+    actually looking at admin_demo's dashboard, not by any prior test)."""
+    pytest.importorskip("PySide2")
+    from PySide2 import QtWidgets
+    from uniui.qt_components import QtStatCardAdapter
+    from uniui.backends.qt.primitives.layouts import QtWrapAdapter
+    from uniui.core import LayoutSpec
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    wrap = QtWrapAdapter()
+    wrap.set_spec(LayoutSpec(gap=14))
+    cards = []
+    for label in ("Active Users", "Orders", "Revenue", "Open Errors"):
+        card = QtStatCardAdapter()
+        card.set_label(label)
+        card.set_value("42")
+        wrap.add_item(card)
+        cards.append(card)
+
+    root = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(root)
+    layout.addWidget(wrap.get_native())
+    try:
+        root.resize(1000, 300)
+        root.show()
+        for _ in range(5):
+            app.processEvents()
+        for card in cards:
+            geo = card.get_native().geometry()
+            assert geo.width() > 0, f"{card.get_native().property('card')} collapsed to width 0"
+            assert geo.height() == 136
+    finally:
+        root.close()
+
+
 def test_qt_chart_streaming_performance_and_gauge_animation_toggle():
     pytest.importorskip("PySide2")
     from PySide2 import QtWidgets
@@ -205,7 +247,7 @@ import examples.admin_demo as demo
 from uniui.routing import RouterView
 
 app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-router = demo._build_qt_router()
+router = demo._build_router()
 view = RouterView(router)
 for _ in range(2):
     router.push_named("settings")
@@ -224,3 +266,43 @@ print("OK")
     assert result.returncode == 0, result.stderr
     assert "already deleted" not in result.stderr, result.stderr
     assert "OK" in result.stdout
+
+
+def test_qt_admin_demo_semantic_classes_still_style_real_widgets():
+    """Regression: admin_demo.py's pages style themselves via
+    widget.add_class("uniui-demo-...") - a real IWidget capability
+    (src/uniui/_adapter_mixins.py ClassMixin) backed on Qt by a boolean
+    dynamic property + QSS attribute selector ([name="true"]), repolished
+    via unpolish()/polish() so it takes effect immediately.
+    _admin_stylesheet() selects on the same class names, so page subtitles
+    should render as an 18px/650-weight heading, not fall back to plain
+    13px body text (caught by measuring the real widget's rendered font,
+    not by eyeballing a screenshot - the visual difference is easy to
+    miss)."""
+    pytest.importorskip("PySide2")
+    import uniui
+    from PySide2 import QtWidgets
+    import examples.admin_demo as demo
+    from uniui.routing import RouterView
+
+    # use("qt") first, matching main()'s real order - creating the Qt
+    # factory lazily on first _get_factory() call (e.g. inside
+    # push_named() below) re-applies the base stylesheet and would
+    # clobber a custom one set beforehand.
+    uniui.use("qt")
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    app.setStyleSheet(demo._admin_stylesheet())
+    router = demo._build_router()
+    view = RouterView(router)
+    root = view.get_native()
+    try:
+        router.push_named("dashboard")
+        app.processEvents()
+        subtitle = next(
+            lbl for lbl in root.findChildren(QtWidgets.QLabel)
+            if lbl.property("uniui-demo-subtitle") is True
+        )
+        assert subtitle.font().pixelSize() == 18
+        assert subtitle.font().bold()
+    finally:
+        root.close()

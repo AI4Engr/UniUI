@@ -81,530 +81,8 @@ _DETAIL_METRICS = [
 
 
 # ---------------------------------------------------------------------------
-# Small Qt composition helpers used by this desktop showcase
+# Cross-backend composition helpers (shared by Qt, Jupyter, and Web)
 # ---------------------------------------------------------------------------
-
-class _NativeWrap:
-    """Adapt a native QWidget to the tiny get_native() protocol UniUI expects."""
-
-    def __init__(self, widget):
-        self._widget = widget
-
-    def get_native(self):
-        return self._widget
-
-
-def _header_icon(name, color):
-    """Render a toolbar icon from the cross-backend Admin SVG source."""
-    from uniui.qt_icons import admin_icon
-
-    aliases = {"back": "arrow_back", "forward": "arrow_forward"}
-    return admin_icon(aliases.get(name, name), color, size=20)
-
-
-def _page_frame(title, subtitle, action_text=""):
-    """Return (UniUI wrapper, body layout, optional primary action button)."""
-    from PySide2 import QtWidgets, QtCore
-
-    page = QtWidgets.QWidget()
-    page.setProperty("adminPage", "1")
-    page.setAccessibleName(title)
-    page.setMinimumWidth(0)
-    page.setSizePolicy(
-        QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Expanding
-    )
-    layout = QtWidgets.QVBoxLayout(page)
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(18)
-
-    heading = QtWidgets.QWidget()
-    heading.setProperty("pageHeading", "1")
-    heading_layout = QtWidgets.QHBoxLayout(heading)
-    heading_layout.setContentsMargins(0, 0, 0, 0)
-    heading_layout.setSpacing(16)
-
-    copy = QtWidgets.QWidget()
-    copy_layout = QtWidgets.QVBoxLayout(copy)
-    copy_layout.setContentsMargins(0, 0, 0, 0)
-    copy_layout.setSpacing(4)
-    # The breadcrumb in the header bar already names the page; the H1 here
-    # would just repeat it, so only the descriptive subtitle is shown.
-    subtitle_label = QtWidgets.QLabel(subtitle)
-    subtitle_label.setProperty("pageSubtitle", "1")
-    subtitle_label.setWordWrap(True)
-    subtitle_label.setMinimumWidth(0)
-    subtitle_label.setSizePolicy(
-        QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
-    )
-    copy_layout.addWidget(subtitle_label)
-    heading_layout.addWidget(copy, stretch=1)
-
-    action = None
-    if action_text:
-        action = QtWidgets.QPushButton(action_text)
-        action.setProperty("buttonRole", "primary")
-        action.setCursor(QtCore.Qt.PointingHandCursor)
-        heading_layout.addWidget(action, alignment=QtCore.Qt.AlignVCenter)
-
-    layout.addWidget(heading)
-    return _NativeWrap(page), layout, action
-
-
-# ---------------------------------------------------------------------------
-# Pages
-# ---------------------------------------------------------------------------
-
-def dashboard_page(ctx):
-    f = uniui._get_factory()
-    from PySide2 import QtWidgets, QtCore
-
-    root, layout, refresh_btn = _page_frame(
-        "Dashboard",
-        "Monitor the signals that need your attention today.",
-        "Refresh data",
-    )
-
-    live_updates = f.create_switch()
-    live_updates.set_checked(True)
-    live_label = f.create_label()
-    live_label.set_text("Live updates")
-    live_row = QtWidgets.QWidget()
-    live_row_layout = QtWidgets.QHBoxLayout(live_row)
-    live_row_layout.setContentsMargins(0, 0, 0, 0)
-    live_row_layout.setSpacing(8)
-    live_row_layout.addWidget(live_updates.get_native())
-    live_row_layout.addWidget(live_label.get_native())
-    live_row_layout.addStretch()
-    layout.addWidget(live_row)
-
-    # Stat cards
-    sc_users   = f.create_stat_card()
-    sc_orders  = f.create_stat_card()
-    sc_revenue = f.create_stat_card()
-    sc_errors  = f.create_stat_card()
-
-    sc_users.set_label("Active Users");  sc_users.set_value("…");   sc_users.set_trend(0); sc_users.set_status("ok")
-    sc_orders.set_label("Orders");       sc_orders.set_value("…");  sc_orders.set_trend(0); sc_orders.set_status("ok")
-    sc_revenue.set_label("Revenue");     sc_revenue.set_value("…"); sc_revenue.set_trend(0); sc_revenue.set_status("ok")
-    sc_errors.set_label("Open Errors");  sc_errors.set_value("…");  sc_errors.set_trend(0); sc_errors.set_status("warn")
-
-    class _ResponsiveStats(QtWidgets.QWidget):
-        def __init__(self, cards):
-            super().__init__()
-            self._cards = cards
-            self._columns = 0
-            self._grid = QtWidgets.QGridLayout(self)
-            self._grid.setContentsMargins(0, 0, 0, 0)
-            self._grid.setHorizontalSpacing(14)
-            self._grid.setVerticalSpacing(14)
-            self._reflow(4)
-
-        def minimumSizeHint(self):
-            # Report the compact one-column minimum so the parent window can
-            # shrink far enough for resizeEvent() to trigger a reflow.
-            return QtCore.QSize(190, 136)
-
-        def resizeEvent(self, event):
-            super().resizeEvent(event)
-            width = event.size().width()
-            columns = 1 if width < 440 else 2 if width < 720 else 4
-            self._reflow(columns)
-
-        def _reflow(self, columns):
-            if columns == self._columns:
-                return
-            self._columns = columns
-            for card in self._cards:
-                self._grid.removeWidget(card)
-            for index, card in enumerate(self._cards):
-                self._grid.addWidget(card, index // columns, index % columns)
-            for column in range(4):
-                self._grid.setColumnStretch(column, 0)
-            for column in range(columns):
-                self._grid.setColumnStretch(column, 1)
-            rows = (len(self._cards) + columns - 1) // columns
-            self.setFixedHeight(rows * 136 + (rows - 1) * 14)
-
-    stat_row = _ResponsiveStats([
-        sc_users.get_native(), sc_orders.get_native(),
-        sc_revenue.get_native(), sc_errors.get_native(),
-    ])
-
-    gauge = f.create_gauge()
-    gauge.set_label("Service health")
-    gauge.set_range(0, 100)
-    gauge.set_unit("%")
-    gauge.set_status("ok")
-    gauge.set_value(82)
-    chart = f.create_chart()
-    chart.set_type("area")
-    chart.set_title("Live activity")
-    chart.set_max_points(24)
-    chart.set_data(
-        ["-4", "-3", "-2", "-1", "now"],
-        [{"name": "Requests", "data": [42, 58, 51, 67, 62]}],
-    )
-    gauge_card = f.create_card()
-    gauge_card.set_title("Health")
-    gauge_card.set_subtitle("Animated radial progress")
-    gauge_card.set_content(gauge)
-    chart_card = f.create_card()
-    chart_card.set_title("Realtime")
-    chart_card.set_subtitle("append_data() keeps the latest 24 points")
-    chart_card.set_content(chart)
-
-    metrics = f.create_metric_list()
-    metrics.set_items(_DETAIL_METRICS)
-    disk_usage = f.create_progress_bar(); disk_usage.set_value(62); disk_usage.set_status("warn")
-    metrics_body = f.create_vbox()
-    metrics_body.set_spec(LayoutSpec(gap=10))
-    metrics_body.add_item(metrics)
-    metrics_body.add_item(disk_usage)
-    metrics_card = f.create_card()
-    metrics_card.set_title("Process")
-    metrics_card.set_subtitle("Runtime signals at a glance")
-    metrics_card.set_content(metrics_body)
-
-    visual_row = QtWidgets.QWidget()
-    visual_layout = QtWidgets.QHBoxLayout(visual_row)
-    visual_layout.setContentsMargins(0, 0, 0, 0)
-    visual_layout.setSpacing(14)
-    visual_layout.addWidget(gauge_card.get_native(), stretch=1)
-    visual_layout.addWidget(chart_card.get_native(), stretch=2)
-    visual_layout.addWidget(metrics_card.get_native(), stretch=1)
-    # A fixed height clipped the Process card once it grew a progress bar
-    # below the metric list - let the row grow to fit its tallest card
-    # instead of clamping every card to a number picked for the old content.
-    visual_row.setMinimumHeight(290)
-
-    runner = TaskRunner()
-
-    def _fetch(_cancelled: threading.Event):
-        time.sleep(0.5)
-        active = sum(1 for u in _USERS if u["status"] == "Active")
-        revenue = sum(
-            float(o["amount"].replace("$", "").replace(",", ""))
-            for o in _ORDERS if o["status"] != "Cancelled"
-        )
-        return {"users": active, "orders": len(_ORDERS), "revenue": revenue, "errors": 2}
-
-    def _on_done(data):
-        sc_users.set_value(str(data["users"]));      sc_users.set_trend(5.2)
-        sc_orders.set_value(str(data["orders"]));    sc_orders.set_trend(-1.4)
-        sc_revenue.set_value(f"${data['revenue']:,.0f}"); sc_revenue.set_trend(12.0)
-        sc_errors.set_value(str(data["errors"]));    sc_errors.set_status("error"); sc_errors.set_trend(0)
-        health = max(0, 100 - data["errors"] * 7)
-        gauge.set_value(health)
-        gauge.set_status("ok" if health >= 80 else "warn")
-        chart.append_data(time.strftime("%H:%M:%S"), [data["users"] * 14 + data["orders"]])
-        refresh_btn.setEnabled(True)
-        refresh_btn.setText("Refresh data")
-
-    def _refresh():
-        refresh_btn.setEnabled(False)
-        refresh_btn.setText("Refreshing…")
-        runner.run(_fetch, on_done=_on_done, on_error=lambda _exc: _on_done({
-            "users": "—", "orders": "—", "revenue": 0, "errors": "—"
-        }))
-
-    refresh_btn.clicked.connect(_refresh)
-    _refresh()
-
-    # A light periodic tick so the chart is visibly a live native component,
-    # not a static screenshot - a small random walk, not real monitoring.
-    # Navigating away from this page (uncached route) deletes the Qt chart
-    # widget; schedule_after keeps firing regardless, so the tick stops
-    # itself the first time it touches a deleted widget instead of
-    # rescheduling forever into a torn-down page.
-    _live_state = {"value": 62}
-
-    def _live_tick():
-        try:
-            if live_updates.is_checked():
-                _live_state["value"] = max(20, min(120, _live_state["value"] + random.randint(-6, 8)))
-                chart.append_data(time.strftime("%H:%M:%S"), [_live_state["value"]])
-        except Exception:
-            return  # page/chart was torn down; stop rescheduling
-        schedule_after(1500, _live_tick)
-
-    schedule_after(1500, _live_tick)
-
-    # Orders table
-    tbl = f.create_table()
-    tbl.set_columns([
-        {"key": "id",       "label": "Order",    "width": 80},
-        {"key": "customer", "label": "Customer", "width": 180},
-        {"key": "amount",   "label": "Amount",   "width": 100},
-        {"key": "status",   "label": "Status",   "width": 120},
-    ])
-    tbl.set_rows(_ORDERS)
-
-    selected = State("Click a row to inspect")
-    status_lbl = f.create_label()
-    bind_text(status_lbl, selected)
-    status_lbl.get_native().setProperty("tableHint", "1")
-    tbl.on_row_click(lambda row: selected.set(
-        f"  {row['id']}  ·  {row['customer']}  ·  {row['status']}"
-    ))
-
-    card = f.create_card()
-    card.set_title("Recent Orders")
-    card.set_subtitle("Click a row to inspect it")
-    inner = f.create_vbox()
-    inner.add_item(tbl)
-    inner.add_item(status_lbl)
-    card.set_content(inner)
-
-    layout.addWidget(stat_row)
-    layout.addWidget(visual_row)
-    layout.addWidget(card.get_native(), stretch=1)
-    return root
-
-
-def users_page(ctx):
-    f = uniui._get_factory()
-    from PySide2 import QtWidgets
-
-    root, layout, add_btn = _page_frame(
-        "Users",
-        "Manage access, roles, and account status.",
-        "Add user",
-    )
-    add_btn.clicked.connect(lambda: None)
-
-    search = State("")
-    search_input = f.create_line_edit()
-    search_input.set_text("")
-    search_input.on_change(search.set)
-    search_input.get_native().setPlaceholderText("Search by name or email…")
-    search_input.get_native().setClearButtonEnabled(True)
-    search_input.get_native().setMaximumWidth(420)
-
-    tbl = f.create_table()
-    tbl.set_columns([
-        {"key": "id",     "label": "ID",     "width": 50},
-        {"key": "name",   "label": "Name",   "width": 180},
-        {"key": "email",  "label": "Email"},
-        {"key": "role",   "label": "Role",   "width": 90},
-        {"key": "status", "label": "Status", "width": 90},
-    ])
-    tbl.set_rows(_USERS)
-
-    search.subscribe(lambda q: tbl.set_rows([
-        u for u in _USERS
-        if not q.strip() or q.lower() in u["name"].lower() or q.lower() in u["email"].lower()
-    ]))
-
-    card = f.create_card()
-    card.set_title("All Users")
-    card.set_subtitle("Type to filter by name or email")
-    content = QtWidgets.QWidget()
-    content_layout = QtWidgets.QVBoxLayout(content)
-    content_layout.setContentsMargins(0, 0, 0, 0)
-    content_layout.setSpacing(14)
-    content_layout.addWidget(search_input.get_native())
-    content_layout.addWidget(tbl.get_native(), stretch=1)
-    card.set_content(_NativeWrap(content))
-    layout.addWidget(card.get_native(), stretch=1)
-    return root
-
-
-def settings_page(_ctx):
-    f = uniui._get_factory()
-    root, layout, open_drawer = _page_frame(
-        "Settings",
-        "Choose how the workspace looks and behaves.",
-        "Open drawer",
-    )
-
-    info = f.create_label()
-    bind_text(info, Computed(
-        lambda: f"Current theme: {_ADMIN_THEME.value.title()}", _ADMIN_THEME
-    ))
-    drawer_theme = f.create_button()
-    bind_text(drawer_theme, Computed(
-        # _ADMIN_THEME is the reactive trigger; the label itself reads the
-        # real is_dark() flag so it stays correct after the picker below
-        # switches to a named theme, not just after the quick toggle.
-        lambda: "Switch to Light" if uniui.is_dark() else "Switch to Dark",
-        _ADMIN_THEME,
-    ))
-    drawer_theme.connect(_toggle_admin_theme)
-
-    # Theme picker: every registered theme, not just the light/dark pair the
-    # header's quick-toggle button flips between.
-    theme_picker = f.create_combo_box()
-    for name in uniui.list_themes():
-        theme_picker.add_item(name)
-    theme_picker.set_selection(_ADMIN_THEME.value)
-    theme_picker.on_change(lambda: _apply_named_theme(theme_picker.get_text()))
-
-    drawer = f.create_drawer()
-    drawer.set_title("Workspace settings")
-    drawer_content = f.create_vbox()
-    drawer_hint = f.create_label()
-    drawer_hint.set_text("Changes apply immediately without rebuilding the current route.")
-    drawer_content.add_item(drawer_hint)
-    drawer_content.add_item(drawer_theme)
-    drawer.set_content(drawer_content)
-    open_drawer.clicked.connect(drawer.open)
-
-    card = f.create_card()
-    card.set_title("Appearance")
-    card.set_subtitle("Theme changes preserve routes, table state, and loaded data")
-    inner = f.create_vbox()
-    inner.add_item(info)
-    inner.add_item(theme_picker)
-    open_button = f.create_button()
-    open_button.set_text("Open settings drawer")
-    open_button.connect(drawer.open)
-    inner.add_item(open_button)
-    card.set_content(inner)
-    layout.addWidget(card.get_native())
-    layout.addStretch()
-    return root
-
-
-def _qt_labeled_field(title, control_native):
-    from PySide2 import QtWidgets
-
-    field = QtWidgets.QWidget()
-    field_layout = QtWidgets.QVBoxLayout(field)
-    field_layout.setContentsMargins(0, 0, 0, 0)
-    field_layout.setSpacing(6)
-    label = QtWidgets.QLabel(title)
-    label.setProperty("fieldLabel", "1")
-    field_layout.addWidget(label)
-    field_layout.addWidget(control_native)
-    return field
-
-
-def components_page(ctx):
-    f = uniui._get_factory()
-    from PySide2 import QtWidgets
-
-    root, layout, _ = _page_frame(
-        "Components",
-        "A quick reference for the form and navigation controls available in every backend.",
-    )
-
-    role_dropdown = f.create_dropdown()
-    for role in ("Admin", "Editor", "Viewer"):
-        role_dropdown.add_item(role)
-    role_dropdown.set_selection("Editor")
-
-    theme_combo = f.create_combo_box()
-    for option in ("System", "Light", "Dark", "High contrast"):
-        theme_combo.add_item(option)
-    theme_combo.set_selection("System")
-
-    status_dropdown = f.create_dropdown()
-    for status in ("Active", "Inactive", "Pending"):
-        status_dropdown.add_item(status)
-    status_dropdown.set_selection("Active")
-
-    hint = QtWidgets.QLabel("Editor · Active")
-    hint.setProperty("tableHint", "1")
-
-    def _update_hint():
-        hint.setText(f"{role_dropdown.get_text()}  ·  {status_dropdown.get_text()}")
-
-    role_dropdown.on_change(_update_hint)
-    status_dropdown.on_change(_update_hint)
-
-    fields_row = QtWidgets.QWidget()
-    fields_layout = QtWidgets.QHBoxLayout(fields_row)
-    fields_layout.setContentsMargins(0, 0, 0, 0)
-    fields_layout.setSpacing(16)
-    fields_layout.addWidget(_qt_labeled_field("Role (dropdown)", role_dropdown.get_native()))
-    fields_layout.addWidget(_qt_labeled_field("Theme (editable combo box)", theme_combo.get_native()))
-    fields_layout.addWidget(_qt_labeled_field("Status (dropdown)", status_dropdown.get_native()))
-    fields_layout.addStretch()
-
-    inputs_content = QtWidgets.QWidget()
-    inputs_layout = QtWidgets.QVBoxLayout(inputs_content)
-    inputs_layout.setContentsMargins(0, 0, 0, 0)
-    inputs_layout.setSpacing(14)
-    inputs_layout.addWidget(fields_row)
-    inputs_layout.addWidget(hint)
-
-    inputs_card = f.create_card()
-    inputs_card.set_title("Selection controls")
-    inputs_card.set_subtitle("Dropdown and combo box, wired to a shared change handler")
-    inputs_card.set_content(_NativeWrap(inputs_content))
-
-    overview_tab = QtWidgets.QLabel(
-        "Tabs mount every pane up front and only toggle visibility, so state "
-        "in inactive tabs is preserved when you switch back."
-    )
-    overview_tab.setWordWrap(True)
-
-    activity_tab = QtWidgets.QWidget()
-    activity_layout = QtWidgets.QVBoxLayout(activity_tab)
-    activity_layout.setContentsMargins(12, 12, 12, 12)
-    activity_layout.setSpacing(8)
-    for entry in (
-        "Alice Johnson updated the Dashboard layout",
-        "Bob Smith invited a new Editor",
-        "Nightly export completed without errors",
-    ):
-        activity_layout.addWidget(QtWidgets.QLabel(f"•  {entry}"))
-    activity_layout.addStretch()
-
-    settings_tab = QtWidgets.QWidget()
-    settings_tab_layout = QtWidgets.QVBoxLayout(settings_tab)
-    settings_tab_layout.setContentsMargins(12, 12, 12, 12)
-    settings_tab_layout.setSpacing(8)
-    notify_toggle = QtWidgets.QPushButton("Notifications: On")
-    notify_toggle.setProperty("buttonRole", "secondary")
-    settings_tab_layout.addWidget(notify_toggle)
-    compact_toggle = QtWidgets.QPushButton("Compact density: Off")
-    compact_toggle.setProperty("buttonRole", "secondary")
-    settings_tab_layout.addWidget(compact_toggle)
-    settings_tab_layout.addStretch()
-
-    tabs = f.create_tab_widget()
-    tabs.add_tab(_NativeWrap(overview_tab), "Overview")
-    tabs.add_tab(_NativeWrap(activity_tab), "Activity")
-    tabs.add_tab(_NativeWrap(settings_tab), "Settings")
-
-    tabs_card = f.create_card()
-    tabs_card.set_title("Tabs")
-    tabs_card.set_subtitle("Three panes sharing one tab strip")
-    tabs_card.set_content(tabs)
-
-    layout.addWidget(inputs_card.get_native())
-    layout.addWidget(tabs_card.get_native(), stretch=1)
-    return root
-
-
-def not_found_page(ctx):
-    f = uniui._get_factory()
-    lbl = f.create_label()
-    lbl.set_text(f"404 — No page at: {ctx.path}")
-    return lbl
-
-
-# ---------------------------------------------------------------------------
-# Browser composition (shared by Jupyter and the NiceGUI Web backend)
-# ---------------------------------------------------------------------------
-
-def _add_class(widget, class_name):
-    """Add a semantic CSS class without exposing a backend in page code."""
-    native = widget.get_native() if hasattr(widget, "get_native") else widget
-    if hasattr(native, "add_class"):
-        native.add_class(class_name)
-        # ipywidgets Buttons carry the generic theme's accent colour as an
-        # inline style, which outranks any stylesheet. Clear it so the admin
-        # palette can style this button through its semantic class.
-        style = getattr(native, "style", None)
-        if style is not None and hasattr(style, "button_color"):
-            style.button_color = None
-            style.text_color = None
-    elif hasattr(native, "classes"):
-        native.classes(add=class_name)
-    return widget
-
 
 def _set_props(widget, props):
     """Apply optional browser-native presentation props when available."""
@@ -615,25 +93,28 @@ def _set_props(widget, props):
 
 
 def _set_icon_class(widget, icon_name):
-    """Switch a shared SVG icon class on a browser-backed control."""
+    """Switch a shared SVG icon class on the widget."""
     from uniui.icons import ADMIN_ICON_NAMES
 
-    native = widget.get_native() if hasattr(widget, "get_native") else widget
     for name in ADMIN_ICON_NAMES:
-        class_name = f"uniui-icon-{name}"
-        if hasattr(native, "remove_class"):
-            native.remove_class(class_name)
-        elif hasattr(native, "classes"):
-            native.classes(remove=class_name)
-    _add_class(widget, f"uniui-icon-{icon_name}")
+        widget.remove_class(f"uniui-icon-{name}")
+    widget.add_class(f"uniui-icon-{icon_name}")
+    # ipywidgets Buttons carry the generic theme's accent colour as an
+    # inline style, which outranks any stylesheet. Clear it so the admin
+    # palette can style this button through its semantic class.
+    native = widget.get_native() if hasattr(widget, "get_native") else widget
+    style = getattr(native, "style", None)
+    if style is not None and hasattr(style, "button_color"):
+        style.button_color = None
+        style.text_color = None
     return widget
 
 
-def _browser_page_frame(title, subtitle, action_text=""):
+def _page_frame(title, subtitle, action_text=""):
     f = uniui._get_factory()
     page = f.create_vbox()
     page.set_spec(LayoutSpec(gap=18))
-    _add_class(page, "uniui-demo-page")
+    page.add_class("uniui-demo-page")
     page_native = page.get_native() if hasattr(page, "get_native") else page
     if callable(getattr(page_native, "tooltip", None)):
         page_native.tooltip(title)  # NiceGUI element
@@ -642,14 +123,14 @@ def _browser_page_frame(title, subtitle, action_text=""):
 
     heading = f.create_hbox()
     heading.set_spec(LayoutSpec(gap=16))
-    _add_class(heading, "uniui-demo-heading")
+    heading.add_class("uniui-demo-heading")
     copy = f.create_vbox()
     copy.set_spec(LayoutSpec(gap=4))
     # The breadcrumb in the header bar already names the page; the H1 here
     # would just repeat it, so only the descriptive subtitle is shown.
     subtitle_label = f.create_label()
     subtitle_label.set_text(subtitle)
-    _add_class(subtitle_label, "uniui-demo-subtitle")
+    subtitle_label.add_class("uniui-demo-subtitle")
     copy.add_item(subtitle_label)
     heading.add_item_with_spec(copy, LayoutItem(copy, grow=1))
 
@@ -657,7 +138,7 @@ def _browser_page_frame(title, subtitle, action_text=""):
     if action_text:
         action = f.create_button()
         action.set_text(action_text)
-        _add_class(action, "uniui-demo-primary-action")
+        action.add_class("uniui-demo-primary-action")
         _set_props(action, "no-caps unelevated")
         heading.add_item(action)
 
@@ -665,9 +146,9 @@ def _browser_page_frame(title, subtitle, action_text=""):
     return page, action
 
 
-def _browser_dashboard_page(_ctx):
+def dashboard_page(_ctx):
     f = uniui._get_factory()
-    page, refresh_btn = _browser_page_frame(
+    page, refresh_btn = _page_frame(
         "Dashboard",
         "Monitor the signals that need your attention today.",
         "Refresh data",
@@ -697,7 +178,7 @@ def _browser_dashboard_page(_ctx):
 
     stats = f.create_wrap()
     stats.set_spec(LayoutSpec(gap=14))
-    _add_class(stats, "uniui-demo-stats")
+    stats.add_class("uniui-demo-stats")
     for card in cards:
         stats.add_item(card)
 
@@ -725,25 +206,40 @@ def _browser_dashboard_page(_ctx):
     visuals = f.create_wrap(); visuals.set_spec(LayoutSpec(gap=14))
     visuals.add_item(gauge_card); visuals.add_item(chart_card); visuals.add_item(metrics_card)
 
-    def refresh():
-        refresh_btn.set_enabled(False)
-        refresh_btn.set_text("Refreshing…")
+    # Runs the "fetch" on a worker thread via TaskRunner so the UI stays
+    # responsive during the simulated network delay - cross-backend
+    # (uniui.state.TaskRunner), unlike a plain synchronous refresh.
+    runner = TaskRunner()
+
+    def _fetch(_cancelled: threading.Event):
+        time.sleep(0.5)
         active = sum(1 for user in _USERS if user["status"] == "Active")
         revenue = sum(
             float(order["amount"].replace("$", "").replace(",", ""))
             for order in _ORDERS if order["status"] != "Cancelled"
         )
-        values = (str(active), str(len(_ORDERS)), f"${revenue:,.0f}", "2")
+        return {"users": active, "orders": len(_ORDERS), "revenue": revenue, "errors": 2}
+
+    def _on_done(data):
+        values = (str(data["users"]), str(data["orders"]), f"${data['revenue']:,.0f}", str(data["errors"]))
         trends = (5.2, -1.4, 12.0, 0.0)
         for card, value, trend in zip(cards, values, trends):
             card.set_value(value)
             card.set_trend(trend)
         cards[-1].set_status("error")
-        health = max(0, 100 - 2 * 7)
+        health = max(0, 100 - data["errors"] * 7)
         gauge.set_value(health)
-        chart.append_data(time.strftime("%H:%M:%S"), [active * 14 + len(_ORDERS)])
+        gauge.set_status("ok" if health >= 80 else "warn")
+        chart.append_data(time.strftime("%H:%M:%S"), [data["users"] * 14 + data["orders"]])
         refresh_btn.set_text("Refresh data")
         refresh_btn.set_enabled(True)
+
+    def refresh():
+        refresh_btn.set_enabled(False)
+        refresh_btn.set_text("Refreshing…")
+        runner.run(_fetch, on_done=_on_done, on_error=lambda _exc: _on_done({
+            "users": "—", "orders": "—", "revenue": 0, "errors": "—"
+        }))
 
     refresh_btn.connect(refresh)
     refresh()
@@ -772,7 +268,7 @@ def _browser_dashboard_page(_ctx):
     selected = State("Click a row to inspect")
     hint = f.create_label()
     bind_text(hint, selected)
-    _add_class(hint, "uniui-demo-hint")
+    hint.add_class("uniui-demo-hint")
     table.on_row_click(lambda row: selected.set(
         f"{row['id']}  ·  {row['customer']}  ·  {row['status']}"
     ))
@@ -791,20 +287,27 @@ def _browser_dashboard_page(_ctx):
     return page
 
 
-def _browser_users_page(_ctx):
+def users_page(_ctx):
     f = uniui._get_factory()
-    page, add_btn = _browser_page_frame(
+    page, add_btn = _page_frame(
         "Users", "Manage access, roles, and account status.", "Add user"
     )
     add_btn.connect(lambda: None)
 
     search_input = f.create_line_edit()
     native_input = search_input.get_native()
-    if hasattr(native_input, "placeholder"):
-        native_input.placeholder = "Search by name or email…"
+    if hasattr(native_input, "setPlaceholderText"):
+        # Qt: QLineEdit
+        native_input.setPlaceholderText("Search by name or email…")
+        native_input.setClearButtonEnabled(True)
+        native_input.setMaximumWidth(420)
     elif hasattr(native_input, "props"):
+        # Web: NiceGUI element
         native_input.props('placeholder="Search by name or email…" clearable outlined dense')
-    if hasattr(native_input, "layout"):
+    elif hasattr(native_input, "placeholder"):
+        # Jupyter: ipywidgets Text - .layout is a real settable trait here,
+        # unlike Qt's QWidget.layout() method or NiceGUI's absent attribute.
+        native_input.placeholder = "Search by name or email…"
         native_input.layout.width = "100%"
         native_input.layout.max_width = "420px"
 
@@ -838,9 +341,9 @@ def _browser_users_page(_ctx):
     return page
 
 
-def _browser_settings_page(_ctx):
+def settings_page(_ctx):
     f = uniui._get_factory()
-    page, open_drawer = _browser_page_frame(
+    page, open_drawer = _page_frame(
         "Settings", "Choose how the workspace looks and behaves.", "Open drawer"
     )
     info = f.create_label()
@@ -888,18 +391,18 @@ def _labeled_field(label_text, control):
     f = uniui._get_factory()
     field = f.create_vbox()
     field.set_spec(LayoutSpec(gap=6))
-    _add_class(field, "uniui-demo-field")
+    field.add_class("uniui-demo-field")
     label = f.create_label()
     label.set_text(label_text)
-    _add_class(label, "uniui-demo-field-label")
+    label.add_class("uniui-demo-field-label")
     field.add_item(label)
     field.add_item(control)
     return field
 
 
-def _browser_components_page(_ctx):
+def components_page(_ctx):
     f = uniui._get_factory()
-    page, _ = _browser_page_frame(
+    page, _ = _page_frame(
         "Components",
         "A quick reference for the form and navigation controls available in every backend.",
     )
@@ -924,7 +427,7 @@ def _browser_components_page(_ctx):
 
     selection_hint = f.create_label()
     selection_hint.set_text("Editor · Active")
-    _add_class(selection_hint, "uniui-demo-hint")
+    selection_hint.add_class("uniui-demo-hint")
 
     def _update_hint():
         selection_hint.set_text(f"{role_dropdown.get_text()} · {status_dropdown.get_text()}")
@@ -968,14 +471,36 @@ def _browser_components_page(_ctx):
         row.set_text(f"•  {entry}")
         activity_tab.add_item(row)
 
+    notify_switch = f.create_switch()
+    notify_switch.set_checked(True)
+    notify_label = f.create_label()
+    notify_label.set_text("Notifications")
+    notify_row = f.create_hbox()
+    notify_row.set_spec(LayoutSpec(gap=8))
+    notify_row.add_item(notify_switch)
+    notify_row.add_item(notify_label)
+    # Without a trailing stretch, a bare HBox stretched to the tab's full
+    # width divides ALL leftover space between its two zero-stretch
+    # children instead of letting them hug together on the left - the
+    # switch and its own label ended up ~500px apart (caught by actually
+    # clicking into this nested Settings sub-tab and looking, not by any
+    # test).
+    notify_row.add_stretch()
+
+    compact_checkbox = f.create_checkbox()
+    compact_checkbox.set_checked(False)
+    compact_label = f.create_label()
+    compact_label.set_text("Compact density")
+    compact_row = f.create_hbox()
+    compact_row.set_spec(LayoutSpec(gap=8))
+    compact_row.add_item(compact_checkbox)
+    compact_row.add_item(compact_label)
+    compact_row.add_stretch()
+
     settings_tab = f.create_vbox()
     settings_tab.set_spec(LayoutSpec(gap=8))
-    notify_toggle = f.create_button()
-    notify_toggle.set_text("Notifications: On")
-    settings_tab.add_item(notify_toggle)
-    compact_toggle = f.create_button()
-    compact_toggle.set_text("Compact density: Off")
-    settings_tab.add_item(compact_toggle)
+    settings_tab.add_item(notify_row)
+    settings_tab.add_item(compact_row)
 
     tabs = f.create_tab_widget()
     tabs.add_tab(overview_tab, "Overview")
@@ -987,15 +512,97 @@ def _browser_components_page(_ctx):
     tabs_card.set_subtitle("Three panes sharing one tab strip")
     tabs_card.set_content(tabs)
 
+    # More controls: RadioGroup, NumberInput, and Slider, each wired to a
+    # live label via on_change - matching the gallery's "real interaction,
+    # not a screenshot" principle.
+    density_hint = f.create_label()
+    density_hint.set_text("Density: Comfortable")
+    density_radio = f.create_radio_group()
+    density_radio.set_options(["Comfortable", "Compact", "Spacious"])
+    density_radio.set_selected("Comfortable")
+    density_radio.on_change(lambda: density_hint.set_text(
+        f"Density: {density_radio.get_selected()}"
+    ))
+    density_box = f.create_vbox()
+    density_box.set_spec(LayoutSpec(gap=6))
+    density_box.add_item(density_radio)
+    density_box.add_item(density_hint)
+    density_field = _labeled_field("Table density", density_box)
+
+    rows_hint = f.create_label()
+    rows_hint.set_text("25 rows per page")
+    rows_input = f.create_number_input()
+    rows_input.set_range(5, 100)
+    rows_input.set_step(5)
+    rows_input.set_value(25)
+    rows_input.on_change(lambda: rows_hint.set_text(
+        f"{int(rows_input.get_value())} rows per page"
+    ))
+    rows_box = f.create_vbox()
+    rows_box.set_spec(LayoutSpec(gap=6))
+    rows_box.add_item(rows_input)
+    rows_box.add_item(rows_hint)
+    rows_field = _labeled_field("Rows per page", rows_box)
+
+    interval_hint = f.create_label()
+    interval_hint.set_text("Every 5s")
+    interval_slider = f.create_slider()
+    interval_slider.set_range(1, 30)
+    interval_slider.set_step(1)
+    interval_slider.set_value(5)
+    interval_slider.on_change(lambda: interval_hint.set_text(
+        f"Every {int(interval_slider.get_value())}s"
+    ))
+    interval_box = f.create_vbox()
+    interval_box.set_spec(LayoutSpec(gap=6))
+    interval_box.add_item(interval_slider)
+    interval_box.add_item(interval_hint)
+    interval_field = _labeled_field("Refresh interval", interval_box)
+
+    more_controls_row = f.create_wrap()
+    more_controls_row.set_spec(LayoutSpec(gap=16))
+    more_controls_row.add_item(density_field)
+    more_controls_row.add_item(rows_field)
+    more_controls_row.add_item(interval_field)
+
+    more_controls_card = f.create_card()
+    more_controls_card.set_title("More controls")
+    more_controls_card.set_subtitle("RadioGroup, NumberInput, and Slider, each driving a live label")
+    more_controls_card.set_content(more_controls_row)
+
     page.add_item(inputs_card)
+    page.add_item(more_controls_card)
     page.add_item_with_spec(tabs_card, LayoutItem(tabs_card, grow=1))
     return page
 
 
-def _browser_not_found_page(ctx):
+def not_found_page(ctx):
     label = uniui._get_factory().create_label()
     label.set_text(f"404 — No page at: {ctx.path}")
     return label
+
+
+def _build_router():
+    """The shared route table, built fresh per call since Route/Router hold
+    per-instance navigation state - split out so a test can build one
+    without also going through show_ui()'s blocking event loop, and so Qt,
+    Jupyter, and Web all navigate through the exact same page functions."""
+    from uniui.routing import Router, Route
+
+    return Router(
+        Route("/dashboard",   dashboard_page,   name="dashboard"),
+        Route("/users",       users_page,       name="users"),
+        Route("/components",  components_page,  name="components"),
+        # Cached: settings_page binds labels to the module-level, permanent
+        # _ADMIN_THEME state. Rebuilding it on every visit (the default for
+        # uncached routes) would leak one bind_text subscription per visit,
+        # each pointing at a widget that gets deleted the moment the route
+        # is left - the next theme toggle after that throws "Internal C++
+        # object already deleted" on Qt for every leaked visit. Caching
+        # means the page (and its one subscription) is built exactly once.
+        Route("/settings",    settings_page,    name="settings", cache=True),
+        not_found=not_found_page,
+    )
 
 
 def create_admin_ui(framework="auto", debug=False):
@@ -1008,7 +615,7 @@ def create_admin_ui(framework="auto", debug=False):
 
     use(framework)
 
-    from uniui.routing import Router, Route, RouterView, sync_breadcrumb
+    from uniui.routing import RouterView, sync_breadcrumb
     if framework == "jupyter":
         from uniui import jupyter_components as admin_backend
     else:
@@ -1017,26 +624,13 @@ def create_admin_ui(framework="auto", debug=False):
     _ADMIN_THEME.set("light")
     admin_backend.set_admin_theme(False)
     f = uniui._get_factory()
-    router = Router(
-        Route("/dashboard", _browser_dashboard_page, name="dashboard"),
-        Route("/users", _browser_users_page, name="users"),
-        Route("/components", _browser_components_page, name="components"),
-        # Cached: settings_page binds labels to the module-level, permanent
-        # _ADMIN_THEME state. Rebuilding it on every visit (the default for
-        # uncached routes) would leak one bind_text subscription per visit,
-        # each pointing at a QTLabel that gets deleted the moment the route
-        # is left - the next theme toggle after that throws "Internal C++
-        # object already deleted" for every leaked visit. Caching means the
-        # page (and its one subscription) is built exactly once.
-        Route("/settings", _browser_settings_page, name="settings", cache=True),
-        not_found=_browser_not_found_page,
-    )
+    router = _build_router()
 
     header = f.create_hbox()
-    _add_class(header, "uniui-demo-header-content")
+    header.add_class("uniui-demo-header-content")
     header.set_spec(LayoutSpec(gap=8))
-    logo = f.create_label(); logo.set_text("U"); _add_class(logo, "uniui-demo-logo-mark")
-    product = f.create_label(); product.set_text("UniUI Admin"); _add_class(product, "uniui-demo-product")
+    logo = f.create_label(); logo.set_text("U"); logo.add_class("uniui-demo-logo-mark")
+    product = f.create_label(); product.set_text("UniUI Admin"); product.add_class("uniui-demo-product")
     beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
     back = f.create_button()
     forward = f.create_button()
@@ -1045,8 +639,8 @@ def create_admin_ui(framework="auto", debug=False):
     _set_props(forward, "flat round dense")
     _set_icon_class(back, "arrow_back")
     _set_icon_class(forward, "arrow_forward")
-    _add_class(back, "uniui-demo-icon-button")
-    _add_class(forward, "uniui-demo-icon-button")
+    back.add_class("uniui-demo-icon-button")
+    forward.add_class("uniui-demo-icon-button")
     back.connect(router.back)
     forward.connect(router.forward)
     breadcrumb = f.create_breadcrumb()
@@ -1058,7 +652,7 @@ def create_admin_ui(framework="auto", debug=False):
     breadcrumb.on_click(router.push)
     theme_button = f.create_button()
     theme_button.set_text("Dark mode")
-    _add_class(theme_button, "uniui-demo-theme-button")
+    theme_button.add_class("uniui-demo-theme-button")
     _set_props(theme_button, "flat no-caps")
     _set_icon_class(theme_button, "dark_mode")
     header.add_item(logo)
@@ -1068,7 +662,7 @@ def create_admin_ui(framework="auto", debug=False):
     header.add_item(forward)
     header.add_item_with_spec(breadcrumb, LayoutItem(breadcrumb, grow=1))
     header.add_item(theme_button)
-    avatar = f.create_label(); avatar.set_text("AJ"); _add_class(avatar, "uniui-demo-avatar")
+    avatar = f.create_label(); avatar.set_text("AJ"); avatar.add_class("uniui-demo-avatar")
     header.add_item(avatar)
 
     sidebar = f.create_sidebar()
@@ -1093,8 +687,8 @@ def create_admin_ui(framework="auto", debug=False):
     if debug and hasattr(shell, "set_debug"):
         shell.set_debug(True)
     footer = f.create_hbox()
-    ready = f.create_label(); ready.set_text("●  All systems operational"); _add_class(ready, "uniui-web-status-ok")
-    version = f.create_label(); version.set_text("UniUI admin preview · v0.1"); _add_class(version, "uniui-web-footer-meta")
+    ready = f.create_label(); ready.set_text("●  All systems operational"); ready.add_class("uniui-web-status-ok")
+    version = f.create_label(); version.set_text("UniUI admin preview · v0.1"); version.add_class("uniui-web-footer-meta")
     footer.add_item(ready); footer.add_stretch(); footer.add_item(version)
     shell.set_footer(footer)
 
@@ -1142,20 +736,19 @@ def _admin_stylesheet():
 
     p = get_admin_palette()
     return base_stylesheet() + """
-QWidget[adminPage="1"], QWidget[pageHeading="1"] { background: transparent; }
-QLabel[pageSubtitle="1"] {
+QLabel[uniui-demo-subtitle="true"] {
     color: %(text)s;
     font-size: 18px;
     font-weight: 650;
 }
-QLabel[tableHint="1"] {
+QLabel[uniui-demo-hint="true"] {
     color: %(text_muted)s;
     background: %(surface_subtle)s;
     border: 1px solid %(border)s;
     border-radius: 8px;
     padding: 8px 10px;
 }
-QLabel[fieldLabel="1"] {
+QLabel[uniui-demo-field-label="true"] {
     color: %(text_muted)s;
     font-size: 12px;
     font-weight: 650;
@@ -1190,26 +783,29 @@ QLineEdit[headerSearch="1"]:focus {
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Main (Qt shell only - the pages above are cross-backend; the shell is not
+# unified yet, see notes/admin_demo_unification_plan.md Step 3)
 # ---------------------------------------------------------------------------
 
-def _build_qt_router():
-    """The Qt router's route table - split out from main() so a test can
-    build it without also going through show_ui()'s blocking event loop."""
-    from uniui.routing import Router, Route
+class _NativeWrap:
+    """Adapt a native QWidget to the tiny get_native() protocol UniUI expects.
 
-    return Router(
-        Route("/dashboard",   dashboard_page,   name="dashboard"),
-        Route("/users",       users_page,       name="users"),
-        Route("/components",  components_page,  name="components"),
-        # Cached: see the matching comment on the browser router's
-        # /settings route above - settings_page binds labels to the
-        # permanent, module-level _ADMIN_THEME state, so rebuilding it on
-        # every visit would leak one subscription (pointing at an already-
-        # deleted QTLabel) per visit.
-        Route("/settings",    settings_page,    name="settings", cache=True),
-        not_found=not_found_page,
-    )
+    Only used by the Qt-only shell below (header/footer built from raw
+    QtWidgets) - the pages themselves no longer need it."""
+
+    def __init__(self, widget):
+        self._widget = widget
+
+    def get_native(self):
+        return self._widget
+
+
+def _header_icon(name, color):
+    """Render a toolbar icon from the cross-backend Admin SVG source."""
+    from uniui.qt_icons import admin_icon
+
+    aliases = {"back": "arrow_back", "forward": "arrow_forward"}
+    return admin_icon(aliases.get(name, name), color, size=20)
 
 
 def main():
@@ -1229,7 +825,7 @@ def main():
     _ADMIN_THEME.set("light")
     set_admin_theme(False)
 
-    router = _build_qt_router()
+    router = _build_router()
 
     f = uniui._get_factory()
 

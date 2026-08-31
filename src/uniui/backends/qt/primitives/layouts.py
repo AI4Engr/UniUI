@@ -13,8 +13,8 @@ from PySide2.QtWidgets import (
 
 from ....core import *
 from ...._adapter_mixins import (
-    ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin, TextMixin,
-    VisibilityMixin,
+    ClassMixin, ClearMixin, EnableMixin, NativeMixin, SelectionMixin, SizeMixin,
+    TextMixin, VisibilityMixin,
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
@@ -227,10 +227,25 @@ class _QFlowLayout(QtWidgets.QLayout):
     def minimumSize(self):
         size = QtCore.QSize()
         for item in self._item_list:
-            size = size.expandedTo(item.minimumSize())
+            size = size.expandedTo(self._child_size_hint(item))
         m = self.contentsMargins()
         size += QtCore.QSize(m.left() + m.right(), m.top() + m.bottom())
         return size
+
+    @staticmethod
+    def _child_size_hint(item):
+        """The size to place a child at, in flow-layout coordinates.
+
+        Deliberately reads widget.sizeHint() directly rather than
+        item.sizeHint(): QWidgetItem zeroes out any axis whose size policy
+        is QSizePolicy.Ignored (several UniUI Qt components - StatCard,
+        Card, Table, MetricList labels - use Ignored horizontally so a
+        QVBoxLayout/QHBoxLayout parent can shrink them below their natural
+        width). This flow layout has no parent layout deciding the size
+        for it, so it must use the widget's real sizeHint() or every
+        Ignored-policy child collapses to width 0.
+        """
+        return item.widget().sizeHint()
 
     def _do_layout(self, rect, test_only):
         left, top, right, bottom = self.getContentsMargins()
@@ -239,6 +254,7 @@ class _QFlowLayout(QtWidgets.QLayout):
 
         for item in self._item_list:
             wid = item.widget()
+            size = self._child_size_hint(item)
             h_space = self.horizontalSpacing()
             if h_space == -1:
                 h_space = wid.style().layoutSpacing(
@@ -251,17 +267,16 @@ class _QFlowLayout(QtWidgets.QLayout):
                     QtWidgets.QSizePolicy.PushButton,
                     QtWidgets.QSizePolicy.PushButton,
                     QtCore.Qt.Vertical)
-            next_x = x + item.sizeHint().width() + h_space
+            next_x = x + size.width() + h_space
             if next_x - h_space > effective.right() and line_height > 0:
                 x = effective.x()
                 y = y + line_height + v_space
-                next_x = x + item.sizeHint().width() + h_space
+                next_x = x + size.width() + h_space
                 line_height = 0
             if not test_only:
-                item.setGeometry(QtCore.QRect(
-                    QtCore.QPoint(x, y), item.sizeHint()))
+                item.setGeometry(QtCore.QRect(QtCore.QPoint(x, y), size))
             x = next_x
-            line_height = max(line_height, item.sizeHint().height())
+            line_height = max(line_height, size.height())
 
         return y + line_height - rect.y() + bottom
 
@@ -352,7 +367,7 @@ class QtGridAdapter(IGrid):
             if callback in self._resize_callbacks:
                 self._resize_callbacks.remove(callback)
         return Handle(cancel)
-class QtWrapAdapter(VisibilityMixin, EnableMixin, SizeMixin, IWrap):
+class QtWrapAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, IWrap):
     """Qt Wrap adapter using _QFlowLayout."""
 
     def __init__(self):

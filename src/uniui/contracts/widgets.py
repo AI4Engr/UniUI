@@ -171,6 +171,16 @@ class ILineEdit(IWidget):
     @abstractmethod
     def set_fixed_width(self, width: int) -> None:
         pass
+
+    def set_leading_icon(self, icon_name: str) -> None:
+        """Show a small icon before the text (optional, default no-op).
+
+        icon_name should be one of uniui.icons.ADMIN_ICON_NAMES; unknown names
+        are tolerated silently (matches the existing _set_icon_class() /
+        QtButtonAdapter._apply_icon_class() convention elsewhere in the
+        codebase - not every icon exists on every icon set version).
+        """
+        pass
 class ITextArea(IWidget):
     """Text area widget interface"""
 
@@ -510,6 +520,14 @@ class IHBoxLayout(ILayoutOnly):
         No-op on backends without a narrow-screen stacking rule (Qt, Jupyter).
         """
         pass
+
+    def on_resize(self, callback: Callable[[str], None],
+                  breakpoints: "Breakpoints" = None) -> Handle:
+        """Register a callback fired when the container crosses a breakpoint.
+        callback receives "compact" | "medium" | "wide".
+        Default: no-op (backends that support it override this).
+        """
+        return Handle(lambda: None)
 
     def clear(self) -> None:
         """Remove all children. Default: not supported."""

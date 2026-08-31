@@ -182,6 +182,15 @@ class TestHBoxContract(WidgetContractTest):
         inner.add_item(label)
         outer.add_item(inner)
 
+    @pytest.mark.contract
+    def test_on_resize(self, factory):
+        """on_resize() must not raise (default no-op on backends without a
+        narrow-screen breakpoint rule, e.g. Web/Jupyter - see IGrid.on_resize's
+        identical precedent)."""
+        hbox = self.create_widget(factory)
+        handle = hbox.on_resize(lambda mode: None)
+        handle.dispose()
+
 
 class TestGridContract(WidgetContractTest):
     """Contract tests for Grid layout."""
@@ -241,6 +250,160 @@ class TestGridContract(WidgetContractTest):
     def test_is_layout_only(self, factory):
         """See TestVBoxContract.test_is_layout_only."""
         assert isinstance(self.create_widget(factory), ILayoutOnly)
+
+    @pytest.mark.contract
+    def test_on_resize(self, factory):
+        """on_resize() must not raise on any backend."""
+        grid = self.create_widget(factory)
+        handle = grid.on_resize(lambda mode: None)
+        handle.dispose()
+
+
+class TestQtResponsiveOnResize:
+    """Qt-specific: on_resize() must fire with the correct breakpoint mode at
+    each threshold crossing, and must not refire on a resize that doesn't
+    cross a threshold (edge-triggered).
+
+    Uses DEFAULT_BREAKPOINTS' thresholds directly: compact < 720, medium <
+    1200, wide >= 1200 (uniui.contracts.layout.Breakpoints.mode_for).
+    """
+
+    def _assert_thresholds(self, container, on_resize):
+        events = []
+        on_resize(lambda mode: events.append(mode))
+
+        container.resize(719, 100)
+        self._pump()
+        assert events == ["compact"]
+
+        container.resize(720, 100)
+        self._pump()
+        assert events == ["compact", "medium"]
+
+        container.resize(1199, 100)
+        self._pump()
+        assert events == ["compact", "medium"], "no crossing - must not refire"
+
+        container.resize(1200, 100)
+        self._pump()
+        assert events == ["compact", "medium", "wide"]
+
+        container.resize(1600, 100)
+        self._pump()
+        assert events == ["compact", "medium", "wide"], "no crossing - must not refire"
+
+    @staticmethod
+    def _pump():
+        from PySide2 import QtWidgets
+        app = QtWidgets.QApplication.instance()
+        if app is not None:
+            app.processEvents()
+
+    @pytest.mark.contract
+    def test_grid_fires_at_each_threshold_crossing(self):
+        skip_unless_available("qt")
+        from PySide2 import QtWidgets
+        from uniui import create_factory
+
+        factory = create_factory("qt")
+        grid = factory.create_grid(columns=4)
+        for i in range(4):
+            lbl = factory.create_label()
+            lbl.set_text(str(i))
+            grid.add_item(lbl)
+
+        container = QtWidgets.QWidget()
+        container.setLayout(grid.get_native())
+        container.resize(400, 100)
+        container.show()
+        self._pump()
+
+        self._assert_thresholds(container, grid.on_resize)
+
+    @pytest.mark.contract
+    def test_hbox_fires_at_each_threshold_crossing(self):
+        skip_unless_available("qt")
+        from PySide2 import QtWidgets
+        from uniui import create_factory
+
+        factory = create_factory("qt")
+        hbox = factory.create_hbox()
+        lbl = factory.create_label()
+        lbl.set_text("x")
+        hbox.add_item(lbl)
+
+        container = QtWidgets.QWidget()
+        container.setLayout(hbox.get_native())
+        container.resize(400, 60)
+        container.show()
+        self._pump()
+
+        self._assert_thresholds(container, hbox.on_resize)
+
+    @pytest.mark.contract
+    def test_hbox_on_resize_registered_before_attachment(self):
+        """A caller may build the HBox and register on_resize() before ever
+        composing it into a parent widget (e.g. building a page header row
+        before it's added to the shell) - the callback must still fire
+        correctly once the row is later attached and laid out."""
+        skip_unless_available("qt")
+        from PySide2 import QtWidgets
+        from uniui import create_factory
+
+        factory = create_factory("qt")
+        hbox = factory.create_hbox()
+
+        events = []
+        hbox.on_resize(lambda mode: events.append(mode))
+        assert events == [], "must not fire before the layout has a parent widget"
+
+        lbl = factory.create_label()
+        lbl.set_text("x")
+        hbox.add_item(lbl)
+        assert events == [], "must still not fire before attachment"
+
+        container = QtWidgets.QWidget()
+        container.setLayout(hbox.get_native())
+        container.resize(500, 60)
+        container.show()
+        self._pump()
+        assert events == ["compact"]
+
+        container.resize(1200, 60)
+        self._pump()
+        assert events == ["compact", "wide"]
+
+    @pytest.mark.contract
+    def test_grid_on_resize_registered_before_attachment(self):
+        """Same ordering guarantee as HBox - see
+        test_hbox_on_resize_registered_before_attachment."""
+        skip_unless_available("qt")
+        from PySide2 import QtWidgets
+        from uniui import create_factory
+
+        factory = create_factory("qt")
+        grid = factory.create_grid(columns=4)
+
+        events = []
+        grid.on_resize(lambda mode: events.append(mode))
+        assert events == [], "must not fire before the layout has a parent widget"
+
+        for i in range(4):
+            lbl = factory.create_label()
+            lbl.set_text(str(i))
+            grid.add_item(lbl)
+        assert events == [], "must still not fire before attachment"
+
+        container = QtWidgets.QWidget()
+        container.setLayout(grid.get_native())
+        container.resize(500, 100)
+        container.show()
+        self._pump()
+        assert events == ["compact"]
+
+        container.resize(1200, 100)
+        self._pump()
+        assert events == ["compact", "wide"]
 
 
 class TestWrapContract(WidgetContractTest):

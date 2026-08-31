@@ -101,3 +101,37 @@ class TestButtonContract(CommonCapabilitiesContractTest):
         simulate_click(button)
 
         assert called == [1]
+
+
+class TestQtButtonIconTheming:
+    """Regression test: a Qt button carrying an ``uniui-icon-*`` class used
+    to keep its *original* icon color forever after a theme change, because
+    QtButtonAdapter had no ``apply_theme()`` and was never registered with
+    ``track_themed`` - every other themed Qt component already retints
+    automatically, buttons silently didn't."""
+
+    @pytest.mark.contract
+    def test_icon_button_retints_automatically_on_theme_change(self):
+        from tests.contract_framework import skip_unless_available
+        skip_unless_available("qt")
+        from uniui import create_factory, theme_runtime
+
+        factory = create_factory("qt")
+        button = factory.create_button()
+        button.add_class("uniui-icon-arrow_back")
+
+        theme_runtime.set_theme(False)
+        try:
+            before = button.get_native().icon().pixmap(20, 20).toImage()
+            before_px = [before.pixel(x, 10) for x in range(20)]
+
+            theme_runtime.set_theme(True)
+            after = button.get_native().icon().pixmap(20, 20).toImage()
+            after_px = [after.pixel(x, 10) for x in range(20)]
+
+            assert before_px != after_px, (
+                "icon color must change automatically on theme change, "
+                "without any external code re-calling _apply_icon_class"
+            )
+        finally:
+            theme_runtime.set_theme(False)

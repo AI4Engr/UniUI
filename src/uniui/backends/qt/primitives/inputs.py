@@ -310,6 +310,11 @@ _ICON_CLASS_PREFIX = "uniui-icon-"
 class QtButtonAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, IButton):
     """Qt Button adapter - implements snake_case interface convention"""
 
+    def __init__(self, native_widget) -> None:
+        super().__init__(native_widget)
+        from ..runtime import track_themed
+        track_themed(self, native_widget)
+
     def add_class(self, name: str) -> None:
         super().add_class(name)
         if name.startswith(_ICON_CLASS_PREFIX):
@@ -325,7 +330,13 @@ class QtButtonAdapter(NativeMixin, TextMixin, VisibilityMixin, EnableMixin, Size
         try:
             self._native.setIcon(admin_icon(icon_name, get_palette()["text_muted"]))
         except KeyError:
-            pass  # unknown icon name - leave whatever icon is already set
+            return  # unknown icon name - leave whatever icon is already set
+        self._icon_name = icon_name
+
+    def apply_theme(self) -> None:
+        name = getattr(self, "_icon_name", None)
+        if name is not None:
+            self._apply_icon_class(name)
 
     # IEventCapable
     def connect(self, callback) -> Handle:
@@ -337,9 +348,32 @@ class QtLineEditAdapter(ClassMixin, ILineEdit):
 
     def __init__(self, native_widget: QTLineEdit):
         self._native = native_widget
+        from ..runtime import track_themed
+        track_themed(self, native_widget)
 
     def get_native(self):
         return self._native
+
+    def set_leading_icon(self, icon_name: str) -> None:
+        from ..icons import admin_icon
+        from ..runtime import get_palette
+
+        self._leading_icon_name = icon_name
+        if getattr(self, "_leading_icon_action", None) is not None:
+            self._native.removeAction(self._leading_icon_action)
+        try:
+            icon = admin_icon(icon_name, get_palette()["text_muted"])
+        except KeyError:
+            self._leading_icon_action = None
+            return
+        self._leading_icon_action = self._native.addAction(
+            icon, QtWidgets.QLineEdit.LeadingPosition
+        )
+
+    def apply_theme(self) -> None:
+        name = getattr(self, "_leading_icon_name", None)
+        if name is not None:
+            self.set_leading_icon(name)
 
     # ITextCapable
     def set_text(self, text: str):

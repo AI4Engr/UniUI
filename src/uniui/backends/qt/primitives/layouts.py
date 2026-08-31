@@ -41,6 +41,7 @@ class QTHBoxLayout(QtWidgets.QHBoxLayout):
     """Qt Horizontal Box Layout - native implementation"""
     def __init__(self):
         super().__init__()
+        self._width_callback = None
 
     def setAlignmentTop(self):
         super().setAlignment(QtCore.Qt.AlignTop)
@@ -53,6 +54,23 @@ class QTHBoxLayout(QtWidgets.QHBoxLayout):
 
     def addStretch(self):
         super().addStretch()
+
+    def setWidthCallback(self, callback):
+        """Report this layout's actual laid-out content width on every
+        relayout - see QtHBoxAdapter.on_resize for why this (QLayout's own
+        setGeometry, called by Qt whenever the container is resized) is used
+        instead of a child sentinel widget: it fires with the exact content
+        width regardless of how many other children are in the row, and
+        naturally handles on_resize() being registered before this layout is
+        ever attached to a parent widget (setGeometry simply doesn't run
+        until Qt actually lays it out post-attachment - no polling needed).
+        """
+        self._width_callback = callback
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        if self._width_callback is not None:
+            self._width_callback(rect.width())
 class QTTabWidget(QtWidgets.QTabWidget):
     """Qt Tab Widget - native implementation"""
     def __init__(self):
@@ -127,6 +145,10 @@ class QtHBoxAdapter(IHBoxLayout):
 
     def __init__(self, native_layout: QTHBoxLayout):
         self._native = native_layout
+        self._resize_callbacks: List = []
+        self._breakpoints = None
+        self._last_mode: Optional[str] = None
+        self._resize_wired = False
 
     def get_native(self):
         return self._native
@@ -159,6 +181,28 @@ class QtHBoxAdapter(IHBoxLayout):
             item = self._native.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+
+    def on_resize(self, callback, breakpoints=None) -> Handle:
+        from ....core import DEFAULT_BREAKPOINTS
+        bp = breakpoints or DEFAULT_BREAKPOINTS
+        self._breakpoints = bp
+        self._resize_callbacks.append(callback)
+
+        def _on_width(w):
+            mode = bp.mode_for(w)
+            if mode != self._last_mode:
+                self._last_mode = mode
+                for cb in self._resize_callbacks:
+                    safe_call(cb, mode, backend="qt", component="HBox", method="on_resize")
+
+        if not self._resize_wired:
+            self._resize_wired = True
+            self._native.setWidthCallback(_on_width)
+
+        def cancel():
+            if callback in self._resize_callbacks:
+                self._resize_callbacks.remove(callback)
+        return Handle(cancel)
 class QtTabWidgetAdapter(NativeMixin, VisibilityMixin, EnableMixin, SizeMixin, ITabWidget):
     """Qt TabWidget adapter - implements snake_case interface convention"""
 
@@ -287,27 +331,37 @@ class _QFlowLayout(QtWidgets.QLayout):
         if parent.isWidgetType():
             return parent.style().pixelMetric(pm, None, parent)
         return self.spacing()
-class _ResizeNotifier(QtWidgets.QWidget):
-    """Invisible QWidget that fires a callback on resizeEvent — used by layout adapters."""
-    def __init__(self, callback):
-        super().__init__()
-        self._callback = callback
+class QTGridLayout(QtWidgets.QGridLayout):
+    """Qt Grid Layout - native implementation.
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._callback(event.size().width())
+    Only real addition over the plain ``QGridLayout`` base is
+    ``setWidthCallback`` - see ``QTHBoxLayout.setWidthCallback`` for why
+    ``setGeometry`` (rather than a child sentinel widget) is the reliable
+    way to observe the container's actual laid-out width for on_resize().
+    """
+    def __init__(self):
+        super().__init__()
+        self._width_callback = None
+
+    def setWidthCallback(self, callback):
+        self._width_callback = callback
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        if self._width_callback is not None:
+            self._width_callback(rect.width())
 class QtGridAdapter(IGrid):
     """Qt Grid adapter using QGridLayout."""
 
     def __init__(self, columns: int = 12):
-        self._native = QtWidgets.QGridLayout()
+        self._native = QTGridLayout()
         self._columns = columns
         self._auto_row = 0
         self._auto_col = 0
         self._resize_callbacks: List = []
         self._breakpoints = None
         self._last_mode: Optional[str] = None
-        self._notifier: Optional[_ResizeNotifier] = None
+        self._resize_wired = False
 
     def get_native(self):
         return self._native
@@ -358,10 +412,9 @@ class QtGridAdapter(IGrid):
                 for cb in self._resize_callbacks:
                     safe_call(cb, mode, backend="qt", component="Grid", method="on_resize")
 
-        if self._notifier is None:
-            self._notifier = _ResizeNotifier(_on_width)
-            self._native.addWidget(self._notifier, 0, 0, 1, 1)
-            self._notifier.hide()
+        if not self._resize_wired:
+            self._resize_wired = True
+            self._native.setWidthCallback(_on_width)
 
         def cancel():
             if callback in self._resize_callbacks:

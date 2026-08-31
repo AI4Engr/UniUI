@@ -34,15 +34,15 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Qt
 
 from .backends.qt.primitives import (
-    QTCheckbox, QTComboBox, QTDropdown, QTGroupBox, QTHBoxLayout, QTImage,
-    QTLabel, QTLineEdit, QTNumberInput, QTPushButton, QTRadioGroup, QTSlider,
-    QTSwitch, QTTabWidget, QTTextarea, QTVBoxLayout, QtButtonAdapter,
-    QtCheckboxAdapter, QtComboBoxAdapter, QtDropdownAdapter, QtGridAdapter,
-    QtGroupBoxAdapter, QtHBoxAdapter, QtImageAdapter, QtLabelAdapter,
-    QtLineEditAdapter, QtNumberInputAdapter, QtOverlayAdapter,
-    QtRadioGroupAdapter, QtScrollViewAdapter, QtSliderAdapter,
-    QtSplitPaneAdapter, QtSwitchAdapter, QtTabWidgetAdapter,
+    QTCheckbox, QTComboBox, QTDropdown, QTGridLayout, QTGroupBox,
+    QTHBoxLayout, QTImage, QTLabel, QTLineEdit, QTNumberInput, QTPushButton,
+    QTRadioGroup, QTSlider, QTSwitch, QTTabWidget, QTTextarea, QTVBoxLayout,
+    QtButtonAdapter, QtCheckboxAdapter, QtComboBoxAdapter, QtDropdownAdapter,
+    QtGridAdapter, QtGroupBoxAdapter, QtHBoxAdapter, QtImageAdapter,
+    QtLabelAdapter, QtLineEditAdapter, QtNumberInputAdapter,
+    QtOverlayAdapter, QtRadioGroupAdapter, QtScrollViewAdapter,
+    QtSliderAdapter, QtSplitPaneAdapter, QtSwitchAdapter, QtTabWidgetAdapter,
     QtTextAreaAdapter, QtVBoxAdapter, QtWrapAdapter,
-    _BaseQtWidgetFactory, _QFlowLayout, _ResizeNotifier,
+    _BaseQtWidgetFactory, _QFlowLayout,
     check_connection, convert_control_text, has_method,
 )

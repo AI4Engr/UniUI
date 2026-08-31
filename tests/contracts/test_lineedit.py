@@ -166,3 +166,64 @@ class TestLineEditContract(
 
         line_edit.set_text("Hello")  # must not raise
         assert called == [1]
+
+    @pytest.mark.contract
+    def test_set_leading_icon(self, factory):
+        """set_leading_icon() must not raise on any backend (default no-op
+        on backends without an icon slot, e.g. Jupyter)."""
+        line_edit = self.create_widget(factory)
+        line_edit.set_leading_icon("search")
+
+
+class TestLineEditLeadingIconRendering:
+    """Backend-specific assertions that set_leading_icon() actually renders
+    something, not just that it's a silent no-op everywhere."""
+
+    def test_qt_leading_icon_adds_a_real_action_with_a_non_null_icon(self):
+        from tests.contract_framework import skip_unless_available
+        skip_unless_available("qt")
+        from uniui import create_factory
+
+        line_edit = create_factory("qt").create_line_edit()
+        line_edit.set_leading_icon("search")
+
+        actions = line_edit.get_native().actions()
+        assert actions, "expected addAction() to have registered a leading icon action"
+        assert not actions[0].icon().isNull()
+
+    def test_web_leading_icon_adds_a_prepend_slot_with_the_icon_class(self):
+        from tests.contract_framework import skip_unless_available
+        skip_unless_available("web")
+        from uniui import create_factory
+
+        line_edit = create_factory("web").create_line_edit()
+        line_edit.set_leading_icon("search")
+
+        native = line_edit.get_native()
+        assert "prepend" in native.slots
+        assert "uniui-icon-search" in native.slots["prepend"].template
+
+    def test_qt_leading_icon_retints_automatically_on_theme_change(self):
+        from tests.contract_framework import skip_unless_available
+        skip_unless_available("qt")
+        from uniui import create_factory, theme_runtime
+
+        line_edit = create_factory("qt").create_line_edit()
+        line_edit.set_leading_icon("search")
+
+        theme_runtime.set_theme(False)
+        try:
+            action = line_edit.get_native().actions()[0]
+            before = action.icon().pixmap(20, 20).toImage()
+            before_px = [before.pixel(x, 10) for x in range(20)]
+
+            theme_runtime.set_theme(True)
+            action_after = line_edit.get_native().actions()[0]
+            after = action_after.icon().pixmap(20, 20).toImage()
+            after_px = [after.pixel(x, 10) for x in range(20)]
+
+            assert before_px != after_px, (
+                "leading icon color must change automatically on theme change"
+            )
+        finally:
+            theme_runtime.set_theme(False)

@@ -127,6 +127,11 @@ class WebLineEditAdapter(_WebAdapter, ILineEdit):
     def is_enabled(self) -> bool:
         return self._enabled
 
+    def set_leading_icon(self, icon_name: str) -> None:
+        self._native.add_slot(
+            "prepend", f'<span class="uniui-svg-icon uniui-icon-{icon_name}"></span>'
+        )
+
     def _apply_theme(self) -> None:
         self._native.style(
             f"color: {T['fg']}; background: {T['bg_input']}; "

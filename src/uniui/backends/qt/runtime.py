@@ -85,13 +85,39 @@ def set_theme(dark: bool) -> bool:
     return theme_runtime.set_theme(dark)
 
 
+class _DestroyWatcher(QtCore.QObject):
+    """Fallback for native classes that shadow QObject.connect (e.g.
+    QTPushButton.connect(self, function) for the click signal, needed for
+    the snake_case adapter API) - PySide2/Shiboken resolves
+    ``native_widget.destroyed.connect(...)`` through the *instance's*
+    ``connect`` override in that case, not ``SignalInstance.connect``,
+    raising a TypeError. installEventFilter + QEvent.Destroy sidesteps the
+    shadowed name entirely (verified directly: the same TypeError reproduces
+    on any QObject subclass that merely defines a ``connect`` method, and
+    disappears once destruction is observed this way instead).
+    """
+    def __init__(self, callback) -> None:
+        super().__init__()
+        self._callback = callback
+
+    def eventFilter(self, _obj, event) -> bool:
+        if event.type() == QtCore.QEvent.Destroy:
+            self._callback()
+        return False
+
+
 def track_themed(adapter, native_widget) -> None:
     """Keep the adapter alive for as long as its native Qt widget is alive."""
     THEMED_ADAPTERS.add(adapter)
     native_widget._uniui_theme_adapter = adapter
-    native_widget.destroyed.connect(
-        lambda *_args, tracked=adapter: THEMED_ADAPTERS.discard(tracked)
-    )
+    discard = lambda *_args, tracked=adapter: THEMED_ADAPTERS.discard(tracked)
+    try:
+        native_widget.destroyed.connect(discard)
+    except TypeError:
+        # native_widget's class shadows connect() - see _DestroyWatcher.
+        watcher = _DestroyWatcher(discard)
+        native_widget.installEventFilter(watcher)
+        native_widget._uniui_destroy_watcher = watcher
 
 
 def as_widget(widget) -> QtWidgets.QWidget:

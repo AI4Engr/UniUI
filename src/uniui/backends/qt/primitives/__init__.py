@@ -18,7 +18,7 @@ from .inputs import (
     QtSliderAdapter, QtSwitchAdapter, QtTextAreaAdapter,
 )
 from .layouts import (
-    QTHBoxLayout, QTTabWidget, QTVBoxLayout, _QFlowLayout, _ResizeNotifier,
+    QTGridLayout, QTHBoxLayout, QTTabWidget, QTVBoxLayout, _QFlowLayout,
     QtGridAdapter, QtHBoxAdapter, QtOverlayAdapter, QtScrollViewAdapter,
     QtSeparatorAdapter, QtSplitPaneAdapter, QtTabWidgetAdapter, QtVBoxAdapter,
     QtWrapAdapter,
@@ -31,10 +31,10 @@ from .text import (
 __all__ = [
     "_BaseQtWidgetFactory",
     "_QFlowLayout",
-    "_ResizeNotifier",
     "QTCheckbox",
     "QTComboBox",
     "QTDropdown",
+    "QTGridLayout",
     "QTGroupBox",
     "QTHBoxLayout",
     "QTImage",

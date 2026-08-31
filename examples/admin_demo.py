@@ -114,7 +114,7 @@ def _page_frame(title, subtitle, action_text=""):
     f = uniui._get_factory()
     page = f.create_vbox()
     page.set_spec(LayoutSpec(gap=18))
-    page.add_class("uniui-demo-page")
+    page.add_class("uniui-page")
     page_native = page.get_native() if hasattr(page, "get_native") else page
     if callable(getattr(page_native, "tooltip", None)):
         page_native.tooltip(title)  # NiceGUI element
@@ -123,14 +123,14 @@ def _page_frame(title, subtitle, action_text=""):
 
     heading = f.create_hbox()
     heading.set_spec(LayoutSpec(gap=16))
-    heading.add_class("uniui-demo-heading")
+    heading.add_class("uniui-page-heading")
     copy = f.create_vbox()
     copy.set_spec(LayoutSpec(gap=4))
     # The breadcrumb in the header bar already names the page; the H1 here
     # would just repeat it, so only the descriptive subtitle is shown.
     subtitle_label = f.create_label()
     subtitle_label.set_text(subtitle)
-    subtitle_label.add_class("uniui-demo-subtitle")
+    subtitle_label.add_class("uniui-page-subtitle")
     copy.add_item(subtitle_label)
     heading.add_item_with_spec(copy, LayoutItem(copy, grow=1))
 
@@ -138,7 +138,7 @@ def _page_frame(title, subtitle, action_text=""):
     if action_text:
         action = f.create_button()
         action.set_text(action_text)
-        action.add_class("uniui-demo-primary-action")
+        action.add_class("uniui-shell-primary-action")
         _set_props(action, "no-caps unelevated")
         heading.add_item(action)
 
@@ -178,7 +178,7 @@ def dashboard_page(_ctx):
 
     stats = f.create_wrap()
     stats.set_spec(LayoutSpec(gap=14))
-    stats.add_class("uniui-demo-stats")
+    stats.add_class("uniui-page-stats")
     for card in cards:
         stats.add_item(card)
 
@@ -268,7 +268,7 @@ def dashboard_page(_ctx):
     selected = State("Click a row to inspect")
     hint = f.create_label()
     bind_text(hint, selected)
-    hint.add_class("uniui-demo-hint")
+    hint.add_class("uniui-page-hint")
     table.on_row_click(lambda row: selected.set(
         f"{row['id']}  ·  {row['customer']}  ·  {row['status']}"
     ))
@@ -391,10 +391,10 @@ def _labeled_field(label_text, control):
     f = uniui._get_factory()
     field = f.create_vbox()
     field.set_spec(LayoutSpec(gap=6))
-    field.add_class("uniui-demo-field")
+    field.add_class("uniui-page-field")
     label = f.create_label()
     label.set_text(label_text)
-    label.add_class("uniui-demo-field-label")
+    label.add_class("uniui-page-field-label")
     field.add_item(label)
     field.add_item(control)
     return field
@@ -427,7 +427,7 @@ def components_page(_ctx):
 
     selection_hint = f.create_label()
     selection_hint.set_text("Editor · Active")
-    selection_hint.add_class("uniui-demo-hint")
+    selection_hint.add_class("uniui-page-hint")
 
     def _update_hint():
         selection_hint.set_text(f"{role_dropdown.get_text()} · {status_dropdown.get_text()}")
@@ -627,10 +627,10 @@ def create_admin_ui(framework="auto", debug=False):
     router = _build_router()
 
     header = f.create_hbox()
-    header.add_class("uniui-demo-header-content")
+    header.add_class("uniui-shell-header-content")
     header.set_spec(LayoutSpec(gap=8))
-    logo = f.create_label(); logo.set_text("U"); logo.add_class("uniui-demo-logo-mark")
-    product = f.create_label(); product.set_text("UniUI Admin"); product.add_class("uniui-demo-product")
+    logo = f.create_label(); logo.set_text("U"); logo.add_class("uniui-shell-logo-mark")
+    product = f.create_label(); product.set_text("UniUI Admin"); product.add_class("uniui-shell-product")
     beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
     back = f.create_button()
     forward = f.create_button()
@@ -639,8 +639,8 @@ def create_admin_ui(framework="auto", debug=False):
     _set_props(forward, "flat round dense")
     _set_icon_class(back, "arrow_back")
     _set_icon_class(forward, "arrow_forward")
-    back.add_class("uniui-demo-icon-button")
-    forward.add_class("uniui-demo-icon-button")
+    back.add_class("uniui-shell-icon-button")
+    forward.add_class("uniui-shell-icon-button")
     back.connect(router.back)
     forward.connect(router.forward)
     breadcrumb = f.create_breadcrumb()
@@ -652,7 +652,7 @@ def create_admin_ui(framework="auto", debug=False):
     breadcrumb.on_click(router.push)
     theme_button = f.create_button()
     theme_button.set_text("Dark mode")
-    theme_button.add_class("uniui-demo-theme-button")
+    theme_button.add_class("uniui-shell-theme-button")
     _set_props(theme_button, "flat no-caps")
     _set_icon_class(theme_button, "dark_mode")
     header.add_item(logo)
@@ -662,7 +662,7 @@ def create_admin_ui(framework="auto", debug=False):
     header.add_item(forward)
     header.add_item_with_spec(breadcrumb, LayoutItem(breadcrumb, grow=1))
     header.add_item(theme_button)
-    avatar = f.create_label(); avatar.set_text("AJ"); avatar.add_class("uniui-demo-avatar")
+    avatar = f.create_label(); avatar.set_text("AJ"); avatar.add_class("uniui-shell-avatar")
     header.add_item(avatar)
 
     sidebar = f.create_sidebar()
@@ -724,64 +724,6 @@ def _main_browser(framework):
 # Admin stylesheet
 # ---------------------------------------------------------------------------
 
-def _admin_stylesheet():
-    """Demo-only chrome, layered on top of the library's base widget style.
-
-    Ordinary controls (QPushButton, QLineEdit, QComboBox, QTabWidget, ...) are
-    styled by uniui.qt_style so any Qt app gets them, not just this demo.
-    Only the demo's own property-tagged widgets are defined here.
-    """
-    from uniui.qt_components import get_admin_palette
-    from uniui.qt_style import base_stylesheet
-
-    p = get_admin_palette()
-    return base_stylesheet() + """
-QLabel[uniui-demo-subtitle="true"] {
-    color: %(text)s;
-    font-size: 18px;
-    font-weight: 650;
-}
-QLabel[uniui-demo-hint="true"] {
-    color: %(text_muted)s;
-    background: %(surface_subtle)s;
-    border: 1px solid %(border)s;
-    border-radius: 8px;
-    padding: 8px 10px;
-}
-QLabel[uniui-demo-field-label="true"] {
-    color: %(text_muted)s;
-    font-size: 12px;
-    font-weight: 650;
-}
-QWidget[topBar="1"] { background: %(header_bg)s; }
-QLabel[logoMark="1"] {
-    background: %(accent)s; color: white; border-radius: 8px;
-    font-size: 15px; font-weight: 800;
-}
-QLabel[productName="1"] { color: %(text)s; font-size: 15px; font-weight: 700; }
-QFrame[headerSeparator="1"] { color: %(header_border)s; background: transparent; }
-QLabel[avatar="1"] {
-    background: %(avatar_bg)s; color: %(avatar_fg)s;
-    border-radius: 16px; font-size: 11px; font-weight: 700;
-}
-QLabel[systemStatus="1"] { color: %(ok)s; font-size: 11px; }
-QLabel[footerMeta="1"] { color: %(text_muted)s; font-size: 11px; }
-QToolButton[headerButton="1"] {
-    background: transparent; color: %(text_muted)s; border: none;
-    border-radius: 7px; padding: 5px 8px; min-width: 18px; min-height: 18px;
-}
-QToolButton[headerButton="1"]:hover { background: %(surface_subtle)s; color: %(text)s; }
-QLineEdit[headerSearch="1"] {
-    background: %(surface_subtle)s; border: 1px solid transparent;
-    border-radius: 7px; padding: 5px 10px; font-size: 12px;
-    color: %(text_muted)s;
-}
-QLineEdit[headerSearch="1"]:focus {
-    background: %(bg)s; border: 1px solid %(border)s; color: %(text)s;
-}
-""" % p
-
-
 # ---------------------------------------------------------------------------
 # Main (Qt shell only - the pages above are cross-backend; the shell is not
 # unified yet, see notes/admin_demo_unification_plan.md Step 3)
@@ -820,6 +762,7 @@ def main():
 
     from uniui.routing import RouterView, sync_breadcrumb
     from uniui.qt_components import get_admin_palette, set_admin_theme
+    from uniui.qt_style import base_stylesheet, tag_native
     from PySide2 import QtWidgets, QtCore
 
     _ADMIN_THEME.set("light")
@@ -848,7 +791,7 @@ def main():
             search.setVisible(width >= 850)
 
     header_w = _ResponsiveTopBar()
-    header_w.setProperty("topBar", "1")
+    tag_native(header_w, "uniui-shell-topbar")
     header_w.setMinimumWidth(0)
     header_w.setSizePolicy(
         QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
@@ -857,33 +800,42 @@ def main():
     hl.setContentsMargins(4, 0, 4, 0)
     hl.setSpacing(7)
 
-    logo_mark = QtWidgets.QLabel("U")
-    logo_mark.setProperty("logoMark", "1")
-    logo_mark.setAlignment(QtCore.Qt.AlignCenter)
-    logo_mark.setFixedSize(32, 32)
-    hl.addWidget(logo_mark)
-    logo = QtWidgets.QLabel("UniUI Admin")
-    logo.setProperty("productName", "1")
-    hl.addWidget(logo)
+    logo_mark = f.create_label()
+    logo_mark.set_text("U")
+    logo_mark.add_class("uniui-shell-logo-mark")
+    logo_mark_native = logo_mark.get_native()
+    logo_mark_native.setAlignment(QtCore.Qt.AlignCenter)
+    logo_mark_native.setFixedSize(32, 32)
+    hl.addWidget(logo_mark_native)
+    logo = f.create_label()
+    logo.set_text("UniUI Admin")
+    logo.add_class("uniui-shell-product")
+    logo_native = logo.get_native()
+    hl.addWidget(logo_native)
 
     beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
     hl.addWidget(beta_badge.get_native())
 
-    sep = QtWidgets.QFrame()
-    sep.setProperty("headerSeparator", "1")
-    sep.setFrameShape(QtWidgets.QFrame.VLine)
-    hl.addWidget(sep)
+    sep = f.create_separator("vertical")
+    sep.add_class("uniui-shell-separator")
+    hl.addWidget(sep.get_native())
 
-    back_btn = QtWidgets.QToolButton()
-    fwd_btn = QtWidgets.QToolButton()
-    for button, tip in ((back_btn, "Go back"), (fwd_btn, "Go forward")):
-        button.setProperty("headerButton", "1")
-        button.setToolTip(tip)
-        button.setCursor(QtCore.Qt.PointingHandCursor)
-    back_btn.clicked.connect(router.back)
-    fwd_btn.clicked.connect(router.forward)
-    hl.addWidget(back_btn)
-    hl.addWidget(fwd_btn)
+    back = f.create_button(); forward = f.create_button()
+    for btn, icon_name, tip in (
+        (back, "arrow_back", "Go back"),
+        (forward, "arrow_forward", "Go forward"),
+    ):
+        btn.set_text("")
+        _set_icon_class(btn, icon_name)
+        btn.add_class("uniui-shell-icon-button")
+        btn_native = btn.get_native()
+        btn_native.setToolTip(tip)
+        btn_native.setCursor(QtCore.Qt.PointingHandCursor)
+    back.connect(router.back)
+    forward.connect(router.forward)
+    back_native, fwd_native = back.get_native(), forward.get_native()
+    hl.addWidget(back_native)
+    hl.addWidget(fwd_native)
 
     # Breadcrumb in header
     breadcrumb = f.create_breadcrumb()
@@ -896,35 +848,44 @@ def main():
     breadcrumb.on_click(router.push)
     hl.addWidget(breadcrumb.get_native(), stretch=1)
 
-    global_search = QtWidgets.QLineEdit()
-    global_search.setProperty("headerSearch", "1")
-    global_search.setPlaceholderText("Search…")
-    global_search.setMaximumWidth(180)
-    search_action = global_search.addAction(
+    global_search = f.create_line_edit()
+    global_search.add_class("uniui-shell-header-search")
+    global_search_native = global_search.get_native()
+    global_search_native.setPlaceholderText("Search…")
+    global_search_native.setMaximumWidth(180)
+    search_action = global_search_native.addAction(
         _header_icon("search", get_admin_palette()["text_muted"]),
         QtWidgets.QLineEdit.LeadingPosition,
     )
-    hl.addWidget(global_search)
+    hl.addWidget(global_search_native)
 
-    theme_btn = QtWidgets.QToolButton()
-    theme_btn.setProperty("headerButton", "1")
-    theme_btn.setToolTip("Toggle dark mode")
-    theme_btn.setCursor(QtCore.Qt.PointingHandCursor)
-    hl.addWidget(theme_btn)
-    header_w.set_responsive_widgets(logo, global_search)
+    theme_btn = f.create_button()
+    theme_btn.set_text("")
+    _set_icon_class(theme_btn, "dark_mode")
+    theme_btn.add_class("uniui-shell-icon-button")
+    theme_btn_native = theme_btn.get_native()
+    theme_btn_native.setToolTip("Toggle dark mode")
+    theme_btn_native.setCursor(QtCore.Qt.PointingHandCursor)
+    hl.addWidget(theme_btn_native)
+    header_w.set_responsive_widgets(logo_native, global_search_native)
 
-    bell = QtWidgets.QToolButton()
-    bell.setProperty("headerButton", "1")
-    bell.setToolTip("Notifications")
-    bell.setCursor(QtCore.Qt.PointingHandCursor)
-    hl.addWidget(bell)
+    bell = f.create_button()
+    bell.set_text("")
+    _set_icon_class(bell, "notifications")
+    bell.add_class("uniui-shell-icon-button")
+    bell_native = bell.get_native()
+    bell_native.setToolTip("Notifications")
+    bell_native.setCursor(QtCore.Qt.PointingHandCursor)
+    hl.addWidget(bell_native)
 
-    avatar = QtWidgets.QLabel("AJ")
-    avatar.setProperty("avatar", "1")
-    avatar.setAlignment(QtCore.Qt.AlignCenter)
-    avatar.setFixedSize(32, 32)
-    avatar.setToolTip("Alice Johnson · Administrator")
-    hl.addWidget(avatar)
+    avatar = f.create_label()
+    avatar.set_text("AJ")
+    avatar.add_class("uniui-shell-avatar")
+    avatar_native = avatar.get_native()
+    avatar_native.setAlignment(QtCore.Qt.AlignCenter)
+    avatar_native.setFixedSize(32, 32)
+    avatar_native.setToolTip("Alice Johnson · Administrator")
+    hl.addWidget(avatar_native)
 
     # ── Sidebar + content ─────────────────────────────────────────────────────
     sidebar = f.create_sidebar()
@@ -955,19 +916,20 @@ def main():
     footer = QtWidgets.QWidget()
     footer_layout = QtWidgets.QHBoxLayout(footer)
     footer_layout.setContentsMargins(0, 0, 0, 0)
-    ready = QtWidgets.QLabel("●  All systems operational")
-    ready.setProperty("systemStatus", "1")
-    version = QtWidgets.QLabel("UniUI admin preview · v0.1")
-    version.setProperty("footerMeta", "1")
-    for label in (ready, version):
+    ready = f.create_label(); ready.set_text("●  All systems operational")
+    ready.add_class("uniui-shell-status-ok")
+    version = f.create_label(); version.set_text("UniUI admin preview · v0.1")
+    version.add_class("uniui-shell-footer-meta")
+    ready_native, version_native = ready.get_native(), version.get_native()
+    for label in (ready_native, version_native):
         label.setMinimumWidth(0)
         label.setSizePolicy(
             QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
         )
-    ready.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-    version.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-    footer_layout.addWidget(ready, stretch=1)
-    footer_layout.addWidget(version, stretch=1)
+    ready_native.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+    version_native.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+    footer_layout.addWidget(ready_native, stretch=1)
+    footer_layout.addWidget(version_native, stretch=1)
     shell.set_footer(_NativeWrap(footer))
 
     def _restyle_shell(dark: bool):
@@ -975,17 +937,13 @@ def main():
         stands right now. Does not touch THEME itself -- set_admin_theme()
         would force it back to the plain light/dark palette, clobbering a
         named theme picked from the settings-page dropdown."""
-        palette = get_admin_palette()
-        icon_color = palette["text_muted"]
-        back_btn.setIcon(_header_icon("back", icon_color))
-        fwd_btn.setIcon(_header_icon("forward", icon_color))
-        bell.setIcon(_header_icon("notifications", icon_color))
-        search_action.setIcon(_header_icon("search", icon_color))
-        theme_btn.setIcon(_header_icon(
-            "light_mode" if dark else "dark_mode", icon_color
-        ))
-        theme_btn.setToolTip("Switch to light mode" if dark else "Switch to dark mode")
-        shell.get_native().setStyleSheet(_admin_stylesheet())
+        _set_icon_class(back, "arrow_back")
+        _set_icon_class(forward, "arrow_forward")
+        _set_icon_class(bell, "notifications")
+        search_action.setIcon(_header_icon("search", get_admin_palette()["text_muted"]))
+        _set_icon_class(theme_btn, "light_mode" if dark else "dark_mode")
+        theme_btn_native.setToolTip("Switch to light mode" if dark else "Switch to dark mode")
+        shell.get_native().setStyleSheet(base_stylesheet())
 
     def _apply_theme(dark: bool):
         set_admin_theme(dark)
@@ -999,7 +957,7 @@ def main():
         _apply_theme(not uniui.is_dark())
 
     _THEME_TOGGLE = _toggle_theme
-    theme_btn.clicked.connect(_toggle_theme)
+    theme_btn.connect(_toggle_theme)
     _apply_theme(False)
 
     global _QT_RESTYLE_HOOK
@@ -1008,7 +966,7 @@ def main():
     router.push("/dashboard")
 
     show_ui(shell, title="UniUI Admin Demo", width=1280, height=780,
-            stylesheet=_admin_stylesheet())
+            stylesheet=base_stylesheet())
 
 
 if __name__ == "__main__":

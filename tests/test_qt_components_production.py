@@ -270,14 +270,15 @@ print("OK")
 
 def test_qt_admin_demo_semantic_classes_still_style_real_widgets():
     """Regression: admin_demo.py's pages style themselves via
-    widget.add_class("uniui-demo-...") - a real IWidget capability
+    widget.add_class("uniui-page-...") - a real IWidget capability
     (src/uniui/_adapter_mixins.py ClassMixin) backed on Qt by a boolean
     dynamic property + QSS attribute selector ([name="true"]), repolished
     via unpolish()/polish() so it takes effect immediately.
-    _admin_stylesheet() selects on the same class names, so page subtitles
-    should render as an 18px/650-weight heading, not fall back to plain
-    13px body text (caught by measuring the real widget's rendered font,
-    not by eyeballing a screenshot - the visual difference is easy to
+    uniui.qt_style.base_stylesheet() selects on the same class names (this
+    vocabulary is a real library capability, not admin_demo.py-specific), so
+    page subtitles should render as an 18px/650-weight heading, not fall back
+    to plain 13px body text (caught by measuring the real widget's rendered
+    font, not by eyeballing a screenshot - the visual difference is easy to
     miss)."""
     pytest.importorskip("PySide2")
     import uniui
@@ -290,8 +291,10 @@ def test_qt_admin_demo_semantic_classes_still_style_real_widgets():
     # push_named() below) re-applies the base stylesheet and would
     # clobber a custom one set beforehand.
     uniui.use("qt")
+    from uniui.qt_style import base_stylesheet
+
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-    app.setStyleSheet(demo._admin_stylesheet())
+    app.setStyleSheet(base_stylesheet())
     router = demo._build_router()
     view = RouterView(router)
     root = view.get_native()
@@ -300,7 +303,7 @@ def test_qt_admin_demo_semantic_classes_still_style_real_widgets():
         app.processEvents()
         subtitle = next(
             lbl for lbl in root.findChildren(QtWidgets.QLabel)
-            if lbl.property("uniui-demo-subtitle") is True
+            if lbl.property("uniui-page-subtitle") is True
         )
         assert subtitle.font().pixelSize() == 18
         assert subtitle.font().bold()

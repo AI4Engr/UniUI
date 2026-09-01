@@ -30,8 +30,8 @@ def _page_and_shell_css() -> str:
         .uniui-shell-avatar {width:32px!important;height:32px;min-width:32px;display:grid;place-items:center;border-radius:50%;
           background:#dbeafe;color:#1d4ed8!important;font-size:11px;font-weight:750}
         .uniui-web-admin .uniui-shell-primary-action {white-space:nowrap;min-width:max-content;background:var(--uniui-accent)!important;color:#fff!important}
-        .uniui-web-admin .uniui-web-status-ok {color:var(--uniui-ok)!important;font-size:12px;font-weight:600}
-        .uniui-web-admin .uniui-web-footer-meta {color:var(--uniui-text_muted)!important;font-size:12px}
+        .uniui-web-admin .uniui-shell-status-ok {color:var(--uniui-ok)!important;font-size:12px;font-weight:600}
+        .uniui-web-admin .uniui-shell-footer-meta {color:var(--uniui-text_muted)!important;font-size:12px}
 """
 
 def _page_trailer_css() -> str:

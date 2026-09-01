@@ -75,9 +75,9 @@ def _page_and_shell_css() -> str:
   white-space:nowrap;background:var(--uniui-accent)!important;color:#fff!important;
   border-color:var(--uniui-accent)!important;
 }}
-.uniui-web-status-ok, .uniui-web-status-ok .widget-label {{
+.uniui-shell-status-ok, .uniui-shell-status-ok .widget-label {{
   color:var(--uniui-ok)!important;font-size:12px;font-weight:600;
 }}
-.uniui-web-footer-meta, .uniui-web-footer-meta .widget-label {{
+.uniui-shell-footer-meta, .uniui-shell-footer-meta .widget-label {{
   color:var(--uniui-text_muted)!important;font-size:12px;
 }}"""

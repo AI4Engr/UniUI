@@ -31,12 +31,13 @@ def _toggle_admin_theme():
         _THEME_TOGGLE()
 
 
-#: Set by main()'s Qt path to its _apply_theme(dark) closure. Qt's
+#: Set by create_admin_ui() to its apply_theme(dark) closure. Qt's
 #: stylesheet is a one-shot string baked into setStyleSheet() at apply
 #: time, not a live binding like Web's CSS variables or Jupyter's re-emitted
 #: <style> node -- theme_runtime.set_active_theme() alone updates THEME but
-#: never repaints an already-built Qt widget tree. Web/Jupyter don't need
-#: this hook: their refresh_theme_* already reads THEME live.
+#: never repaints an already-built Qt widget tree. apply_theme() itself
+#: no-ops the repaint on Web/Jupyter (their shell native has no
+#: setStyleSheet), so this hook is safe to set unconditionally.
 _QT_RESTYLE_HOOK = None
 
 
@@ -606,12 +607,12 @@ def _build_router():
 
 
 def create_admin_ui(framework="auto", debug=False):
-    """Build the Admin dashboard shell and return it (Jupyter and Web only).
+    """Build the Admin dashboard shell and return it - all three backends.
 
     Mirrors the create_*_ui(framework) -> show_ui(layout, ...) pattern used
     by the other examples (create_bmi_ui, create_sysmon_ui, ...).
     """
-    global _THEME_TOGGLE
+    global _THEME_TOGGLE, _QT_RESTYLE_HOOK
 
     use(framework)
 
@@ -628,10 +629,12 @@ def create_admin_ui(framework="auto", debug=False):
 
     header = f.create_hbox()
     header.add_class("uniui-shell-header-content")
-    header.set_spec(LayoutSpec(gap=8))
+    header.set_spec(LayoutSpec(gap=7))
     logo = f.create_label(); logo.set_text("U"); logo.add_class("uniui-shell-logo-mark")
     product = f.create_label(); product.set_text("UniUI Admin"); product.add_class("uniui-shell-product")
     beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
+    sep = f.create_separator("vertical")
+    sep.add_class("uniui-shell-separator")
     back = f.create_button()
     forward = f.create_button()
     back.set_text(""); forward.set_text("")
@@ -641,6 +644,8 @@ def create_admin_ui(framework="auto", debug=False):
     _set_icon_class(forward, "arrow_forward")
     back.add_class("uniui-shell-icon-button")
     forward.add_class("uniui-shell-icon-button")
+    _set_tooltip(back, "Go back")
+    _set_tooltip(forward, "Go forward")
     back.connect(router.back)
     forward.connect(router.forward)
     breadcrumb = f.create_breadcrumb()
@@ -650,20 +655,44 @@ def create_admin_ui(framework="auto", debug=False):
          {"label": ctx.name.replace("-", " ").title()}]
     ))
     breadcrumb.on_click(router.push)
+    global_search = f.create_line_edit()
+    global_search.add_class("uniui-shell-header-search")
+    global_search.set_leading_icon("search")
+    _set_placeholder(global_search, "Search…")
     theme_button = f.create_button()
-    theme_button.set_text("Dark mode")
-    theme_button.add_class("uniui-shell-theme-button")
-    _set_props(theme_button, "flat no-caps")
+    theme_button.set_text("")
+    theme_button.add_class("uniui-shell-icon-button")
     _set_icon_class(theme_button, "dark_mode")
+    _set_tooltip(theme_button, "Toggle dark mode")
+    bell = f.create_button()
+    bell.set_text("")
+    bell.add_class("uniui-shell-icon-button")
+    _set_icon_class(bell, "notifications")
+    _set_tooltip(bell, "Notifications")
+    avatar = f.create_label(); avatar.set_text("AJ"); avatar.add_class("uniui-shell-avatar")
+    _set_tooltip(avatar, "Alice Johnson · Administrator")
+
     header.add_item(logo)
     header.add_item(product)
     header.add_item(beta_badge)
+    header.add_item(sep)
     header.add_item(back)
     header.add_item(forward)
     header.add_item_with_spec(breadcrumb, LayoutItem(breadcrumb, grow=1))
+    header.add_item(global_search)
     header.add_item(theme_button)
-    avatar = f.create_label(); avatar.set_text("AJ"); avatar.add_class("uniui-shell-avatar")
+    header.add_item(bell)
     header.add_item(avatar)
+
+    def _sync_header_responsive(mode):
+        # Approximated onto DEFAULT_BREAKPOINTS' three-mode scheme
+        # (720/1200) since on_resize() reports a mode name, not a raw
+        # pixel width - not identical to the old 650/850 two-value scheme
+        # this replaced, but the closest equivalent behavior.
+        (product.show() if mode != "compact" else product.hide())
+        (global_search.show() if mode == "wide" else global_search.hide())
+
+    header.on_resize(_sync_header_responsive)
 
     sidebar = f.create_sidebar()
     sidebar.add_group("Workspace")
@@ -687,16 +716,29 @@ def create_admin_ui(framework="auto", debug=False):
     if debug and hasattr(shell, "set_debug"):
         shell.set_debug(True)
     footer = f.create_hbox()
-    ready = f.create_label(); ready.set_text("●  All systems operational"); ready.add_class("uniui-web-status-ok")
-    version = f.create_label(); version.set_text("UniUI admin preview · v0.1"); version.add_class("uniui-web-footer-meta")
+    ready = f.create_label(); ready.set_text("●  All systems operational"); ready.add_class("uniui-shell-status-ok")
+    version = f.create_label(); version.set_text("UniUI admin preview · v0.1"); version.add_class("uniui-shell-footer-meta")
     footer.add_item(ready); footer.add_stretch(); footer.add_item(version)
     shell.set_footer(footer)
+
+    def _repaint_chrome(dark):
+        """Repaint chrome that doesn't already read THEME live: the toggle
+        button's icon/tooltip, and (Qt only) the whole shell's stylesheet.
+        Does not touch THEME/set_admin_theme itself - that would force the
+        plain light/dark palette, clobbering a named theme picked from the
+        settings-page dropdown. Safe to call for either a light/dark toggle
+        or a named-theme change."""
+        _set_icon_class(theme_button, "light_mode" if dark else "dark_mode")
+        _set_tooltip(theme_button, "Switch to light mode" if dark else "Switch to dark mode")
+        native = shell.get_native()
+        if hasattr(native, "setStyleSheet"):
+            from uniui.qt_style import base_stylesheet
+            native.setStyleSheet(base_stylesheet())
 
     def apply_theme(dark):
         admin_backend.set_admin_theme(dark)
         _ADMIN_THEME.set("dark" if dark else "light")
-        theme_button.set_text("Light mode" if dark else "Dark mode")
-        _set_icon_class(theme_button, "light_mode" if dark else "dark_mode")
+        _repaint_chrome(dark)
 
     def toggle():
         # Read the real active-theme flag, not the display-name string: if
@@ -706,10 +748,33 @@ def create_admin_ui(framework="auto", debug=False):
         apply_theme(not uniui.is_dark())
 
     _THEME_TOGGLE = toggle
+    _QT_RESTYLE_HOOK = _repaint_chrome
     theme_button.connect(toggle)
     apply_theme(False)
     router.push("/dashboard")
     return shell
+
+
+def _set_tooltip(widget, text):
+    """Best-effort tooltip: real on Qt/Web, silently skipped where the
+    native widget has no such concept (e.g. ipywidgets)."""
+    native = widget.get_native() if hasattr(widget, "get_native") else widget
+    if hasattr(native, "setToolTip"):
+        native.setToolTip(text)
+    elif hasattr(native, "tooltip"):
+        native.tooltip = text
+
+
+def _set_placeholder(widget, text):
+    """Best-effort input placeholder text, tried in feature-detected order
+    (Qt's setPlaceholderText, NiceGUI's .props, ipywidgets' placeholder)."""
+    native = widget.get_native() if hasattr(widget, "get_native") else widget
+    if hasattr(native, "setPlaceholderText"):
+        native.setPlaceholderText(text)
+    elif hasattr(native, "props"):
+        native.props(f'placeholder="{text}"')
+    elif hasattr(native, "placeholder"):
+        native.placeholder = text
 
 
 def _main_browser(framework):
@@ -720,31 +785,7 @@ def _main_browser(framework):
     show_ui(shell, title="UniUI Admin Demo", width=1280, height=780)
 
 
-# ---------------------------------------------------------------------------
-# Admin stylesheet
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Main (Qt shell only - the pages above are cross-backend; the shell is not
-# unified yet, see notes/admin_demo_unification_plan.md Step 3)
-# ---------------------------------------------------------------------------
-
-class _NativeWrap:
-    """Adapt a native QWidget to the tiny get_native() protocol UniUI expects.
-
-    Only used by the Qt-only shell below (header/footer built from raw
-    QtWidgets) - the pages themselves no longer need it."""
-
-    def __init__(self, widget):
-        self._widget = widget
-
-    def get_native(self):
-        return self._widget
-
-
 def main():
-    global _THEME_TOGGLE
-
     framework = parse_args_ui()
     use(framework if framework != "auto" else "qt")
 
@@ -752,199 +793,9 @@ def main():
         _main_browser(framework)
         return
 
-    from uniui.routing import RouterView, sync_breadcrumb
-    from uniui.qt_components import set_admin_theme
-    from uniui.qt_style import base_stylesheet, tag_native
-    from PySide2 import QtWidgets, QtCore
+    from uniui.qt_style import base_stylesheet
 
-    _ADMIN_THEME.set("light")
-    set_admin_theme(False)
-
-    router = _build_router()
-
-    f = uniui._get_factory()
-
-    # ── Product header ────────────────────────────────────────────────────────
-    header_w = f.create_hbox()
-    header_w.set_spec(LayoutSpec(gap=7, padding=0))
-
-    logo_mark = f.create_label()
-    logo_mark.set_text("U")
-    logo_mark.add_class("uniui-shell-logo-mark")
-    logo_mark_native = logo_mark.get_native()
-    logo_mark_native.setAlignment(QtCore.Qt.AlignCenter)
-    logo_mark_native.setFixedSize(32, 32)
-    header_w.add_item(logo_mark)
-    logo = f.create_label()
-    logo.set_text("UniUI Admin")
-    logo.add_class("uniui-shell-product")
-    header_w.add_item(logo)
-
-    beta_badge = f.create_badge(); beta_badge.set_text("Beta"); beta_badge.set_status("warn")
-    header_w.add_item(beta_badge)
-
-    sep = f.create_separator("vertical")
-    sep.add_class("uniui-shell-separator")
-    header_w.add_item(sep)
-
-    back = f.create_button(); forward = f.create_button()
-    for btn, icon_name, tip in (
-        (back, "arrow_back", "Go back"),
-        (forward, "arrow_forward", "Go forward"),
-    ):
-        btn.set_text("")
-        _set_icon_class(btn, icon_name)
-        btn.add_class("uniui-shell-icon-button")
-        btn_native = btn.get_native()
-        btn_native.setToolTip(tip)
-        btn_native.setCursor(QtCore.Qt.PointingHandCursor)
-    back.connect(router.back)
-    forward.connect(router.forward)
-    header_w.add_item(back)
-    header_w.add_item(forward)
-
-    # Breadcrumb in header
-    breadcrumb = f.create_breadcrumb()
-    sync_breadcrumb(breadcrumb, router, trail_fn=lambda ctx: (
-        [{"label": "Dashboard"}]
-        if ctx.name == "dashboard" else
-        [{"label": "Dashboard", "path": "/dashboard"},
-         {"label": ctx.name.replace("-", " ").title()}]
-    ))
-    breadcrumb.on_click(router.push)
-    header_w.add_item_with_spec(breadcrumb, LayoutItem(breadcrumb, grow=1))
-
-    global_search = f.create_line_edit()
-    global_search.add_class("uniui-shell-header-search")
-    global_search.set_leading_icon("search")
-    global_search_native = global_search.get_native()
-    global_search_native.setPlaceholderText("Search…")
-    global_search_native.setMaximumWidth(180)
-    header_w.add_item(global_search)
-
-    theme_btn = f.create_button()
-    theme_btn.set_text("")
-    _set_icon_class(theme_btn, "dark_mode")
-    theme_btn.add_class("uniui-shell-icon-button")
-    theme_btn_native = theme_btn.get_native()
-    theme_btn_native.setToolTip("Toggle dark mode")
-    theme_btn_native.setCursor(QtCore.Qt.PointingHandCursor)
-    header_w.add_item(theme_btn)
-
-    bell = f.create_button()
-    bell.set_text("")
-    _set_icon_class(bell, "notifications")
-    bell.add_class("uniui-shell-icon-button")
-    bell_native = bell.get_native()
-    bell_native.setToolTip("Notifications")
-    bell_native.setCursor(QtCore.Qt.PointingHandCursor)
-    header_w.add_item(bell)
-
-    avatar = f.create_label()
-    avatar.set_text("AJ")
-    avatar.add_class("uniui-shell-avatar")
-    avatar_native = avatar.get_native()
-    avatar_native.setAlignment(QtCore.Qt.AlignCenter)
-    avatar_native.setFixedSize(32, 32)
-    avatar_native.setToolTip("Alice Johnson · Administrator")
-    header_w.add_item(avatar)
-
-    def _sync_header_responsive(mode):
-        # Old thresholds (product hidden < 650px, search hidden < 850px)
-        # approximated onto DEFAULT_BREAKPOINTS' three-mode scheme (720/1200)
-        # since on_resize() reports a mode name, not a raw pixel width.
-        (logo.show() if mode != "compact" else logo.hide())
-        (global_search.show() if mode == "wide" else global_search.hide())
-
-    header_w.on_resize(_sync_header_responsive)
-
-    # ── Sidebar + content ─────────────────────────────────────────────────────
-    sidebar = f.create_sidebar()
-    sidebar.add_group("Workspace")
-    for key, label, icon in (
-        ("dashboard", "Dashboard", "dashboard"),
-        ("users", "Users", "users"),
-        ("components", "Components", "components"),
-    ):
-        sidebar.add_item(key, label, icon)
-    sidebar.add_group("Admin")
-    sidebar.add_item("settings", "Settings", "settings")
-    sidebar.on_select(router.push_named)
-
-    def _sync_sidebar(ctx):
-        if ctx.name and ctx.name != "__not_found__":
-            sidebar.set_active(ctx.name)
-
-    router.on_navigate(_sync_sidebar)
-    content = RouterView(router)
-
-    # ── AppShell ──────────────────────────────────────────────────────────────
-    shell = f.create_app_shell()
-    shell.set_header(header_w)
-    # header_w's native is a bare QLayout (add_class() is a no-op on it, same
-    # as any IHBoxLayout on Qt) - tag the real QWidget set_header() already
-    # wrapped it in via parentWidget(), rather than calling as_widget() a
-    # second time here, which would create a SECOND wrapper and steal the
-    # layout away from the one set_header() just composed into the shell
-    # (deleting header_w's children along with the orphaned first wrapper).
-    tag_native(header_w.get_native().parentWidget(), "uniui-shell-topbar")
-    shell.set_sidebar(sidebar)
-    shell.set_content(content)
-
-    footer = QtWidgets.QWidget()
-    footer_layout = QtWidgets.QHBoxLayout(footer)
-    footer_layout.setContentsMargins(0, 0, 0, 0)
-    ready = f.create_label(); ready.set_text("●  All systems operational")
-    ready.add_class("uniui-shell-status-ok")
-    version = f.create_label(); version.set_text("UniUI admin preview · v0.1")
-    version.add_class("uniui-shell-footer-meta")
-    ready_native, version_native = ready.get_native(), version.get_native()
-    for label in (ready_native, version_native):
-        label.setMinimumWidth(0)
-        label.setSizePolicy(
-            QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred
-        )
-    ready_native.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-    version_native.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-    footer_layout.addWidget(ready_native, stretch=1)
-    footer_layout.addWidget(version_native, stretch=1)
-    shell.set_footer(_NativeWrap(footer))
-
-    def _restyle_shell(dark: bool):
-        """Repaint chrome that doesn't retint itself automatically.
-
-        back/forward/bell/the search icon keep the same icon name across a
-        theme change, so QtButtonAdapter/QtLineEditAdapter's own
-        apply_theme() (registered via track_themed()) already repaints them
-        via sync_palette() - no manual re-call needed here. theme_btn is
-        the one exception: its icon NAME changes (dark_mode <-> light_mode)
-        depending on the new state, which apply_theme()'s "repaint with the
-        same name" can't infer on its own.
-        """
-        _set_icon_class(theme_btn, "light_mode" if dark else "dark_mode")
-        theme_btn_native.setToolTip("Switch to light mode" if dark else "Switch to dark mode")
-        shell.get_native().setStyleSheet(base_stylesheet())
-
-    def _apply_theme(dark: bool):
-        set_admin_theme(dark)
-        _restyle_shell(dark)
-        _ADMIN_THEME.set("dark" if dark else "light")
-
-    def _toggle_theme():
-        # See the matching comment on the Jupyter/Web toggle() above: read
-        # the real flag, not the display-name string, so a named theme
-        # picked from the settings page doesn't desync the quick toggle.
-        _apply_theme(not uniui.is_dark())
-
-    _THEME_TOGGLE = _toggle_theme
-    theme_btn.connect(_toggle_theme)
-    _apply_theme(False)
-
-    global _QT_RESTYLE_HOOK
-    _QT_RESTYLE_HOOK = _restyle_shell
-
-    router.push("/dashboard")
-
+    shell = create_admin_ui("qt")
     show_ui(shell, title="UniUI Admin Demo", width=1280, height=780,
             stylesheet=base_stylesheet())
 

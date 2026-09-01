@@ -5,9 +5,12 @@ Each backend used to keep its own ``_admin_dark`` flag plus its own copy of
 other, so ``qt_components.set_admin_theme(True)`` left
 ``jupyter_components.is_admin_dark()`` reporting ``False``.
 
-Backends now register a refresh callback here and read the palette from
-:mod:`uniui.theme`.  A single :func:`set_theme` call flips the tokens and
-notifies everyone.
+Backends register a refresh callback here via :func:`register_refresh`.
+The actual flip-tokens-and-notify-everyone logic lives in
+:mod:`uniui.theme`'s own ``set_theme``/``set_active_theme`` (they call back
+into :func:`_run_refreshers` here) — this module's own ``set_theme``/
+``set_active_theme`` are thin pass-throughs kept for backend code that
+already imports them from here.
 """
 from __future__ import annotations
 
@@ -38,9 +41,14 @@ def is_dark() -> bool:
     return _theme.is_dark()
 
 
-def set_theme(dark: bool) -> bool:
-    """Switch the palette and refresh every registered backend."""
-    _theme.set_theme(dark)
+def _run_refreshers() -> None:
+    """Fire every registered refresh callback once.
+
+    Shared by theme.py's set_theme/set_active_theme (the real mutation +
+    notification now happens there) and this module's own pass-throughs
+    below, so there is exactly one refresh-firing implementation regardless
+    of which module a caller imports from.
+    """
     for refresh in list(_refreshers):
         try:
             refresh()
@@ -48,7 +56,11 @@ def set_theme(dark: bool) -> bool:
             # Qt objects can be deleted underneath us; anything else is a bug.
             if "already deleted" not in str(exc):
                 raise
-    return _theme.is_dark()
+
+
+def set_theme(dark: bool) -> bool:
+    """Switch the palette and refresh every registered backend."""
+    return _theme.set_theme(dark)
 
 
 def toggle_theme() -> bool:
@@ -63,14 +75,7 @@ def set_active_theme(name: str) -> str:
     behavior, so a theme picker calling this has every backend follow along
     exactly the way flipping dark/light already does.
     """
-    _theme.set_active_theme(name)
-    for refresh in list(_refreshers):
-        try:
-            refresh()
-        except RuntimeError as exc:
-            if "already deleted" not in str(exc):
-                raise
-    return _theme.get_active_theme_name()
+    return _theme.set_active_theme(name)
 
 
 def get_active_theme_name() -> str:

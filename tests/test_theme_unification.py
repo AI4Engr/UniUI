@@ -281,3 +281,82 @@ def test_theme_runtime_set_active_theme_fires_registered_refreshers():
     finally:
         theme_runtime._refreshers.remove(callback)
         theme_runtime.set_theme(False)
+
+
+def test_top_level_set_theme_fires_registered_refreshers():
+    """uniui.set_theme (the top-level export) used to only mutate THEME and
+    never notify any backend - the actual work happened only if a caller
+    knew to reach into theme_runtime.set_theme instead. theme.py's own
+    set_theme/set_active_theme now fire the same refreshers directly, so
+    every entry point (top-level, bare theme.py, theme_runtime) behaves
+    identically."""
+    import uniui
+    from uniui import theme_runtime
+
+    calls = []
+    callback = lambda: calls.append(1)
+    theme_runtime.register_refresh(callback)
+    try:
+        uniui.set_theme(True)
+        assert calls
+    finally:
+        theme_runtime._refreshers.remove(callback)
+        uniui.set_theme(False)
+
+
+def test_bare_theme_module_set_theme_fires_registered_refreshers():
+    from uniui import theme, theme_runtime
+
+    calls = []
+    callback = lambda: calls.append(1)
+    theme_runtime.register_refresh(callback)
+    try:
+        theme.set_theme(True)
+        assert calls
+    finally:
+        theme_runtime._refreshers.remove(callback)
+        theme.set_theme(False)
+
+
+def test_set_theme_does_not_fire_refreshers_twice():
+    """theme.py's set_theme notifies refreshers directly; theme_runtime.set_theme
+    is now a thin pass-through to it. Confirm the two don't compound into a
+    double-fire regardless of which entry point a caller uses."""
+    import uniui
+    from uniui import theme, theme_runtime
+
+    calls = []
+    callback = lambda: calls.append(1)
+    theme_runtime.register_refresh(callback)
+    try:
+        uniui.set_theme(True)
+        assert len(calls) == 1
+        theme.set_theme(False)
+        assert len(calls) == 2
+        theme_runtime.set_theme(True)
+        assert len(calls) == 3
+    finally:
+        theme_runtime._refreshers.remove(callback)
+        uniui.set_theme(False)
+
+
+def test_top_level_set_theme_repaints_a_real_qt_admin_component():
+    """Closes the coverage gap that let this bug ship: every existing
+    refresh-firing test entered through theme_runtime or a backend's own
+    set_admin_theme, never through the top-level uniui.set_theme a normal
+    caller would reach for first."""
+    pytest.importorskip("PySide2")
+    import uniui
+
+    uniui.use("qt")
+    from uniui import create_factory
+
+    card = create_factory("qt").create_card()
+    fired = []
+    original = card.apply_theme
+    card.apply_theme = lambda: (fired.append(1), original())[-1]
+    try:
+        uniui.set_theme(not uniui.is_dark())
+        assert fired
+    finally:
+        uniui.set_theme(False)

@@ -32,6 +32,13 @@ registered (from a dict or a JSON file) and switched to by name:
 exactly as before — they are a boolean-typed special case of the same
 mechanism, not a separate code path: ``set_theme(dark)`` just calls
 ``set_active_theme("dark" if dark else "light")``.
+
+``set_theme``/``set_active_theme`` also notify every backend to repaint
+(via :mod:`uniui.theme_runtime`'s registered refresh callbacks) after
+updating THEME — this module is the single real implementation regardless
+of whether a caller reaches it directly, via the top-level ``uniui.set_theme``
+re-export, or via ``theme_runtime.set_theme`` (a thin pass-through kept for
+existing backend code).
 """
 from __future__ import annotations
 
@@ -201,7 +208,8 @@ del _name, _filename, _dark
 
 
 def set_active_theme(name: str) -> str:
-    """Switch the active palette to the named theme. Returns ``name``.
+    """Switch the active palette to the named theme and notify every
+    registered backend to repaint. Returns ``name``.
 
     THEME is updated in place, same as ``set_theme`` — modules holding a
     reference to it see the new values immediately.  ``is_dark()`` is
@@ -215,7 +223,20 @@ def set_active_theme(name: str) -> str:
     THEME.update(palette)
     _active_theme_name = name
     _is_dark = theme_registry.is_theme_dark(name)
+    _notify_refresh()
     return _active_theme_name
+
+
+def _notify_refresh() -> None:
+    """Fire every backend's registered refresh callback (Qt/Jupyter/Web
+    sync_palette()) so an already-built widget tree actually repaints.
+
+    Imported lazily: theme_runtime imports this module at module level, so
+    importing it back at module level here would be circular - see
+    docs/architecture.md's deferred-import convention.
+    """
+    from . import theme_runtime
+    theme_runtime._run_refreshers()
 
 
 def get_active_theme_name() -> str:
@@ -241,7 +262,8 @@ def list_themes() -> List[str]:
 
 
 def set_theme(dark: bool) -> bool:
-    """Switch between the built-in light and dark themes. Returns True if now dark.
+    """Switch between the built-in light and dark themes, notifying every
+    registered backend to repaint. Returns True if now dark.
 
     THEME is updated in place; modules holding a reference to it see the new
     values immediately.  A special case of ``set_active_theme`` — the

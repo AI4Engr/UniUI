@@ -84,7 +84,7 @@ other unknown framework name.
 package/submodule kind: `backends/web/primitives/__init__.py` imports
 `.theming`, which does `from . import state`. Everything else that *looks*
 circular in a naive scan (`registry` -> `qt_components` -> ... -> `uniui`) is
-broken by a deliberately deferred, function-level import. Three of those are
+broken by a deliberately deferred, function-level import. Four of those are
 load-bearing and documented at their call sites:
 
 - `routing.py` calls `_get_factory()` per navigation rather than binding a
@@ -94,6 +94,13 @@ load-bearing and documented at their call sites:
   from `styles.py`.
 - `display.py` imports `backends/<name>/display.py` inside each dispatch
   branch, so `import uniui` never pulls in PySide2, ipywidgets or NiceGUI.
+- `theme.py`'s `set_theme`/`set_active_theme` import `theme_runtime` *inside*
+  `_notify_refresh()` rather than at module level, because `theme_runtime.py`
+  already does `from . import theme as _theme` at module level. This is what
+  lets `theme.py`'s own functions notify every registered backend refresh
+  callback directly, rather than that only happening for callers who knew to
+  go through `theme_runtime.set_theme` instead — `theme_runtime`'s own
+  `set_theme`/`set_active_theme` are now thin pass-throughs to `theme.py`.
 
 ## Two kinds of mutable state
 

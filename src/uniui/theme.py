@@ -110,6 +110,7 @@ METRICS: Dict[str, Any] = {
     "sidebar_max": 360,
     "sidebar_edge_width": 2,
     "content_padding": 32,
+    "content_max_width": 1180,
     "section_gap": 32,
     "card_gap": 12,
     "card_padding": 18,

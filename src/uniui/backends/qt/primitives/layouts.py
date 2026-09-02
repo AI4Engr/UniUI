@@ -18,6 +18,7 @@ from ...._adapter_mixins import (
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
+from ....theme import get_admin_metrics
 from .helpers import ensure_qwidget, is_qlayout
 
 
@@ -464,6 +465,49 @@ class QtCenterAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, ICent
             self._layout.removeWidget(ensure_qwidget(self._content.get_native()))
         self._content = widget
         self._layout.addWidget(ensure_qwidget(widget.get_native()), alignment=Qt.AlignCenter)
+class QtSpacerAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, ISpacer):
+    """Qt Spacer adapter: a bare QWidget that expands to fill room in
+    whichever box layout it's added to."""
+
+    def __init__(self):
+        self._native = QtWidgets.QWidget()
+        self._native.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
+
+    def get_native(self):
+        return self._native
+class QtContainerAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, IContainer):
+    """Qt Container adapter: caps a single child's width and centers it
+    horizontally, via an outer stretch-widget-stretch QHBoxLayout."""
+
+    def __init__(self):
+        self._inner = QtWidgets.QWidget()
+        self._inner_layout = QtWidgets.QVBoxLayout()
+        self._inner_layout.setContentsMargins(0, 0, 0, 0)
+        self._inner.setLayout(self._inner_layout)
+        self._inner.setMaximumWidth(get_admin_metrics()["content_max_width"])
+
+        self._layout = QtWidgets.QHBoxLayout()
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.addStretch()
+        self._layout.addWidget(self._inner)
+        self._layout.addStretch()
+        self._container = QtWidgets.QWidget()
+        self._container.setLayout(self._layout)
+        self._content: Optional[IWidget] = None
+
+    def get_native(self):
+        return self._container
+
+    def set_content(self, widget: IWidget) -> None:
+        if self._content is not None:
+            self._inner_layout.removeWidget(ensure_qwidget(self._content.get_native()))
+        self._content = widget
+        self._inner_layout.addWidget(ensure_qwidget(widget.get_native()))
+
+    def set_max_width(self, width: int) -> None:
+        self._inner.setMaximumWidth(width)
 class QtSeparatorAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, ISeparator):
     """Qt Separator adapter using QFrame's HLine/VLine shape."""
 

@@ -18,9 +18,9 @@ from .components import (
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .core import (
-    IButton, ICenter, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
+    IButton, ICenter, IContainer, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
     IImage, ILabel, ILineEdit, INumberInput, IOverlay, IRadioGroup,
-    IScrollView, ISeparator, ISlider, ISplitPane, ISwitch, ITabWidget,
+    IScrollView, ISeparator, ISlider, ISpacer, ISplitPane, ISwitch, ITabWidget,
     ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
 )
 
@@ -198,6 +198,21 @@ def Wrap(spec: LayoutSpec = None) -> IWrap:
 def Center(content=None) -> ICenter:
     """Create a container that centers its content both horizontally and vertically."""
     c = _get_factory().create_center()
+    if content is not None:
+        c.set_content(content)
+    return c
+
+
+def Spacer() -> ISpacer:
+    """Create a flexible spacer that expands to fill available space."""
+    return _get_factory().create_spacer()
+
+
+def Container(content=None, max_width: int = None) -> IContainer:
+    """Create a container that caps content width and centers it horizontally."""
+    c = _get_factory().create_container()
+    if max_width is not None:
+        c.set_max_width(max_width)
     if content is not None:
         c.set_content(content)
     return c
@@ -422,6 +437,8 @@ class UniUI:
         'grid':        'create_grid',
         'wrap':        'create_wrap',
         'center':      'create_center',
+        'spacer':      'create_spacer',
+        'container':   'create_container',
         'scroll_view': 'create_scroll_view',
         'split_pane':  'create_split_pane',
         'overlay':     'create_overlay',

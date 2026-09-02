@@ -690,6 +690,21 @@ class ICenter(IWidget):
     @abstractmethod
     def set_content(self, widget: "IWidget") -> None:
         pass
+class ISpacer(IWidget):
+    """Flexible empty space that expands to fill available room in a
+    parent flex/box layout - insertable via add_item(), unlike
+    add_stretch() which only works on the box itself."""
+class IContainer(IWidget):
+    """Single-child container that caps content width and centers it
+    horizontally - for capping regular page width while dashboard/3D
+    pages stay full-width."""
+
+    @abstractmethod
+    def set_content(self, widget: "IWidget") -> None:
+        pass
+
+    def set_max_width(self, width: int) -> None:
+        pass
 class ISeparator(IWidget):
     """A thin visual divider line."""
 
@@ -826,6 +841,14 @@ class IWidgetFactory(ABC):
         """Create a centering container (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Center not supported on this platform")
 
+    def createSpacer(self) -> "ISpacer":
+        """Create a flexible spacer (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Spacer not supported on this platform")
+
+    def createContainer(self) -> "IContainer":
+        """Create a width-capping container (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Container not supported on this platform")
+
     def createSeparator(self, orientation: str = "horizontal") -> "ISeparator":
         """Create a thin divider line (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Separator not supported on this platform")
@@ -927,6 +950,8 @@ _SNAKE_ALIASES = {
     "createGrid":       "create_grid",
     "createWrap":       "create_wrap",
     "createCenter":     "create_center",
+    "createSpacer":     "create_spacer",
+    "createContainer":  "create_container",
     "createSeparator":  "create_separator",
     "createScrollView": "create_scroll_view",
     "createSplitPane":  "create_split_pane",

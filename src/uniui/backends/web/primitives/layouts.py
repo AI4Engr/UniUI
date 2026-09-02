@@ -8,7 +8,7 @@ from nicegui import ui
 from ....core import *
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
-from ....theme import THEME, is_dark
+from ....theme import THEME, get_admin_metrics, is_dark
 from .state import T, register_adapter
 
 from .base import _WebAdapter
@@ -304,6 +304,29 @@ class WebCenterAdapter(_WebAdapter, ICenter):
     def set_content(self, widget: IWidget) -> None:
         self._native.clear()
         widget.get_native().move(self._native)
+class WebSpacerAdapter(_WebAdapter, ISpacer):
+    """Web Spacer adapter — a flex-grow div that expands to fill available
+    room. Same mechanism VBox/HBox's own add_stretch() already build."""
+
+    def __init__(self):
+        with ui.element("div").classes("grow") as el:
+            pass
+        super().__init__(el)
+class WebContainerAdapter(_WebAdapter, IContainer):
+    """Web Container adapter — caps width and centers horizontally."""
+
+    def __init__(self):
+        with ui.element("div").classes("uniui-container w-full") as el:
+            pass
+        super().__init__(el)
+        self.set_max_width(get_admin_metrics()["content_max_width"])
+
+    def set_content(self, widget: IWidget) -> None:
+        self._native.clear()
+        widget.get_native().move(self._native)
+
+    def set_max_width(self, width: int) -> None:
+        self._native.style(f"max-width: {width}px; margin: 0 auto")
 class WebSeparatorAdapter(_WebAdapter, ISeparator):
     """Web Separator adapter using NiceGUI's ui.separator (Quasar q-separator)."""
 

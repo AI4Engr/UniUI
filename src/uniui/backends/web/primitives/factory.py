@@ -17,9 +17,9 @@ from .inputs import (
     WebTextAreaAdapter,
 )
 from .layouts import (
-    WebCenterAdapter,
+    WebCenterAdapter, WebContainerAdapter,
     WebGridAdapter, WebHBoxAdapter, WebOverlayAdapter, WebScrollViewAdapter,
-    WebSeparatorAdapter, WebSplitPaneAdapter, WebTabWidgetAdapter,
+    WebSeparatorAdapter, WebSpacerAdapter, WebSplitPaneAdapter, WebTabWidgetAdapter,
     WebVBoxAdapter, WebWrapAdapter,
 )
 from .state import set_backend_active
@@ -92,6 +92,12 @@ class _BaseNiceGUIWidgetFactory(IWidgetFactory):
 
     def createCenter(self) -> ICenter:
         return WebCenterAdapter()
+
+    def createSpacer(self) -> ISpacer:
+        return WebSpacerAdapter()
+
+    def createContainer(self) -> IContainer:
+        return WebContainerAdapter()
 
     def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
         sep = WebSeparatorAdapter()

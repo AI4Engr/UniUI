@@ -8,8 +8,21 @@ import pytest
 from tests.contract_framework import (
     CommonCapabilitiesContractTest, WidgetContractTest, skip_unless_available,
 )
-from uniui import VBOX, HBOX, GRID, WRAP, CENTER, SEPARATOR, SCROLL_VIEW, SPLIT_PANE, OVERLAY
+from uniui import VBOX, HBOX, GRID, WRAP, CENTER, SPACER, CONTAINER, SEPARATOR, SCROLL_VIEW, SPLIT_PANE, OVERLAY
 from uniui.core import ILayoutOnly, LayoutSpec, LayoutItem
+
+
+def _child_count(native, factory) -> int:
+    """Number of children currently attached to a box's native widget -
+    ipywidgets' `.children` tuple, Qt's `QLayout.count()`, or NiceGUI's
+    `.default_slot.children` all mean the same thing here, hence the
+    per-backend branch instead of one generic attribute check."""
+    framework = factory.__class__.__module__
+    if "jupyter" in framework:
+        return len(native.children)
+    if "web" in framework:
+        return len(native.default_slot.children)
+    return native.layout().count()
 
 
 class TestVBoxContract(WidgetContractTest):
@@ -42,6 +55,18 @@ class TestVBoxContract(WidgetContractTest):
         """add_stretch() must not raise."""
         vbox = self.create_widget(factory)
         vbox.add_stretch()
+
+    @pytest.mark.contract
+    def test_add_stretch_actually_inserts_a_spacer(self, factory):
+        """add_stretch() must not be a silent no-op - a real gap once
+        existed here where Jupyter's VBox.add_stretch() was `pass`, only
+        caught by inspecting the child count, not just "didn't raise"."""
+        vbox = self.create_widget(factory)
+        vbox.add_item(factory.create_label())
+        before = _child_count(vbox.get_native(), factory)
+        vbox.add_stretch()
+        after = _child_count(vbox.get_native(), factory)
+        assert after == before + 1
 
     @pytest.mark.contract
     def test_set_alignment_top(self, factory):
@@ -127,6 +152,16 @@ class TestHBoxContract(WidgetContractTest):
         """add_stretch() must not raise."""
         hbox = self.create_widget(factory)
         hbox.add_stretch()
+
+    @pytest.mark.contract
+    def test_add_stretch_actually_inserts_a_spacer(self, factory):
+        """See TestVBoxContract's test of the same name."""
+        hbox = self.create_widget(factory)
+        hbox.add_item(factory.create_label())
+        before = _child_count(hbox.get_native(), factory)
+        hbox.add_stretch()
+        after = _child_count(hbox.get_native(), factory)
+        assert after == before + 1
 
     @pytest.mark.contract
     def test_set_alignment_top(self, factory):
@@ -698,6 +733,96 @@ class TestCenterContract(CommonCapabilitiesContractTest):
         layout = native.layout()
         widgets = [layout.itemAt(i).widget() for i in range(layout.count())]
         return widgets == [expected.get_native()]
+
+
+class TestSpacerContract(WidgetContractTest):
+    """Contract tests for Spacer — flexible empty space, insertable via
+    add_item() unlike add_stretch() which only works on the box itself."""
+
+    widget_kind = SPACER
+
+    def create_widget(self, factory):
+        return factory.create_spacer()
+
+    @pytest.mark.contract
+    def test_is_not_layout_only(self, factory):
+        """Spacer always wraps a real widget on every backend."""
+        assert not isinstance(self.create_widget(factory), ILayoutOnly)
+
+    @pytest.mark.contract
+    def test_insertable_into_hbox(self, factory):
+        """A Spacer can be added to an HBox via add_item() without error."""
+        hbox = factory.create_hbox()
+        hbox.add_item(factory.create_label())
+        hbox.add_item(self.create_widget(factory))
+        hbox.add_item(factory.create_label())
+
+    @pytest.mark.contract
+    def test_insertable_into_vbox(self, factory):
+        """A Spacer can be added to a VBox via add_item() without error."""
+        vbox = factory.create_vbox()
+        vbox.add_item(factory.create_label())
+        vbox.add_item(self.create_widget(factory))
+        vbox.add_item(factory.create_label())
+
+
+class TestContainerContract(CommonCapabilitiesContractTest):
+    """Contract tests for Container — caps content width and centers it
+    horizontally, for regular pages (dashboard/3D pages stay full-width).
+
+    Like Center, Container always wraps a real widget on every backend, so
+    it gets the full show/hide/enabled/size surface for free via
+    CommonCapabilitiesContractTest.
+    """
+
+    widget_kind = CONTAINER
+
+    def create_widget(self, factory):
+        return factory.create_container()
+
+    @pytest.mark.contract
+    def test_is_not_layout_only(self, factory):
+        assert not isinstance(self.create_widget(factory), ILayoutOnly)
+
+    @pytest.mark.contract
+    def test_set_content_label(self, factory):
+        """Container accepts a label as content."""
+        c = self.create_widget(factory)
+        lbl = factory.create_label()
+        lbl.set_text("content")
+        c.set_content(lbl)
+
+    @pytest.mark.contract
+    def test_set_content_layout(self, factory):
+        """Container accepts a VBox as content."""
+        c = self.create_widget(factory)
+        vbox = factory.create_vbox()
+        lbl = factory.create_label()
+        lbl.set_text("inside container")
+        vbox.add_item(lbl)
+        c.set_content(vbox)
+
+    @pytest.mark.contract
+    def test_set_max_width(self, factory):
+        """set_max_width() must not raise."""
+        c = self.create_widget(factory)
+        c.set_max_width(600)
+
+    @pytest.mark.contract
+    def test_default_max_width_reads_theme_token(self, factory):
+        """With no explicit max_width, Container reads content_max_width
+        from the theme token (not a hardcoded per-backend literal)."""
+        from uniui.theme import get_admin_metrics
+        expected = get_admin_metrics()["content_max_width"]
+        c = self.create_widget(factory)
+        native = c.get_native()
+        framework = factory.__class__.__module__
+        if "jupyter" in framework:
+            assert native.layout.max_width == f"{expected}px"
+        elif "web" in framework:
+            assert native._style.get("max-width") == f"{expected}px"
+        else:
+            assert c._inner.maximumWidth() == expected
 
 
 class TestSplitPaneContract(WidgetContractTest):

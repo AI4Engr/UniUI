@@ -20,10 +20,11 @@ from .inputs import (
     JupyterSwitchAdapter, JupyterTextarea, JupyterTextAreaAdapter,
 )
 from .layouts import (
-    JupyterCenter, JupyterCenterAdapter,
+    JupyterCenter, JupyterCenterAdapter, JupyterContainer, JupyterContainerAdapter,
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
     JupyterOverlay, JupyterOverlayAdapter, JupyterScrollView,
-    JupyterScrollViewAdapter, JupyterSeparatorAdapter, JupyterSplitPane,
+    JupyterScrollViewAdapter, JupyterSeparatorAdapter, JupyterSpacer, JupyterSpacerAdapter,
+    JupyterSplitPane,
     JupyterSplitPaneAdapter, JupyterTabWidget, JupyterTabWidgetAdapter,
     JupyterVBoxAdapter, JupyterVBoxLayout, JupyterWrap, JupyterWrapAdapter,
 )
@@ -119,6 +120,12 @@ class _BaseJupyterWidgetFactory(IWidgetFactory):
 
     def createCenter(self) -> ICenter:
         return JupyterCenterAdapter()
+
+    def createSpacer(self) -> ISpacer:
+        return JupyterSpacerAdapter()
+
+    def createContainer(self) -> IContainer:
+        return JupyterContainerAdapter()
 
     def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
         sep = JupyterSeparatorAdapter()

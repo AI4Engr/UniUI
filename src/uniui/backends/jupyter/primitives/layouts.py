@@ -15,7 +15,7 @@ from ...._adapter_mixins import (
 )
 from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
-from ....theme import THEME, is_dark
+from ....theme import THEME, get_admin_metrics, is_dark
 from .layout_assets import resize_observer_js
 
 #: Alias for the live theme dict. ``THEME`` is mutated in place on a theme
@@ -372,7 +372,7 @@ class JupyterVBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
         self._native.children = self._native.children + (widget.get_native(),)
 
     def add_stretch(self):
-        pass
+        self._native.children = self._native.children + (JupyterSpacer(),)
 
     def set_alignment_top(self):
         self._native.layout.justify_content = "flex-start"
@@ -418,8 +418,7 @@ class JupyterHBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
         self._native.children = self._native.children + (native,)
 
     def add_stretch(self):
-        spacer = widgets.Box(layout=widgets.Layout(flex="1 1 auto"))
-        self._native.children = self._native.children + (spacer,)
+        self._native.children = self._native.children + (JupyterSpacer(),)
 
     def set_alignment_top(self):
         self._native.layout.align_items = "flex-start"
@@ -602,6 +601,47 @@ class JupyterCenterAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSi
 
     def set_content(self, widget: IWidget) -> None:
         self._native.setContent(widget.get_native())
+class JupyterSpacer(widgets.Box):
+    """Jupyter Spacer — a flex-grow box that expands to fill available room
+    in whatever flex-direction its parent uses. Also what HBox/VBox's own
+    add_stretch() build, so there is exactly one definition."""
+    def __init__(self):
+        super().__init__(layout=widgets.Layout(flex="1 1 auto"))
+class JupyterSpacerAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, ISpacer):
+    """Jupyter Spacer adapter backed by JupyterSpacer."""
+
+    def __init__(self):
+        self._native = JupyterSpacer()
+
+    def get_native(self):
+        return self._native
+class JupyterContainer(widgets.Box):
+    """Jupyter Container — caps width and centers horizontally via CSS
+    max-width + margin:0 auto."""
+    def __init__(self, max_width: int):
+        super().__init__(layout=widgets.Layout(
+            width="100%", max_width=f"{max_width}px", margin="0 auto",
+        ))
+
+    def setContent(self, item):
+        self.children = (item,)
+
+    def setMaxWidth(self, width: int):
+        self.layout.max_width = f"{width}px"
+class JupyterContainerAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IContainer):
+    """Jupyter Container adapter backed by JupyterContainer."""
+
+    def __init__(self):
+        self._native = JupyterContainer(get_admin_metrics()["content_max_width"])
+
+    def get_native(self):
+        return self._native
+
+    def set_content(self, widget: IWidget) -> None:
+        self._native.setContent(widget.get_native())
+
+    def set_max_width(self, width: int) -> None:
+        self._native.setMaxWidth(width)
 class JupyterSeparatorAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, ISeparator):
     """Jupyter Separator adapter backed by a stock ipywidgets Box.
 

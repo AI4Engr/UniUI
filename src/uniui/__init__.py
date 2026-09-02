@@ -51,6 +51,8 @@ from .core import (
     ILayoutOnly,
     IWrap,
     ICenter,
+    ISpacer,
+    IContainer,
     ISeparator,
     IScrollView,
     ISplitPane,
@@ -107,9 +109,9 @@ from .backends.registry import (
 # Convenience constructors and the legacy facade class
 from .facade import (
     AppShell, Badge, Breadcrumb, Button, Card, Carousel, Center, Checkbox, Chart, Column,
-    ComboBox, Drawer, Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit,
+    ComboBox, Container, Drawer, Dropdown, Gauge, GroupBox, HBox, Image, Label, LineEdit,
     MetricList, NumberInput, Overlay, ProgressBar, RadioGroup, Row, ScrollView,
-    Separator, Sidebar, Slider, SplitPane, StatCard, Switch, Table, TabWidget,
+    Separator, Sidebar, Slider, Spacer, SplitPane, StatCard, Switch, Table, TabWidget,
     Toast, TextArea, UniUI, VBox, Wrap, Grid,
 )
 
@@ -137,6 +139,8 @@ IMAGE = 'image'
 GRID = 'grid'
 WRAP = 'wrap'
 CENTER = 'center'
+SPACER = 'spacer'
+CONTAINER = 'container'
 SEPARATOR = 'separator'
 SCROLL_VIEW = 'scroll_view'
 SPLIT_PANE = 'split_pane'
@@ -216,6 +220,8 @@ __all__ = [
     'Grid',
     'Wrap',
     'Center',
+    'Spacer',
+    'Container',
     'Separator',
     'ScrollView',
     'SplitPane',
@@ -249,7 +255,7 @@ __all__ = [
     'UniUI',
     'LABEL', 'BUTTON', 'LINE_EDIT', 'TEXT_AREA',
     'COMBO_BOX', 'DROPDOWN', 'CHECKBOX', 'SWITCH', 'RADIO_GROUP', 'NUMBER_INPUT', 'SLIDER', 'VBOX', 'HBOX', 'TAB_WIDGET', 'GROUP_BOX', 'IMAGE',
-    'GRID', 'WRAP', 'CENTER', 'SEPARATOR', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
+    'GRID', 'WRAP', 'CENTER', 'SPACER', 'CONTAINER', 'SEPARATOR', 'SCROLL_VIEW', 'SPLIT_PANE', 'OVERLAY',
     'CARD', 'STAT_CARD', 'METRIC_LIST', 'BADGE', 'PROGRESS_BAR', 'TOAST', 'CAROUSEL', 'TABLE', 'SIDEBAR', 'APP_SHELL', 'BREADCRUMB',
     'GAUGE', 'CHART', 'DRAWER',
 
@@ -285,6 +291,8 @@ __all__ = [
     'ILayoutOnly',
     'IWrap',
     'ICenter',
+    'ISpacer',
+    'IContainer',
     'ISeparator',
     'IScrollView',
     'ISplitPane',

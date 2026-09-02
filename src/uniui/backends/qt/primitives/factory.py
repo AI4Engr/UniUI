@@ -17,8 +17,8 @@ from .inputs import (
     QtSliderAdapter, QtSwitchAdapter, QtTextAreaAdapter,
 )
 from .layouts import (
-    QTHBoxLayout, QTTabWidget, QTVBoxLayout, QtCenterAdapter, QtGridAdapter, QtHBoxAdapter,
-    QtOverlayAdapter, QtScrollViewAdapter, QtSeparatorAdapter,
+    QTHBoxLayout, QTTabWidget, QTVBoxLayout, QtCenterAdapter, QtContainerAdapter, QtGridAdapter, QtHBoxAdapter,
+    QtOverlayAdapter, QtScrollViewAdapter, QtSeparatorAdapter, QtSpacerAdapter,
     QtSplitPaneAdapter, QtTabWidgetAdapter, QtVBoxAdapter, QtWrapAdapter,
 )
 from .text import (
@@ -141,6 +141,12 @@ class _BaseQtWidgetFactory(IWidgetFactory):
 
     def createCenter(self) -> ICenter:
         return QtCenterAdapter()
+
+    def createSpacer(self) -> ISpacer:
+        return QtSpacerAdapter()
+
+    def createContainer(self) -> IContainer:
+        return QtContainerAdapter()
 
     def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
         sep = QtSeparatorAdapter()

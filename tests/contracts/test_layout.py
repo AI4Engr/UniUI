@@ -406,6 +406,123 @@ class TestQtResponsiveOnResize:
         assert events == ["compact", "wide"]
 
 
+class TestWebResponsiveOnResize:
+    """Web-specific: directly exercise WebHBoxAdapter/WebGridAdapter's
+    Python-side width handler (``_on_width``), simulating what would happen
+    if the browser's ResizeObserver/emit JS layer reported a width - no
+    automated test in this repo can drive real browser JS, so this only
+    proves the edge-triggered dispatch logic on the Python side is correct,
+    not that the JS ResizeObserver/hidden-bridge wiring actually functions in
+    a real browser (see WebHBoxAdapter.on_resize's _wire_resize_observer).
+
+    Same thresholds as TestQtResponsiveOnResize: compact < 720, medium <
+    1200, wide >= 1200 (uniui.contracts.layout.Breakpoints.mode_for).
+    """
+
+    class _FakeValueChangeEvent:
+        """Stands in for NiceGUI's ValueChangeEventArguments - only ``.value``
+        is read by WebHBoxAdapter._on_width/WebGridAdapter._on_width."""
+        def __init__(self, value):
+            self.value = value
+
+    def _assert_thresholds(self, container):
+        events = []
+        container.on_resize(lambda mode: events.append(mode))
+
+        container._on_width(self._FakeValueChangeEvent(719))
+        assert events == ["compact"]
+
+        container._on_width(self._FakeValueChangeEvent(720))
+        assert events == ["compact", "medium"]
+
+        container._on_width(self._FakeValueChangeEvent(1199))
+        assert events == ["compact", "medium"], "no crossing - must not refire"
+
+        container._on_width(self._FakeValueChangeEvent(1200))
+        assert events == ["compact", "medium", "wide"]
+
+        container._on_width(self._FakeValueChangeEvent(1600))
+        assert events == ["compact", "medium", "wide"], "no crossing - must not refire"
+
+    @pytest.mark.contract
+    def test_hbox_fires_at_each_threshold_crossing(self):
+        skip_unless_available("web")
+        from uniui import create_factory
+
+        factory = create_factory("web")
+        hbox = factory.create_hbox()
+        self._assert_thresholds(hbox)
+
+    @pytest.mark.contract
+    def test_grid_fires_at_each_threshold_crossing(self):
+        skip_unless_available("web")
+        from uniui import create_factory
+
+        factory = create_factory("web")
+        grid = factory.create_grid(columns=4)
+        self._assert_thresholds(grid)
+
+
+class TestJupyterResponsiveOnResize:
+    """Jupyter-specific: directly exercise JupyterHBoxAdapter/
+    JupyterGridAdapter's hidden bridge widget, simulating what the injected
+    ResizeObserver JS would do (set the bridge's ``.value`` and dispatch a
+    change event) by setting ``.value`` on the bridge directly - no automated
+    test in this repo can drive a real notebook frontend's JS, so this only
+    proves the Python-side bridge-widget observe()/edge-trigger logic is
+    correct, not that the JS injection/ResizeObserver/closest() DOM lookup
+    actually functions in a real notebook (see layout_assets.resize_observer_js
+    and JupyterHBoxAdapter.on_resize's experimental-behavior note).
+
+    ``on_resize()`` itself attempts a real IPython.display.Javascript
+    injection - confirmed (see _wire_resize_observer's guard) not to raise
+    outside a real kernel, so no additional mocking is needed here for
+    on_resize() to be called safely during collection/test execution.
+
+    Same thresholds as TestQtResponsiveOnResize: compact < 720, medium <
+    1200, wide >= 1200 (uniui.contracts.layout.Breakpoints.mode_for).
+    """
+
+    def _assert_thresholds(self, container):
+        events = []
+        container.on_resize(lambda mode: events.append(mode))
+        bridge = container._resize_bridge
+        assert bridge is not None, "on_resize() must wire the hidden bridge widget"
+
+        bridge.value = 719
+        assert events == ["compact"]
+
+        bridge.value = 720
+        assert events == ["compact", "medium"]
+
+        bridge.value = 1199
+        assert events == ["compact", "medium"], "no crossing - must not refire"
+
+        bridge.value = 1200
+        assert events == ["compact", "medium", "wide"]
+
+        bridge.value = 1600
+        assert events == ["compact", "medium", "wide"], "no crossing - must not refire"
+
+    @pytest.mark.contract
+    def test_hbox_fires_at_each_threshold_crossing(self):
+        skip_unless_available("jupyter")
+        from uniui import create_factory
+
+        factory = create_factory("jupyter")
+        hbox = factory.create_hbox()
+        self._assert_thresholds(hbox)
+
+    @pytest.mark.contract
+    def test_grid_fires_at_each_threshold_crossing(self):
+        skip_unless_available("jupyter")
+        from uniui import create_factory
+
+        factory = create_factory("jupyter")
+        grid = factory.create_grid(columns=4)
+        self._assert_thresholds(grid)
+
+
 class TestWrapContract(WidgetContractTest):
     """Contract tests for Wrap layout."""
 

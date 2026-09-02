@@ -6,12 +6,71 @@ from typing import Any, Callable, List, Optional
 from nicegui import ui
 
 from ....core import *
+from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
 from .state import T, register_adapter
 
 from .base import _WebAdapter
 from .helpers import _plain_html, _style_size
+
+
+def _wire_resize_observer(container, bridge) -> None:
+    """Attach a browser-side ResizeObserver to ``container`` that reports its
+    width to Python through ``bridge`` (a hidden ``ui.number`` element).
+
+    Mirrors the hidden-bridge-widget idiom used by the Jupyter backend's
+    AppShell splitter (``JupyterAppShellAdapter._width_bridge`` /
+    ``SPLITTER_HTML``): raw JS reaches into the DOM, sets a hidden input's
+    ``.value``, and dispatches a real ``input`` event so the framework's own
+    value-change wiring picks it up - no custom/synthetic NiceGUI event is
+    used, since ``ui.grid()``/``ui.row()`` are plain ``<div>`` elements with
+    no Vue component behind them to natively emit one (unlike NiceGUI's own
+    ``self.on('resize', ...)`` precedents in e.g. ``elements/xterm/xterm.py``,
+    which are all backed by a custom Vue component that calls its own
+    ``this.$emit(...)`` internally - not available here).
+
+    ``getHtmlElement`` is NiceGUI's own documented helper (see
+    ``ui.run_javascript``'s docstring) for resolving an element's real DOM
+    node from its ``html_id`` inside injected JavaScript. Throttled client-side
+    with a plain timeout, matching the ``throttle=`` behavior NiceGUI's own
+    ``.on()`` provides for real socket events (not available here since this
+    never goes through ``.on()``'s event-listener path).
+    """
+    container_id = container.html_id
+    bridge_id = bridge.html_id
+    script = f"""
+    (() => {{
+        const container = getHtmlElement({container_id!r});
+        const bridgeInput = document.querySelector('#{bridge_id} input');
+        if (!container || !bridgeInput) return;
+        let timer = null;
+        const report = () => {{
+            const width = Math.round(container.getBoundingClientRect().width);
+            bridgeInput.value = String(width);
+            bridgeInput.dispatchEvent(new Event('input', {{bubbles: true}}));
+        }};
+        const observer = new ResizeObserver(() => {{
+            if (timer !== null) clearTimeout(timer);
+            timer = setTimeout(report, 100);
+        }});
+        observer.observe(container);
+    }})();
+    """
+    # ui.run_javascript() asserts a running NiceGUI event loop - true in a
+    # real served app, not true when an adapter is built directly in a plain
+    # Python/pytest process with no NiceGUI server behind it (the same
+    # situation contract tests exercise via create_factory("web")). Same
+    # no-op-is-fine posture as the Jupyter backend's JS injection: if there's
+    # no live event loop to run the script on, on_resize() simply never
+    # fires instead of crashing the caller.
+    from nicegui import core
+    if not core.is_loop_running():
+        return
+    try:
+        ui.run_javascript(script)
+    except Exception:
+        pass
 
 
 def _apply_flex(native, item) -> None:
@@ -55,6 +114,11 @@ class WebHBoxAdapter(_WebAdapter, IHBoxLayout):
     def __init__(self):
         super().__init__(ui.row().classes("uniui-hbox w-full items-center"))
         self._apply_theme()
+        self._resize_callbacks: List = []
+        self._breakpoints = None
+        self._last_mode: Optional[str] = None
+        self._resize_wired = False
+        self._resize_bridge = None
 
     def add_item(self, widget: IWidget) -> None:
         widget.get_native().move(self._native)
@@ -73,6 +137,34 @@ class WebHBoxAdapter(_WebAdapter, IHBoxLayout):
     def set_responsive_stack(self, enabled: bool) -> None:
         self._native.classes(add="" if enabled else "uniui-hbox--no-stack",
                               remove="uniui-hbox--no-stack" if enabled else "")
+
+    def on_resize(self, callback, breakpoints=None) -> Handle:
+        from ....core import DEFAULT_BREAKPOINTS
+        bp = breakpoints or DEFAULT_BREAKPOINTS
+        self._breakpoints = bp
+        self._resize_callbacks.append(callback)
+
+        if not self._resize_wired:
+            self._resize_wired = True
+            self._resize_bridge = ui.number(value=0).classes("hidden")
+            self._resize_bridge.move(self._native)
+            self._resize_bridge.on_value_change(self._on_width)
+            _wire_resize_observer(self._native, self._resize_bridge)
+
+        def cancel():
+            if callback in self._resize_callbacks:
+                self._resize_callbacks.remove(callback)
+        return Handle(cancel)
+
+    def _on_width(self, event) -> None:
+        width = event.value
+        if width is None:
+            return
+        mode = self._breakpoints.mode_for(int(width))
+        if mode != self._last_mode:
+            self._last_mode = mode
+            for cb in self._resize_callbacks:
+                safe_call(cb, mode, backend="web", component="HBox", method="on_resize")
 
     def _apply_theme(self) -> None:
         self._native.style(f"color: {T['fg']}")
@@ -126,6 +218,11 @@ class WebGridAdapter(_WebAdapter, IGrid):
             pass
         super().__init__(grid)
         self._columns = columns
+        self._resize_callbacks: List = []
+        self._breakpoints = None
+        self._last_mode: Optional[str] = None
+        self._resize_wired = False
+        self._resize_bridge = None
 
     def add_item(self, widget: IWidget, row: int = -1, col: int = -1,
                  row_span: int = 1, col_span: int = 1) -> None:
@@ -147,6 +244,34 @@ class WebGridAdapter(_WebAdapter, IGrid):
 
     def clear(self) -> None:
         self._native.clear()
+
+    def on_resize(self, callback, breakpoints=None) -> Handle:
+        from ....core import DEFAULT_BREAKPOINTS
+        bp = breakpoints or DEFAULT_BREAKPOINTS
+        self._breakpoints = bp
+        self._resize_callbacks.append(callback)
+
+        if not self._resize_wired:
+            self._resize_wired = True
+            self._resize_bridge = ui.number(value=0).classes("hidden")
+            self._resize_bridge.move(self._native)
+            self._resize_bridge.on_value_change(self._on_width)
+            _wire_resize_observer(self._native, self._resize_bridge)
+
+        def cancel():
+            if callback in self._resize_callbacks:
+                self._resize_callbacks.remove(callback)
+        return Handle(cancel)
+
+    def _on_width(self, event) -> None:
+        width = event.value
+        if width is None:
+            return
+        mode = self._breakpoints.mode_for(int(width))
+        if mode != self._last_mode:
+            self._last_mode = mode
+            for cb in self._resize_callbacks:
+                safe_call(cb, mode, backend="web", component="Grid", method="on_resize")
 class WebWrapAdapter(_WebAdapter, IWrap):
     """Web Wrap adapter — flex-wrap row."""
 

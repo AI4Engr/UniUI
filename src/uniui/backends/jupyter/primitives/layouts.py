@@ -1,6 +1,7 @@
 """Layout and container primitives."""
 from __future__ import annotations
 
+import itertools
 from typing import Callable, List, Optional
 
 import ipywidgets as widgets
@@ -12,12 +13,37 @@ from ...._adapter_mixins import (
     JupyterSizeMixin, JupyterVisibilityMixin, NativeMixin, SelectionMixin,
     SizeMixin, TextMixin, VisibilityMixin,
 )
+from ....state import Handle, safe_call
 from ....strategies import normalize_text, parse_float
 from ....theme import THEME, is_dark
+from .layout_assets import resize_observer_js
 
 #: Alias for the live theme dict. ``THEME`` is mutated in place on a theme
 #: switch, so this is a view of the current palette, not a snapshot.
 T = THEME
+
+#: Monotonically increasing counter for unique per-instance CSS classes, so
+#: the injected ResizeObserver script (see layout_assets.resize_observer_js)
+#: can find the right container/bridge pair even with multiple Grid/HBox
+#: instances using on_resize() on the same page.
+_resize_instance_ids = itertools.count()
+
+
+def _wire_resize_observer(container_class: str, bridge_class: str) -> None:
+    """Inject the ResizeObserver script for one Grid/HBox instance.
+
+    Experimental: see layout_assets.py's module docstring. Injection is
+    guarded so a notebook frontend that raises (or simply doesn't support)
+    IPython.display.Javascript degrades to on_resize() silently never
+    firing, rather than crashing the caller - matching the no-op-is-fine
+    philosophy already used elsewhere in this codebase for backend gaps
+    (e.g. IHBoxLayout.on_resize's own contract default).
+    """
+    try:
+        from IPython.display import Javascript, display as ipy_display
+        ipy_display(Javascript(resize_observer_js(container_class, bridge_class)))
+    except Exception:
+        pass
 
 
 class JupyterVBoxLayout(widgets.VBox):
@@ -364,10 +390,20 @@ class JupyterVBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
     def clear(self):
         self._native.children = ()
 class JupyterHBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IHBoxLayout):
-    """Jupyter HBox adapter - implements snake_case interface convention"""
+    """Jupyter HBox adapter - implements snake_case interface convention.
+
+    ``on_resize()`` is experimental - see layout_assets.py's module
+    docstring for the cross-notebook-frontend caveats of its ResizeObserver
+    + DOM-traversal approach.
+    """
 
     def __init__(self, native_widget: widgets.HBox):
         self._native = native_widget
+        self._resize_callbacks: List = []
+        self._breakpoints = None
+        self._last_mode: Optional[str] = None
+        self._resize_wired = False
+        self._resize_bridge = None
 
     def get_native(self):
         return self._native
@@ -406,6 +442,38 @@ class JupyterHBoxAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
                     native.layout.width = "auto"
         self._native.children = self._native.children + (native,)
 
+    def on_resize(self, callback, breakpoints=None) -> Handle:
+        from ....core import DEFAULT_BREAKPOINTS
+        bp = breakpoints or DEFAULT_BREAKPOINTS
+        self._breakpoints = bp
+        self._resize_callbacks.append(callback)
+
+        if not self._resize_wired:
+            self._resize_wired = True
+            instance_id = next(_resize_instance_ids)
+            container_class = f"uniui-hbox-resize-{instance_id}"
+            bridge_class = f"uniui-hbox-resize-bridge-{instance_id}"
+            self._native.add_class(container_class)
+            self._resize_bridge = widgets.BoundedIntText(value=0, min=0, max=100000)
+            self._resize_bridge.layout.display = "none"
+            self._resize_bridge.add_class(bridge_class)
+            self._resize_bridge.observe(self._on_width, names="value")
+            self._native.children = self._native.children + (self._resize_bridge,)
+            _wire_resize_observer(container_class, bridge_class)
+
+        def cancel():
+            if callback in self._resize_callbacks:
+                self._resize_callbacks.remove(callback)
+        return Handle(cancel)
+
+    def _on_width(self, change) -> None:
+        width = change["new"]
+        mode = self._breakpoints.mode_for(int(width))
+        if mode != self._last_mode:
+            self._last_mode = mode
+            for cb in self._resize_callbacks:
+                safe_call(cb, mode, backend="jupyter", component="HBox", method="on_resize")
+
     def set_spec(self, spec):
         self._native.layout.gap = f"{spec.gap}px" if spec.gap else None
         self._native.layout.padding = f"{spec.padding}px" if spec.padding else None
@@ -425,10 +493,20 @@ class JupyterTabWidgetAdapter(NativeMixin, VisibilityMixin, JupyterEnableMixin, 
     def get_current_index(self) -> int:
         return self._native.currentIndex()
 class JupyterGridAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IGrid):
-    """Jupyter Grid adapter."""
+    """Jupyter Grid adapter.
+
+    ``on_resize()`` is experimental - see layout_assets.py's module
+    docstring for the cross-notebook-frontend caveats of its ResizeObserver
+    + DOM-traversal approach.
+    """
 
     def __init__(self, columns: int = 12):
         self._native = JupyterGrid(columns)
+        self._resize_callbacks: List = []
+        self._breakpoints = None
+        self._last_mode: Optional[str] = None
+        self._resize_wired = False
+        self._resize_bridge = None
 
     def get_native(self):
         return self._native
@@ -445,6 +523,44 @@ class JupyterGridAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
 
     def clear(self) -> None:
         self._native.clear()
+        # clear() replaces the native GridBox's children wholesale - the
+        # hidden resize bridge is a child too (see on_resize()) and would
+        # otherwise be silently dropped, breaking on_resize() after any
+        # later clear() call.
+        if self._resize_bridge is not None:
+            self._native.children = self._native.children + (self._resize_bridge,)
+
+    def on_resize(self, callback, breakpoints=None) -> Handle:
+        from ....core import DEFAULT_BREAKPOINTS
+        bp = breakpoints or DEFAULT_BREAKPOINTS
+        self._breakpoints = bp
+        self._resize_callbacks.append(callback)
+
+        if not self._resize_wired:
+            self._resize_wired = True
+            instance_id = next(_resize_instance_ids)
+            container_class = f"uniui-grid-resize-{instance_id}"
+            bridge_class = f"uniui-grid-resize-bridge-{instance_id}"
+            self._native.add_class(container_class)
+            self._resize_bridge = widgets.BoundedIntText(value=0, min=0, max=100000)
+            self._resize_bridge.layout.display = "none"
+            self._resize_bridge.add_class(bridge_class)
+            self._resize_bridge.observe(self._on_width, names="value")
+            self._native.children = self._native.children + (self._resize_bridge,)
+            _wire_resize_observer(container_class, bridge_class)
+
+        def cancel():
+            if callback in self._resize_callbacks:
+                self._resize_callbacks.remove(callback)
+        return Handle(cancel)
+
+    def _on_width(self, change) -> None:
+        width = change["new"]
+        mode = self._breakpoints.mode_for(int(width))
+        if mode != self._last_mode:
+            self._last_mode = mode
+            for cb in self._resize_callbacks:
+                safe_call(cb, mode, backend="jupyter", component="Grid", method="on_resize")
 class JupyterWrapAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, IWrap):
     """Jupyter Wrap adapter backed by a stock ipywidgets Box."""
 

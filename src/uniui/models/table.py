@@ -28,6 +28,12 @@ CELL_NUMBER = "number"
 CELL_STATUS = "status"
 CELL_PROGRESS = "progress"
 CELL_ACTIONS = "actions"
+CELL_CHECKBOX = "checkbox"
+
+#: Reserved column key for the checkbox column set_selection_mode("multiple")
+#: prepends. Double-underscore-wrapped (unlike STATUS_COLUMN_KEY) to signal
+#: "framework-reserved" and avoid clashing with a real app column.
+SELECTION_COLUMN_KEY = "__uniui_selected__"
 
 #: Semantic alignments. Backends map these to QSS flags or CSS/Quasar values.
 ALIGN_LEFT = "left"
@@ -77,6 +83,10 @@ class Column:
         return self.source.get("cell") == "actions"
 
     @property
+    def is_checkbox(self) -> bool:
+        return self.key == SELECTION_COLUMN_KEY
+
+    @property
     def actions(self) -> List[Dict]:
         """Row action-button specs for an actions column.
 
@@ -92,11 +102,14 @@ class Column:
     def cell_kind(self) -> str:
         """The semantic kind of every cell in this column.
 
-        Status, progress, and actions are all explicit opt-ins - status via
-        the fixed "status" key name, progress/actions via the "cell" key -
-        so they're checked before the numeric key-name inference, which is
-        the only kind that's ever inferred rather than declared.
+        Checkbox, status, progress, and actions are all explicit opt-ins -
+        checkbox/status via a fixed key name, progress/actions via the
+        "cell" key - so they're checked before the numeric key-name
+        inference, which is the only kind that's ever inferred rather than
+        declared.
         """
+        if self.is_checkbox:
+            return CELL_CHECKBOX
         if self.is_status:
             return CELL_STATUS
         if self.is_progress:
@@ -166,7 +179,7 @@ class TableModel:
 
     __slots__ = (
         "_columns", "_rows", "_rows_set", "_loading", "_error",
-        "_sort_key", "_sort_reverse", "_selected_row",
+        "_sort_key", "_sort_reverse", "_selected_rows", "_selection_mode",
         "_page_size", "_page",
     )
 
@@ -179,7 +192,8 @@ class TableModel:
         self._rows_set = False
         self._loading = False
         self._error = ""
-        self._selected_row: Optional[Dict] = None
+        self._selected_rows: List[Dict] = []
+        self._selection_mode = "single"
         self._sort_key: Optional[str] = None
         self._sort_reverse = False
         #: None = pagination disabled (every row displays).
@@ -198,27 +212,82 @@ class TableModel:
     def set_columns(self, columns: Sequence[Dict]) -> None:
         self._columns = [Column(spec) for spec in columns]
 
-    def set_rows(self, rows: Sequence[Dict]) -> None:
+    def set_rows(self, rows: Sequence[Dict]) -> bool:
+        """Replace the row data. Returns whether this dropped any selected
+        rows that are no longer present, so a caller can dispatch
+        on_selection_change - a data refresh silently clearing a stale
+        selection is still a real selection change."""
         self._rows = list(rows)
         self._rows_set = True
         self._page = 0
-        if self._selected_row is not None and self._selected_row not in self._rows:
-            self._selected_row = None
+        kept = [row for row in self._selected_rows if row in self._rows]
+        return self._notify_selection(self._selected_rows, kept)
 
     # -- selection ---------------------------------------------------------
-    def select_row(self, row: Optional[Dict]) -> None:
-        """Mark ``row`` as selected, or clear the selection with ``None``.
+    def set_selection_mode(self, mode: str) -> None:
+        """"single" (default) or "multiple". Anything else raises - the mode
+        is a small closed set picked once by the app, not per-row user data,
+        so a typo should fail loudly rather than silently no-op."""
+        if mode not in ("single", "multiple"):
+            raise ValueError(f"invalid selection mode: {mode!r}")
+        self._selection_mode = mode
+
+    @property
+    def selection_mode(self) -> str:
+        return self._selection_mode
+
+    def select_row(self, row: Optional[Dict]) -> bool:
+        """Replace the whole selection with ``row`` (or clear it with
+        ``None``), in both single and multiple mode - a row click always
+        single-selects, independent of any checkbox column.
 
         Rows have no stable identity in this model (see the module
         docstring), so selection is by value: a later ``set_rows()`` that no
         longer contains an equal row clears it automatically rather than
         leaving a stale selection pointing at data that's gone.
+
+        Returns whether the selection actually changed, so callers only
+        dispatch a change notification when there's a real change to report.
         """
-        self._selected_row = row
+        previous = self._selected_rows
+        new = [] if row is None else [row]
+        return self._notify_selection(previous, new)
+
+    def toggle_row_selection(self, row: Dict) -> bool:
+        """Add ``row`` to the selection if absent, remove it if present.
+
+        Only meaningful in "multiple" mode; in "single" mode it degrades to
+        toggling between ``[row]`` and ``[]`` rather than needing a mode
+        check at every call site. Returns whether the selection changed.
+        """
+        previous = self._selected_rows
+        if self._selection_mode != "multiple":
+            new = [] if row in previous else [row]
+        elif row in previous:
+            new = [r for r in previous if r != row]
+        else:
+            new = previous + [row]
+        return self._notify_selection(previous, new)
+
+    def _notify_selection(self, previous: List[Dict], new: List[Dict]) -> bool:
+        """Apply ``new`` as the selection and report whether it differs from
+        ``previous`` - mirrors State's equality-gate philosophy (state.py),
+        so a click that doesn't actually change the selection (e.g.
+        clicking the already-selected row again) is not reported as a
+        change. No callback lives here - dispatch is adapter-side (see
+        ITable.on_selection_change) - this only decides *whether* to."""
+        if new == previous:
+            return False
+        self._selected_rows = new
+        return True
 
     @property
     def selected_row(self) -> Optional[Dict]:
-        return self._selected_row
+        return self._selected_rows[0] if self._selected_rows else None
+
+    @property
+    def selected_rows(self) -> List[Dict]:
+        return list(self._selected_rows)
 
     @property
     def has_status_column(self) -> bool:
@@ -234,6 +303,11 @@ class TableModel:
     def has_action_column(self) -> bool:
         """Whether any column needs the row-action-buttons treatment."""
         return any(col.is_actions for col in self._columns)
+
+    @property
+    def has_checkbox_column(self) -> bool:
+        """Whether the synthetic multi-select checkbox column is present."""
+        return any(col.is_checkbox for col in self._columns)
 
     def header_labels(self) -> List[str]:
         return [col.label for col in self._columns]

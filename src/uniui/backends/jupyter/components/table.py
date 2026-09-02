@@ -8,7 +8,10 @@ import ipywidgets as widgets
 
 from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import ITable
-from ....models.table import CELL_ACTIONS, CELL_NUMBER, CELL_PROGRESS, CELL_STATUS, TableModel
+from ....models.table import (
+    CELL_ACTIONS, CELL_CHECKBOX, CELL_NUMBER, CELL_PROGRESS, CELL_STATUS,
+    SELECTION_COLUMN_KEY, TableModel,
+)
 from ....state import Handle, safe_call
 from ..runtime import M, html
 
@@ -17,6 +20,11 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         self._model = TableModel()
         self._row_click_cb: Optional[Callable[[Dict], None]] = None
         self._row_action_cb: Optional[Callable[[Dict, str], None]] = None
+        self._selection_change_cb: Optional[Callable[[List[Dict]], None]] = None
+        #: The columns last passed to set_columns(), without the synthetic
+        #: checkbox column - so a later set_columns() call after enabling
+        #: multi-select can still re-prepend it.
+        self._column_specs: List[Dict] = []
         self._table = html("", "uniui-table-html")
         self._message = html("", "uniui-table-message")
         self._message.layout.display = "none"
@@ -32,21 +40,36 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         self._action_bridge.layout.display = "none"
         self._action_bridge.add_class("uniui-table-actionbridge")
         self._action_bridge.observe(self._on_action_bridge, names="value")
+        self._selection_bridge = widgets.BoundedIntText(value=-1, min=-1, max=1_000_000)
+        self._selection_bridge.layout.display = "none"
+        self._selection_bridge.add_class("uniui-table-selectionbridge")
+        self._selection_bridge.observe(self._on_selection_bridge, names="value")
         self._native = widgets.VBox([
-            self._table, self._message, self._bridge, self._sort_bridge, self._action_bridge,
+            self._table, self._message, self._bridge, self._sort_bridge,
+            self._action_bridge, self._selection_bridge,
         ])
         self._native.add_class("uniui-admin-table")
 
     def get_native(self): return self._native
 
+    def set_selection_mode(self, mode: str) -> None:
+        self._model.set_selection_mode(mode)
+        self.set_columns(self._column_specs)
+
     def set_columns(self, columns: List[Dict]) -> None:
-        self._model.set_columns(columns)
+        self._column_specs = list(columns)
+        effective = columns
+        if self._model.selection_mode == "multiple":
+            effective = [{"key": SELECTION_COLUMN_KEY, "label": "", "width": 40}] + list(columns)
+        self._model.set_columns(effective)
         self._render()
 
     def set_rows(self, rows: List[Dict]) -> None:
-        self._model.set_rows(rows)
+        changed = self._model.set_rows(rows)
         self._render()
         self._sync_message()
+        if changed:
+            self._dispatch_selection_change()
 
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)
@@ -83,6 +106,18 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
             "event.stopPropagation();"
             "const root=this.closest('.uniui-admin-table'),input=root.querySelector("
             "'.uniui-table-actionbridge input');if(input){input.value='" + payload +
+            "';input.dispatchEvent(new Event('change',{bubbles:true}));}"
+        )
+
+    def _selection_click_js(self, index: int) -> str:
+        """JS for a checkbox cell's onclick: writes the row index to the
+        selection bridge and stops the click from also bubbling up to the
+        row (which would otherwise also fire the row-click bridge) - same
+        idiom as _action_click_js."""
+        return (
+            "event.stopPropagation();"
+            "const root=this.closest('.uniui-admin-table'),input=root.querySelector("
+            "'.uniui-table-selectionbridge input');if(input){input.value='" + str(index) +
             "';input.dispatchEvent(new Event('change',{bubbles:true}));}"
         )
 
@@ -124,6 +159,13 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
                             f'onclick="{click}">{label}</button>'
                         )
                     rendered_value = "".join(buttons)
+                elif kind == CELL_CHECKBOX:
+                    checked = "checked" if row in self._model.selected_rows else ""
+                    click = self._selection_click_js(index)
+                    rendered_value = (
+                        f'<input type="checkbox" class="uniui-table-checkbox" '
+                        f'{checked} onclick="{click}">'
+                    )
                 class_attr = f' class="{" ".join(classes)}"' if classes else ""
                 cells.append(f"<td{class_attr}>{rendered_value}</td>")
             click = (
@@ -169,8 +211,26 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
                 self._row_action_cb = None
         return Handle(cancel)
 
+    def on_selection_change(self, fn: Callable[[List[Dict]], None]) -> Handle:
+        self._selection_change_cb = fn
+        def cancel():
+            if self._selection_change_cb is fn:
+                self._selection_change_cb = None
+        return Handle(cancel)
+
+    def _dispatch_selection_change(self) -> None:
+        if self._selection_change_cb:
+            safe_call(
+                self._selection_change_cb, self._model.selected_rows,
+                backend="jupyter", component="Table", method="on_selection_change",
+            )
+
     def get_selected_row(self):
-        return self._model.selected_row
+        rows = self.get_selected_rows()
+        return rows[0] if rows else None
+
+    def get_selected_rows(self) -> List[Dict]:
+        return self._model.selected_rows
 
     def _on_action_bridge(self, change) -> None:
         value = change["new"]
@@ -193,12 +253,21 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
     def _on_bridge(self, change) -> None:
         index = int(change["new"])
         clicked = self._model.row_at(index)
-        if clicked is not None:
-            self._model.select_row(clicked)
+        if clicked is not None and self._model.select_row(clicked):
+            self._dispatch_selection_change()
         if clicked is not None and self._row_click_cb:
             safe_call(self._row_click_cb, clicked, backend="jupyter", component="Table", method="on_row_click")
         if index != -1:
             self._bridge.value = -1
+
+    def _on_selection_bridge(self, change) -> None:
+        index = int(change["new"])
+        row = self._model.row_at(index)
+        if row is not None and self._model.toggle_row_selection(row):
+            self._render()
+            self._dispatch_selection_change()
+        if index != -1:
+            self._selection_bridge.value = -1
 
     def _on_sort_bridge(self, change) -> None:
         key = change["new"]
@@ -241,5 +310,6 @@ def table_css() -> str:
   cursor:pointer; border:none; border-radius:6px; padding:4px 10px; margin-right:6px;
   font-size:12px; font-weight:600; color:var(--uniui-text); background:var(--uniui-surface_subtle);
 }}
+.uniui-table-checkbox {{cursor:pointer; width:16px; height:16px; accent-color:var(--uniui-accent)}}
 .uniui-table-action-btn:hover {{background:var(--uniui-border)}}
 .uniui-table-message, .uniui-table-message p {{margin:20px 0;text-align:center;color:var(--uniui-text_muted)}}"""

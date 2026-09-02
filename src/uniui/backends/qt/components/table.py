@@ -8,7 +8,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from ...._adapter_mixins import EnableMixin, SizeMixin, VisibilityMixin
 from ....components import ITable
 from ....models.status import classify_status, status_token_names
-from ....models.table import ALIGN_RIGHT, TableModel
+from ....models.table import ALIGN_RIGHT, SELECTION_COLUMN_KEY, TableModel
 from ....state import Handle, safe_call
 from ..icons import admin_icon
 from ..runtime import C, M, track_themed
@@ -243,6 +243,68 @@ class _ActionButtonDelegate(QtWidgets.QStyledItemDelegate):
         return super().editorEvent(event, model, option, index)
 
 
+class _CheckboxDelegate(QtWidgets.QStyledItemDelegate):
+    """Paint the multi-select checkbox column and dispatch toggle clicks.
+
+    Same shape as _ActionButtonDelegate: needs the shared TableModel (to
+    resolve the clicked row and its current selection state) and a dispatch
+    callback (to fire the adapter's on_selection_change callback).
+    """
+
+    SIZE = 16
+
+    def __init__(self, model: TableModel, dispatch: Callable[[], None], parent=None):
+        super().__init__(parent)
+        self._model = model
+        self._dispatch = dispatch
+
+    def _box_rect(self, option) -> QtCore.QRect:
+        """The checkbox's square hit/paint rect, centered in the cell. Used
+        by both paint() and editorEvent() so hit-testing and visuals never
+        disagree."""
+        return QtCore.QRect(
+            option.rect.center().x() - self.SIZE // 2,
+            option.rect.center().y() - self.SIZE // 2,
+            self.SIZE, self.SIZE,
+        )
+
+    def paint(self, painter, option, index) -> None:
+        _paint_cell_chrome(self, painter, option, index)
+
+        row = self._model.row_at(index.row())
+        checked = row is not None and row in self._model.selected_rows
+        box = self._box_rect(option)
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        if checked:
+            painter.setPen(QtCore.Qt.NoPen)
+            painter.setBrush(QtGui.QColor(C["accent"]))
+            painter.drawRoundedRect(box, 4, 4)
+            painter.setPen(QtGui.QPen(QtGui.QColor(C["surface"]), 2))
+            painter.drawLine(
+                box.left() + 3, box.center().y(),
+                box.center().x() - 1, box.bottom() - 3,
+            )
+            painter.drawLine(
+                box.center().x() - 1, box.bottom() - 3,
+                box.right() - 2, box.top() + 3,
+            )
+        else:
+            painter.setPen(QtGui.QPen(QtGui.QColor(C["border"]), 1.5))
+            painter.setBrush(QtCore.Qt.NoBrush)
+            painter.drawRoundedRect(box, 4, 4)
+        painter.restore()
+
+    def editorEvent(self, event, model, option, index) -> bool:
+        if event.type() == QtCore.QEvent.MouseButtonRelease:
+            if self._box_rect(option).contains(event.pos()):
+                row = self._model.row_at(index.row())
+                if row is not None and self._model.toggle_row_selection(row):
+                    self._dispatch()
+                return True
+        return super().editorEvent(event, model, option, index)
+
+
 class _TableGridModel(QtCore.QAbstractTableModel):
     def __init__(self, model: TableModel):
         super().__init__()
@@ -337,8 +399,16 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         self._table.setModel(self._grid_model)
         self._row_click_cb: Optional[Callable] = None
         self._row_action_cb: Optional[Callable] = None
+        self._selection_change_cb: Optional[Callable] = None
+        #: The columns last passed to set_columns(), without the synthetic
+        #: checkbox column - so a later set_columns() call after enabling
+        #: multi-select can still re-prepend it.
+        self._column_specs: List[Dict] = []
         self._action_delegate = _ActionButtonDelegate(
             self._model, self._dispatch_row_action, self._table
+        )
+        self._checkbox_delegate = _CheckboxDelegate(
+            self._model, self._dispatch_selection_change, self._table
         )
         self._table.clicked.connect(self._on_clicked)
         track_themed(self, self._container)
@@ -346,11 +416,21 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
 
     def get_native(self): return self._container
 
+    def set_selection_mode(self, mode: str) -> None:
+        self._model.set_selection_mode(mode)
+        self.set_columns(self._column_specs)
+
     def set_columns(self, columns: List[Dict]) -> None:
-        self._model.set_columns(columns)
+        self._column_specs = list(columns)
+        effective = columns
+        if self._model.selection_mode == "multiple":
+            effective = [{"key": SELECTION_COLUMN_KEY, "label": "", "width": 40}] + list(columns)
+        self._model.set_columns(effective)
         self._grid_model.refresh()
         for i, col in enumerate(self._model.columns):
-            if col.is_status:
+            if col.is_checkbox:
+                self._table.setItemDelegateForColumn(i, self._checkbox_delegate)
+            elif col.is_status:
                 self._table.setItemDelegateForColumn(i, self._status_delegate)
             elif col.is_progress:
                 self._table.setItemDelegateForColumn(i, self._progress_delegate)
@@ -363,9 +443,11 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
                 )
 
     def set_rows(self, rows: List[Dict]) -> None:
-        self._model.set_rows(rows)
+        changed = self._model.set_rows(rows)
         self._grid_model.refresh()
         self._sync_overlay()
+        if changed:
+            self._dispatch_selection_change()
 
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)
@@ -426,15 +508,34 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
                 backend="qt", component="Table", method="on_row_action",
             )
 
+    def on_selection_change(self, fn: Callable[[List[Dict]], None]) -> Handle:
+        self._selection_change_cb = fn
+        def cancel():
+            if self._selection_change_cb is fn:
+                self._selection_change_cb = None
+        return Handle(cancel)
+
+    def _dispatch_selection_change(self) -> None:
+        if self._selection_change_cb:
+            safe_call(
+                self._selection_change_cb, self._model.selected_rows,
+                backend="qt", component="Table", method="on_selection_change",
+            )
+
     def get_selected_row(self):
-        return self._model.selected_row
+        rows = self.get_selected_rows()
+        return rows[0] if rows else None
+
+    def get_selected_rows(self) -> List[Dict]:
+        return self._model.selected_rows
 
     def _on_clicked(self, index) -> None:
         self._on_cell_clicked(index.row(), index.column())
 
     def _on_cell_clicked(self, row: int, col: int) -> None:
         clicked = self._model.row_at(row)
-        self._model.select_row(clicked)
+        if self._model.select_row(clicked):
+            self._dispatch_selection_change()
         if self._row_click_cb and clicked is not None:
             safe_call(self._row_click_cb, clicked, backend="qt", component="Table", method="on_row_click")
 

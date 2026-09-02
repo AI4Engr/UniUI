@@ -602,6 +602,74 @@ class TestTableContract(_Common):
         assert tbl._row_action_cb is None
 
     @pytest.mark.contract
+    def test_on_selection_change_registers(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.on_selection_change(lambda rows: None)
+
+    @pytest.mark.contract
+    def test_on_selection_change_dispose_clears_callback(self, factory):
+        tbl = self.create_widget(factory)
+        handle = tbl.on_selection_change(lambda rows: None)
+        handle.dispose()
+        assert tbl._selection_change_cb is None
+
+    @pytest.mark.contract
+    def test_on_selection_change_fires_on_a_plain_row_click_in_default_mode(self, factory, request):
+        """Single-select is the default mode - a plain row click (not a
+        checkbox toggle) must still fire on_selection_change."""
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "name", "label": "Name"}])
+        tbl.set_rows([{"name": "Alice"}, {"name": "Bob"}])
+        seen = []
+        tbl.on_selection_change(seen.append)
+
+        self._click_row(request, tbl, 1)
+
+        assert seen == [[{"name": "Bob"}]]
+
+    @pytest.mark.contract
+    def test_get_selected_rows_reflects_clicks(self, factory, request):
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "name", "label": "Name"}])
+        tbl.set_rows([{"name": "Alice"}, {"name": "Bob"}])
+        assert tbl.get_selected_rows() == []
+
+        self._click_row(request, tbl, 0)
+
+        assert tbl.get_selected_rows() == [{"name": "Alice"}]
+
+    def _click_row(self, request, tbl, index):
+        """Drive a plain row click through whichever backend-specific path
+        create_table() wires up, using the same --ui option the ``factory``
+        fixture itself reads - mirroring how each backend's own click
+        handler is invoked directly in tests/test_models_table.py."""
+        framework = request.config.getoption("--ui")
+        if framework == "qt":
+            tbl._on_cell_clicked(index, 0)
+        elif framework == "jupyter":
+            tbl._on_bridge({"new": index})
+        else:
+            class Event:
+                args = {"row": tbl._model.row_at(index)}
+            tbl._on_row_event(Event())
+
+    @pytest.mark.contract
+    def test_on_selection_change_fires_when_set_rows_drops_the_selection(self, factory, request):
+        """A data refresh that silently clears a stale selection (the row
+        the user had selected is no longer in the new data) is still a
+        real selection change, not just an internal model-state cleanup."""
+        tbl = self.create_widget(factory)
+        tbl.set_columns([{"key": "name", "label": "Name"}])
+        tbl.set_rows([{"name": "Alice"}, {"name": "Bob"}])
+        self._click_row(request, tbl, 0)
+        seen = []
+        tbl.on_selection_change(seen.append)
+
+        tbl.set_rows([{"name": "Bob"}])  # Alice, the selected row, is gone
+
+        assert seen == [[]]
+
+    @pytest.mark.contract
     def test_get_selected_row_starts_as_none(self, factory):
         tbl = self.create_widget(factory)
         assert tbl.get_selected_row() is None

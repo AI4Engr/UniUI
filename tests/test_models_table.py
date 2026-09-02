@@ -5,6 +5,7 @@ from uniui.models.table import (
     ALIGN_LEFT,
     ALIGN_RIGHT,
     CELL_ACTIONS,
+    CELL_CHECKBOX,
     CELL_NUMBER,
     CELL_PROGRESS,
     CELL_STATUS,
@@ -12,6 +13,7 @@ from uniui.models.table import (
     EMPTY_TEXT,
     LOADING_TEXT,
     NUMERIC_COLUMN_KEYS,
+    SELECTION_COLUMN_KEY,
     Column,
     TableModel,
 )
@@ -77,6 +79,14 @@ class TestColumn:
 
     def test_non_actions_column_is_not_actions(self):
         assert not Column({"key": "row_actions"}).is_actions
+
+    def test_checkbox_column_is_opted_in_via_reserved_key(self):
+        col = Column({"key": SELECTION_COLUMN_KEY, "label": ""})
+        assert col.is_checkbox
+        assert col.cell_kind == CELL_CHECKBOX
+
+    def test_non_checkbox_column_is_not_checkbox(self):
+        assert not Column({"key": "selected"}).is_checkbox
 
     def test_actions_defaults_to_empty_list(self):
         assert Column({"key": "row_actions", "cell": "actions"}).actions == []
@@ -268,6 +278,141 @@ class TestSelection:
         model.select_row({"id": 1})
         model.set_rows([{"id": 1}, {"id": 3}])
         assert model.selected_row == {"id": 1}
+
+    def test_select_row_returns_whether_it_changed(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}, {"id": 2}])
+        assert model.select_row({"id": 1}) is True
+        assert model.select_row({"id": 1}) is False, "reselecting the same row is not a change"
+        assert model.select_row({"id": 2}) is True
+        assert model.select_row(None) is True
+        assert model.select_row(None) is False, "clearing an already-empty selection is not a change"
+
+    def test_default_mode_is_single(self):
+        assert TableModel().selection_mode == "single"
+
+    def test_set_selection_mode_accepts_single_and_multiple(self):
+        model = TableModel()
+        model.set_selection_mode("multiple")
+        assert model.selection_mode == "multiple"
+        model.set_selection_mode("single")
+        assert model.selection_mode == "single"
+
+    @pytest.mark.parametrize("bad_mode", ["", "SINGLE", "both", None, 1])
+    def test_set_selection_mode_rejects_anything_else(self, bad_mode):
+        model = TableModel()
+        with pytest.raises(ValueError):
+            model.set_selection_mode(bad_mode)
+
+    def test_toggle_row_selection_in_multiple_mode_adds_and_removes(self):
+        model = TableModel()
+        model.set_selection_mode("multiple")
+        model.set_rows([{"id": 1}, {"id": 2}])
+        assert model.toggle_row_selection({"id": 1}) is True
+        assert model.selected_rows == [{"id": 1}]
+        assert model.toggle_row_selection({"id": 2}) is True
+        assert model.selected_rows == [{"id": 1}, {"id": 2}]
+        assert model.toggle_row_selection({"id": 1}) is True, "unchecking must report a change"
+        assert model.selected_rows == [{"id": 2}]
+
+    def test_toggle_row_selection_in_single_mode_degrades_to_select_toggle(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}, {"id": 2}])
+        assert model.toggle_row_selection({"id": 1}) is True
+        assert model.selected_rows == [{"id": 1}]
+        assert model.toggle_row_selection({"id": 1}) is True
+        assert model.selected_rows == []
+        assert model.toggle_row_selection({"id": 2}) is True
+        assert model.selected_rows == [{"id": 2}], "selecting a second row still single-selects"
+
+    def test_set_rows_filters_multiple_selected_rows_not_just_one(self):
+        model = TableModel()
+        model.set_selection_mode("multiple")
+        model.set_rows([{"id": 1}, {"id": 2}, {"id": 3}])
+        model.toggle_row_selection({"id": 1})
+        model.toggle_row_selection({"id": 2})
+        model.toggle_row_selection({"id": 3})
+        assert model.selected_rows == [{"id": 1}, {"id": 2}, {"id": 3}]
+
+        model.set_rows([{"id": 1}, {"id": 3}])  # id 2 dropped
+        assert model.selected_rows == [{"id": 1}, {"id": 3}]
+
+    def test_set_rows_that_drops_no_selected_rows_reports_no_change(self):
+        model = TableModel()
+        model.set_selection_mode("multiple")
+        model.set_rows([{"id": 1}, {"id": 2}])
+        model.toggle_row_selection({"id": 1})
+        model.set_rows([{"id": 1}, {"id": 2}, {"id": 3}])
+        assert model.selected_rows == [{"id": 1}]
+
+    def test_set_rows_reports_changed_when_it_drops_the_selection(self):
+        model = TableModel()
+        model.select_row({"id": 1})
+        assert model.set_rows([{"id": 2}]) is True, (
+            "a data refresh that silently clears a stale selection is "
+            "still a real selection change - callers must be able to "
+            "dispatch on_selection_change for it"
+        )
+        assert model.selected_rows == []
+
+    def test_set_rows_reports_unchanged_when_selection_survives(self):
+        model = TableModel()
+        model.set_rows([{"id": 1}, {"id": 2}])
+        model.select_row({"id": 1})
+        assert model.set_rows([{"id": 1}, {"id": 3}]) is False
+
+    def test_selected_row_is_the_first_of_selected_rows(self):
+        model = TableModel()
+        model.set_selection_mode("multiple")
+        model.set_rows([{"id": 1}, {"id": 2}])
+        model.toggle_row_selection({"id": 1})
+        model.toggle_row_selection({"id": 2})
+        assert model.selected_row == model.selected_rows[0] == {"id": 1}
+
+    def test_selected_rows_is_a_copy(self):
+        """Mutating the returned list must not change the model's selection."""
+        model = TableModel()
+        model.set_selection_mode("multiple")
+        model.set_rows([{"id": 1}])
+        model.toggle_row_selection({"id": 1})
+        model.selected_rows.append({"id": 999})
+        assert model.selected_rows == [{"id": 1}]
+
+    def test_sabotaged_equality_gate_makes_redundant_notification_pass_through(self, monkeypatch):
+        """Sabotage check: if _notify_selection's equality gate always
+        reports a change (even when the selection didn't actually change),
+        the "no redundant notification" behavior genuinely breaks - proving
+        the passing test above (test_select_row_returns_whether_it_changed)
+        is not vacuous."""
+        from uniui.models import table as table_module
+
+        monkeypatch.setattr(
+            table_module.TableModel, "_notify_selection",
+            lambda self, previous, new: (setattr(self, "_selected_rows", new), True)[1],
+        )
+        model = TableModel()
+        model.set_rows([{"id": 1}])
+        model.select_row({"id": 1})
+        assert model.select_row({"id": 1}) is True, "sabotage should defeat the equality gate"
+
+    def test_sabotaged_toggle_membership_check_makes_unchecking_fail_to_remove(self, monkeypatch):
+        """Sabotage check: if toggle_row_selection always appends instead of
+        removing an already-selected row, "unchecking removes" genuinely
+        breaks - proving the passing test above
+        (test_toggle_row_selection_in_multiple_mode_adds_and_removes) is not
+        vacuous."""
+        def broken_toggle(self, row):
+            previous = self._selected_rows
+            new = previous + [row]  # never removes, even if already present
+            return self._notify_selection(previous, new)
+
+        monkeypatch.setattr(TableModel, "toggle_row_selection", broken_toggle)
+        model = TableModel()
+        model.set_selection_mode("multiple")
+        model.set_rows([{"id": 1}])
+        model.toggle_row_selection({"id": 1})
+        model.toggle_row_selection({"id": 1})  # meant to uncheck
+        assert model.selected_rows != [], "sabotage should defeat the membership check"
 
 
 class TestPagination:
@@ -1035,3 +1180,285 @@ class TestJupyterProgressAndActionCells:
         table._action_bridge.value = "99:delete"
 
         assert seen == []
+
+
+class TestQtCheckboxCell:
+    """Direct Qt tests for the multi-select checkbox column and delegate."""
+
+    ROWS = [{"id": 1}, {"id": 2}, {"id": 3}]
+
+    @pytest.fixture
+    def qapp(self):
+        pytest.importorskip("PySide2")
+        pytest.importorskip("PySide2.QtWidgets")
+        from PySide2 import QtWidgets
+
+        if QtWidgets.QApplication.instance() is None:
+            QtWidgets.QApplication([])
+        return QtWidgets.QApplication.instance()
+
+    def _table(self, qapp):
+        from uniui import qt_components
+
+        table = qt_components.QtTableAdapter()
+        table.set_selection_mode("multiple")
+        table.set_columns([{"key": "id", "label": "ID"}])
+        table.set_rows(self.ROWS)
+        return table
+
+    def test_multiple_mode_prepends_a_checkbox_column(self, qapp):
+        table = self._table(qapp)
+        assert table._model.columns[0].is_checkbox
+        assert table._model.columns[1].key == "id"
+
+    def test_checkbox_column_gets_the_checkbox_delegate(self, qapp):
+        from uniui.backends.qt.components.table import _CheckboxDelegate
+
+        table = self._table(qapp)
+        delegate = table._table.itemDelegateForColumn(0)
+        assert isinstance(delegate, _CheckboxDelegate)
+
+    def test_set_columns_again_still_has_the_checkbox_column(self, qapp):
+        """A later set_columns() call (e.g. an app reacting to new server
+        schema) must not lose the synthetic checkbox column."""
+        table = self._table(qapp)
+        table.set_columns([{"key": "id", "label": "ID"}, {"key": "name", "label": "Name"}])
+        assert table._model.columns[0].is_checkbox
+        assert [c.key for c in table._model.columns[1:]] == ["id", "name"]
+
+    def _fire_checkbox_click(self, table, row_index):
+        """Build a real QMouseEvent at the actual computed checkbox rect and
+        run it through the delegate's editorEvent() - same discipline as
+        _fire_action_click in TestQtProgressAndActionCells: proves the
+        hit-testing rect is correct, not just the dispatch internals."""
+        from PySide2 import QtCore, QtGui, QtWidgets
+
+        index = table._grid_model.index(row_index, 0)
+        rect = table._table.visualRect(index)
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = rect
+        delegate = table._table.itemDelegateForColumn(0)
+        point = delegate._box_rect(option).center()
+        event = QtGui.QMouseEvent(
+            QtCore.QEvent.MouseButtonRelease, point,
+            QtCore.Qt.LeftButton, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier,
+        )
+        return delegate.editorEvent(event, table._grid_model, option, index)
+
+    def test_clicking_two_checkboxes_selects_both(self, qapp):
+        table = self._table(qapp)
+        seen = []
+        table.on_selection_change(seen.append)
+
+        handled_0 = self._fire_checkbox_click(table, 0)
+        handled_1 = self._fire_checkbox_click(table, 1)
+
+        assert handled_0 is True and handled_1 is True
+        assert table.get_selected_rows() == [self.ROWS[0], self.ROWS[1]]
+        assert seen == [[self.ROWS[0]], [self.ROWS[0], self.ROWS[1]]]
+
+    def test_unchecking_a_checkbox_drops_it(self, qapp):
+        table = self._table(qapp)
+        self._fire_checkbox_click(table, 0)
+        self._fire_checkbox_click(table, 1)
+
+        self._fire_checkbox_click(table, 0)  # uncheck row 0
+
+        assert table.get_selected_rows() == [self.ROWS[1]]
+
+    def test_row_click_still_fires_selection_change_in_multiple_mode(self, qapp):
+        """A plain row click (not the checkbox) single-selects independently
+        of any checkbox state, and still fires on_selection_change."""
+        table = self._table(qapp)
+        seen = []
+        table.on_selection_change(seen.append)
+
+        table._on_cell_clicked(2, 1)  # click the "id" cell of row 2, not the checkbox
+
+        assert seen == [[self.ROWS[2]]]
+        assert table.get_selected_rows() == [self.ROWS[2]]
+
+    def test_click_outside_the_checkbox_rect_does_not_toggle(self, qapp):
+        from PySide2 import QtCore, QtGui, QtWidgets
+
+        table = self._table(qapp)
+        seen = []
+        table.on_selection_change(seen.append)
+
+        index = table._grid_model.index(0, 0)
+        rect = table._table.visualRect(index)
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = rect
+        delegate = table._table.itemDelegateForColumn(0)
+        point = QtCore.QPoint(rect.right() + 50, rect.center().y())
+        event = QtGui.QMouseEvent(
+            QtCore.QEvent.MouseButtonRelease, point,
+            QtCore.Qt.LeftButton, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier,
+        )
+        delegate.editorEvent(event, table._grid_model, option, index)
+
+        assert seen == []
+        assert table.get_selected_rows() == []
+
+    def test_visually_checked_and_unchecked_cells_render_different_pixels(self, qapp):
+        """Established discipline for Qt cell delegates (see
+        test_qt_drawer_and_offscreen_visual_render_smoke and the progress/
+        action delegates): render the real widget offscreen and sample
+        pixels rather than trusting the paint code compiled without error.
+        """
+        from PySide2 import QtCore, QtGui
+
+        table = self._table(qapp)
+        self._fire_checkbox_click(table, 0)  # row 0 checked, row 1 unchecked
+        native = table.get_native()
+        native.resize(300, 200)
+        native.show()
+        qapp.processEvents()
+
+        checked_rect = table._table.visualRect(table._grid_model.index(0, 0))
+        unchecked_rect = table._table.visualRect(table._grid_model.index(1, 0))
+
+        image = QtGui.QImage(native.size(), QtGui.QImage.Format_ARGB32)
+        image.fill(QtCore.Qt.transparent)
+        native.render(image)
+
+        def sample(rect):
+            return {
+                image.pixelColor(x, y).rgba()
+                for x in range(rect.left(), rect.right())
+                for y in range(rect.top(), rect.bottom())
+            }
+
+        checked_pixels = sample(checked_rect)
+        unchecked_pixels = sample(unchecked_rect)
+        assert checked_pixels != unchecked_pixels, (
+            "a checked and an unchecked checkbox cell must render visibly "
+            "different pixels"
+        )
+        native.hide()
+
+
+class TestJupyterCheckboxCell:
+    """Direct Jupyter tests for checkbox HTML rendering and the selection bridge."""
+
+    ROWS = [{"id": 1}, {"id": 2}, {"id": 3}]
+
+    def _table(self):
+        pytest.importorskip("ipywidgets")
+        from uniui.jupyter_components import JupyterTableAdapter
+
+        table = JupyterTableAdapter()
+        table.set_selection_mode("multiple")
+        table.set_columns([{"key": "id", "label": "ID"}])
+        table.set_rows(self.ROWS)
+        return table
+
+    def test_multiple_mode_prepends_a_checkbox_column(self):
+        table = self._table()
+        assert table._model.columns[0].is_checkbox
+
+    def test_checkbox_markup_renders_unchecked_by_default(self):
+        table = self._table()
+        html = table._table.value
+        assert html.count('class="uniui-table-checkbox"') == len(self.ROWS)
+        assert "checked" not in html
+
+    def test_selection_bridge_checks_a_row(self):
+        table = self._table()
+        seen = []
+        table.on_selection_change(seen.append)
+
+        table._selection_bridge.value = 1
+
+        assert table.get_selected_rows() == [self.ROWS[1]]
+        assert seen == [[self.ROWS[1]]]
+        assert table._selection_bridge.value == -1
+
+    def test_checked_row_renders_the_checked_attribute(self):
+        table = self._table()
+        table._selection_bridge.value = 0
+
+        html = table._table.value
+        assert 'checked onclick=' in html or 'onclick=' in html and 'checked' in html
+
+    def test_toggling_off_removes_the_checked_attribute(self):
+        table = self._table()
+        table._selection_bridge.value = 0
+        table._selection_bridge.value = 0  # toggles it back off
+
+        html = table._table.value
+        assert "checked" not in html
+        assert table.get_selected_rows() == []
+
+    def test_set_columns_again_still_has_the_checkbox_column(self):
+        table = self._table()
+        table.set_columns([{"key": "id", "label": "ID"}, {"key": "name", "label": "Name"}])
+        assert table._model.columns[0].is_checkbox
+
+
+class TestWebCheckboxCell:
+    """Direct Web tests for the checkbox slot and the rowSelect event bridge."""
+
+    ROWS = [{"id": 1}, {"id": 2}, {"id": 3}]
+
+    def _table(self):
+        pytest.importorskip("nicegui")
+        from uniui.web_components import WebTableAdapter
+
+        table = WebTableAdapter()
+        table.set_selection_mode("multiple")
+        table.set_columns([{"key": "id", "label": "ID"}])
+        table.set_rows(self.ROWS)
+        return table
+
+    def test_multiple_mode_prepends_a_checkbox_column(self):
+        table = self._table()
+        assert table._model.columns[0].is_checkbox
+        assert [c["name"] for c in table._table.columns][0] == "__uniui_selected__"
+
+    def test_checkbox_slot_exists_once_multiselect_is_on(self):
+        from uniui.models.table import SELECTION_COLUMN_KEY
+
+        table = self._table()
+        assert f"body-cell-{SELECTION_COLUMN_KEY}" in table._table.slots
+
+    def test_row_select_event_toggles_selection(self):
+        table = self._table()
+        seen = []
+        table.on_selection_change(seen.append)
+
+        class Event:
+            args = {"row": self.ROWS[1]}
+
+        table._on_row_select_event(Event())
+
+        assert table.get_selected_rows() == [self.ROWS[1]]
+        assert seen == [[self.ROWS[1]]]
+
+    def test_row_select_event_twice_unchecks(self):
+        table = self._table()
+
+        class Event:
+            args = {"row": self.ROWS[1]}
+
+        table._on_row_select_event(Event())
+        table._on_row_select_event(Event())
+
+        assert table.get_selected_rows() == []
+
+    def test_formatted_rows_carry_the_checked_boolean(self):
+        from uniui.models.table import SELECTION_COLUMN_KEY
+
+        table = self._table()
+
+        class Event:
+            args = {"row": self.ROWS[0]}
+
+        table._on_row_select_event(Event())
+        assert table._table.rows[0][SELECTION_COLUMN_KEY] is True
+        assert table._table.rows[1][SELECTION_COLUMN_KEY] is False
+
+    def test_set_columns_again_still_has_the_checkbox_column(self):
+        table = self._table()
+        table.set_columns([{"key": "id", "label": "ID"}, {"key": "name", "label": "Name"}])
+        assert table._model.columns[0].is_checkbox

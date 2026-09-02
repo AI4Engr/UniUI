@@ -205,6 +205,29 @@ class ITable(IWidget):
         ...
 
     @abstractmethod
+    def set_selection_mode(self, mode: str) -> None:
+        """"single" (default) or "multiple". "multiple" prepends a checkbox
+        column that survives future set_columns() calls."""
+        ...
+
+    @abstractmethod
+    def get_selected_rows(self) -> List[Dict]:
+        """All selected rows: 0..1 in single mode, 0..N in multiple mode."""
+        ...
+
+    @abstractmethod
+    def on_selection_change(self, fn: Callable[[List[Dict]], None]) -> Handle:
+        """Register a callback fired whenever the selection changes.
+
+        Fires in both single and multiple mode - a plain row click in the
+        default single mode fires it too, not just checkbox toggles. fn
+        receives the full current selection list. Single-slot, like
+        on_row_click/on_row_action: registering a new callback replaces the
+        previous one.
+        """
+        ...
+
+    @abstractmethod
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         """Sort displayed rows by column ``key``. ``key=None`` clears sorting.
 

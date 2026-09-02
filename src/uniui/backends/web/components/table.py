@@ -8,7 +8,7 @@ from nicegui import ui
 
 from ....components import ITable
 from ....models.status import status_class_expression_js
-from ....models.table import TableModel
+from ....models.table import SELECTION_COLUMN_KEY, TableModel
 from ....state import Handle, safe_call
 from ..primitives import _WebAdapter
 from ..styles import install_admin_css
@@ -19,6 +19,11 @@ class WebTableAdapter(_WebAdapter, ITable):
         self._model = TableModel()
         self._row_click_cb: Optional[Callable[[Dict], None]] = None
         self._row_action_cb: Optional[Callable[[Dict, str], None]] = None
+        self._selection_change_cb: Optional[Callable[[List[Dict]], None]] = None
+        #: The columns last passed to set_columns(), without the synthetic
+        #: checkbox column - so a later set_columns() call after enabling
+        #: multi-select can still re-prepend it.
+        self._column_specs: List[Dict] = []
         root = ui.column().classes("w-full items-stretch gap-0")
         with root:
             self._table = ui.table(columns=[], rows=[], pagination={"rowsPerPage": 0}).classes("uniui-web-table")
@@ -26,10 +31,19 @@ class WebTableAdapter(_WebAdapter, ITable):
         self._message.set_visibility(False)
         self._table.on("rowClick", self._on_row_event)
         self._table.on("rowAction", self._on_row_action_event)
+        self._table.on("rowSelect", self._on_row_select_event)
         super().__init__(root)
 
+    def set_selection_mode(self, mode: str) -> None:
+        self._model.set_selection_mode(mode)
+        self.set_columns(self._column_specs)
+
     def set_columns(self, columns: List[Dict]) -> None:
-        self._model.set_columns(columns)
+        self._column_specs = list(columns)
+        effective = columns
+        if self._model.selection_mode == "multiple":
+            effective = [{"key": SELECTION_COLUMN_KEY, "label": "", "width": 40}] + list(columns)
+        self._model.set_columns(effective)
         self._table.columns = [
             {
                 "name": c.key, "label": c.label, "field": c.key, "align": c.align,
@@ -81,10 +95,22 @@ class WebTableAdapter(_WebAdapter, ITable):
                     </q-td>
                     """,
                 )
+        if self._model.has_checkbox_column:
+            self._table.add_slot(
+                f"body-cell-{SELECTION_COLUMN_KEY}",
+                """
+                <q-td :props="props">
+                  <q-checkbox :model-value="props.value"
+                    @update:model-value="$parent.$emit('rowSelect', {row: props.row})" dense />
+                </q-td>
+                """,
+            )
         self._table.update()
     def set_rows(self, rows: List[Dict]) -> None:
-        self._model.set_rows(rows); self._table.rows = self._formatted_rows(); self._table.update()
+        changed = self._model.set_rows(rows); self._table.rows = self._formatted_rows(); self._table.update()
         self._sync_message()
+        if changed:
+            self._dispatch_selection_change()
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)
         self._table.rows = self._formatted_rows()
@@ -112,16 +138,25 @@ class WebTableAdapter(_WebAdapter, ITable):
         raw model. Narrow enough (only affects code reading a formatted
         column's value out of a click payload) that it's documented here
         rather than solved with position-based click resolution.
+
+        When multi-select is on, also stamps the synthetic checkbox column's
+        boolean onto each display row - Quasar's body-cell slot reads
+        ``props.value`` straight from the row's field, and the raw row dicts
+        have no reason to carry that framework-reserved key themselves. The
+        rowSelect handler strips it back off before touching the model.
         """
         rows = self._model.display_rows()
         formatted = [c for c in self._model.columns if c.source.get("format")]
-        if not formatted:
+        checkbox = self._model.has_checkbox_column
+        if not formatted and not checkbox:
             return rows
         result = []
         for row in rows:
             display = dict(row)
             for col in formatted:
                 display[col.key] = col.text_of(row)
+            if checkbox:
+                display[SELECTION_COLUMN_KEY] = row in self._model.selected_rows
             result.append(display)
         return result
     def set_loading(self, loading: bool) -> None:
@@ -145,17 +180,51 @@ class WebTableAdapter(_WebAdapter, ITable):
             if self._row_action_cb is fn:
                 self._row_action_cb = None
         return Handle(cancel)
+    def on_selection_change(self, fn: Callable[[List[Dict]], None]) -> Handle:
+        self._selection_change_cb = fn
+        def cancel():
+            if self._selection_change_cb is fn:
+                self._selection_change_cb = None
+        return Handle(cancel)
+    def _dispatch_selection_change(self) -> None:
+        if self._selection_change_cb:
+            safe_call(
+                self._selection_change_cb, self._model.selected_rows,
+                backend="web", component="Table", method="on_selection_change",
+            )
     def get_selected_row(self):
-        return self._model.selected_row
+        rows = self.get_selected_rows()
+        return rows[0] if rows else None
+    def get_selected_rows(self) -> List[Dict]:
+        return self._model.selected_rows
+    def _strip_checkbox_field(self, row: Dict) -> Dict:
+        """Drop the synthetic checkbox boolean _formatted_rows() stamped
+        onto the display row before it touches the model - raw rows never
+        carry SELECTION_COLUMN_KEY, so leaving it in would break the
+        by-value equality the model's selection is built on."""
+        if SELECTION_COLUMN_KEY in row:
+            return {k: v for k, v in row.items() if k != SELECTION_COLUMN_KEY}
+        return row
     def _on_row_event(self, event) -> None:
         args = getattr(event, "args", None)
         row = args.get("row") if isinstance(args, dict) else None
         if row is None and isinstance(args, (list, tuple)) and args:
             row = args[-1]
         if isinstance(row, dict):
-            self._model.select_row(row)
+            row = self._strip_checkbox_field(row)
+            if self._model.select_row(row):
+                self._dispatch_selection_change()
         if self._row_click_cb and isinstance(row, dict):
             safe_call(self._row_click_cb, row, backend="web", component="Table", method="on_row_click")
+    def _on_row_select_event(self, event) -> None:
+        args = getattr(event, "args", None)
+        row = args.get("row") if isinstance(args, dict) else None
+        if isinstance(row, dict):
+            row = self._strip_checkbox_field(row)
+            if self._model.toggle_row_selection(row):
+                self._table.rows = self._formatted_rows()
+                self._table.update()
+                self._dispatch_selection_change()
     def _on_row_action_event(self, event) -> None:
         args = getattr(event, "args", None)
         row = args.get("row") if isinstance(args, dict) else None

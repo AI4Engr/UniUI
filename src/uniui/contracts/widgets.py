@@ -683,6 +683,13 @@ class IWrap(IWidget):
 
     def clear(self) -> None:
         raise NotSupportedError("clear() not supported on this Wrap")
+class ICenter(IWidget):
+    """Single-child container that centers its content both horizontally
+    and vertically."""
+
+    @abstractmethod
+    def set_content(self, widget: "IWidget") -> None:
+        pass
 class ISeparator(IWidget):
     """A thin visual divider line."""
 
@@ -815,6 +822,10 @@ class IWidgetFactory(ABC):
         """Create wrap flow layout (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Wrap not supported on this platform")
 
+    def createCenter(self) -> "ICenter":
+        """Create a centering container (optional, raises NotSupportedError by default)"""
+        raise NotSupportedError("Center not supported on this platform")
+
     def createSeparator(self, orientation: str = "horizontal") -> "ISeparator":
         """Create a thin divider line (optional, raises NotSupportedError by default)"""
         raise NotSupportedError("Separator not supported on this platform")
@@ -915,6 +926,7 @@ _SNAKE_ALIASES = {
     "createGroupBox":   "create_group_box",
     "createGrid":       "create_grid",
     "createWrap":       "create_wrap",
+    "createCenter":     "create_center",
     "createSeparator":  "create_separator",
     "createScrollView": "create_scroll_view",
     "createSplitPane":  "create_split_pane",

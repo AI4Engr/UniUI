@@ -205,8 +205,8 @@ Chart(
 
 - [x] Add backend-agnostic `LayoutSpec`, `SizeSpec`, `LayoutItem`, and breakpoint models — `src/uniui/contracts/layout.py`, tested in `tests/test_layout_model.py`
 - [x] Add `Row` and `Column`; keep `HBox` / `VBox` as compatibility aliases — `src/uniui/facade.py` (`Row`/`Column` wrap `create_hbox`/`create_vbox`)
-- [ ] Add `Grid`, `Wrap`, `ScrollView`, `SplitPane`, `Overlay`, `Center`
-  - 5 of 6 exist on all three backends, contract-tested (`tests/contracts/test_layout.py`). `Center` doesn't exist.
+- [x] Add `Grid`, `Wrap`, `ScrollView`, `SplitPane`, `Overlay`, `Center`
+  - Done (2026-09-02): `Center` was the last of the six. `ICenter(IWidget)` (`contracts/widgets.py`) is a single-child container (`set_content()`, replaces any previous child — same convention as `ScrollView`), not `ILayoutOnly`, since it's a real widget on every backend (a `QWidget` holding a `QVBoxLayout` with `Qt.AlignCenter` on Qt, a flex `Box` on Jupyter, a flex `div` on Web) — same shape as `Wrap`/`Separator`/`ScrollView`, so it gets the full show/hide/enabled/sizing capability set for free. All 6 now exist on all three backends, contract-tested (`tests/contracts/test_layout.py::TestCenterContract`).
 - [ ] Add `Container`, `Spacer`, `Divider` — none of the three exist as public widgets
 - [ ] Support dynamic `add()`, `insert()`, `remove()`, `replace()`, `clear()`, and reordering
   - Only `add_item()`/`clear()` (and `IOverlay.remove_layer()`) exist; no `insert()`, single-item `remove()`, `replace()`, or reorder anywhere.

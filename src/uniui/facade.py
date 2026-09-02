@@ -18,7 +18,7 @@ from .components import (
     IMetricList, IProgressBar, ISidebar, IStatCard, ITable, IToast,
 )
 from .core import (
-    IButton, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
+    IButton, ICenter, ICheckbox, IComboBox, IDropdown, IGrid, IGroupBox, IHBoxLayout,
     IImage, ILabel, ILineEdit, INumberInput, IOverlay, IRadioGroup,
     IScrollView, ISeparator, ISlider, ISplitPane, ISwitch, ITabWidget,
     ITextArea, IVBoxLayout, IWidget, IWrap, LayoutSpec,
@@ -193,6 +193,14 @@ def Wrap(spec: LayoutSpec = None) -> IWrap:
     if spec is not None:
         wrap.set_spec(spec)
     return wrap
+
+
+def Center(content=None) -> ICenter:
+    """Create a container that centers its content both horizontally and vertically."""
+    c = _get_factory().create_center()
+    if content is not None:
+        c.set_content(content)
+    return c
 
 
 def Separator(orientation: str = "horizontal") -> ISeparator:
@@ -413,6 +421,7 @@ class UniUI:
         'image':       'create_image',
         'grid':        'create_grid',
         'wrap':        'create_wrap',
+        'center':      'create_center',
         'scroll_view': 'create_scroll_view',
         'split_pane':  'create_split_pane',
         'overlay':     'create_overlay',

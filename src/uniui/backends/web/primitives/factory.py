@@ -17,6 +17,7 @@ from .inputs import (
     WebTextAreaAdapter,
 )
 from .layouts import (
+    WebCenterAdapter,
     WebGridAdapter, WebHBoxAdapter, WebOverlayAdapter, WebScrollViewAdapter,
     WebSeparatorAdapter, WebSplitPaneAdapter, WebTabWidgetAdapter,
     WebVBoxAdapter, WebWrapAdapter,
@@ -88,6 +89,9 @@ class _BaseNiceGUIWidgetFactory(IWidgetFactory):
 
     def createWrap(self) -> IWrap:
         return WebWrapAdapter()
+
+    def createCenter(self) -> ICenter:
+        return WebCenterAdapter()
 
     def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
         sep = WebSeparatorAdapter()

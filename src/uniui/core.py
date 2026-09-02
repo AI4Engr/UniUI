@@ -39,6 +39,7 @@ from .contracts.layout import (
 )
 from .contracts.widgets import (
     IButton,
+    ICenter,
     ICheckbox,
     IComboBox,
     IDropdown,

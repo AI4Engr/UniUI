@@ -581,6 +581,27 @@ class JupyterWrapAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSize
 
     def clear(self) -> None:
         self._native.children = ()
+class JupyterCenter(widgets.Box):
+    """Jupyter Center — flex box centered on both axes."""
+    def __init__(self):
+        super().__init__(layout=widgets.Layout(
+            display="flex", align_items="center", justify_content="center",
+            width="100%", height="100%",
+        ))
+
+    def setContent(self, item):
+        self.children = (item,)
+class JupyterCenterAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, ICenter):
+    """Jupyter Center adapter backed by JupyterCenter."""
+
+    def __init__(self):
+        self._native = JupyterCenter()
+
+    def get_native(self):
+        return self._native
+
+    def set_content(self, widget: IWidget) -> None:
+        self._native.setContent(widget.get_native())
 class JupyterSeparatorAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSizeMixin, JupyterClassMixin, ISeparator):
     """Jupyter Separator adapter backed by a stock ipywidgets Box.
 

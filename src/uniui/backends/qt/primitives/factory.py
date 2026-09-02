@@ -17,7 +17,7 @@ from .inputs import (
     QtSliderAdapter, QtSwitchAdapter, QtTextAreaAdapter,
 )
 from .layouts import (
-    QTHBoxLayout, QTTabWidget, QTVBoxLayout, QtGridAdapter, QtHBoxAdapter,
+    QTHBoxLayout, QTTabWidget, QTVBoxLayout, QtCenterAdapter, QtGridAdapter, QtHBoxAdapter,
     QtOverlayAdapter, QtScrollViewAdapter, QtSeparatorAdapter,
     QtSplitPaneAdapter, QtTabWidgetAdapter, QtVBoxAdapter, QtWrapAdapter,
 )
@@ -138,6 +138,9 @@ class _BaseQtWidgetFactory(IWidgetFactory):
 
     def createWrap(self) -> IWrap:
         return QtWrapAdapter()
+
+    def createCenter(self) -> ICenter:
+        return QtCenterAdapter()
 
     def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
         sep = QtSeparatorAdapter()

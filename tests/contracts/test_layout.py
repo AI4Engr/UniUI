@@ -1,5 +1,5 @@
 """
-Contract Tests for VBox, HBox, Row, Column, Grid, Wrap, ScrollView, SplitPane, Overlay.
+Contract Tests for VBox, HBox, Row, Column, Grid, Wrap, Center, ScrollView, SplitPane, Overlay.
 
 These tests ensure layout containers behave consistently across backends.
 """
@@ -8,7 +8,7 @@ import pytest
 from tests.contract_framework import (
     CommonCapabilitiesContractTest, WidgetContractTest, skip_unless_available,
 )
-from uniui import VBOX, HBOX, GRID, WRAP, SEPARATOR, SCROLL_VIEW, SPLIT_PANE, OVERLAY
+from uniui import VBOX, HBOX, GRID, WRAP, CENTER, SEPARATOR, SCROLL_VIEW, SPLIT_PANE, OVERLAY
 from uniui.core import ILayoutOnly, LayoutSpec, LayoutItem
 
 
@@ -626,6 +626,78 @@ class TestScrollViewContract(WidgetContractTest):
         """set_max_height() must not raise."""
         sv = self.create_widget(factory)
         sv.set_max_height(400)
+
+
+class TestCenterContract(CommonCapabilitiesContractTest):
+    """Contract tests for Center — centers a single child on both axes.
+
+    Like Wrap/Separator, Center always wraps a real widget on every
+    backend, so it gets the full show/hide/enabled/size surface for free
+    via CommonCapabilitiesContractTest.
+    """
+
+    widget_kind = CENTER
+
+    def create_widget(self, factory):
+        return factory.create_center()
+
+    @pytest.mark.contract
+    def test_is_not_layout_only(self, factory):
+        """Unlike VBox/HBox/Grid, Center always wraps a real widget on
+        every backend (a QWidget on Qt, a Box on Jupyter, a div on Web)."""
+        assert not isinstance(self.create_widget(factory), ILayoutOnly)
+
+    @pytest.mark.contract
+    def test_set_content_label(self, factory):
+        """Center accepts a label as content."""
+        c = self.create_widget(factory)
+        lbl = factory.create_label()
+        lbl.set_text("content")
+        c.set_content(lbl)
+
+    @pytest.mark.contract
+    def test_set_content_layout(self, factory):
+        """Center accepts a VBox as content."""
+        c = self.create_widget(factory)
+        vbox = factory.create_vbox()
+        lbl = factory.create_label()
+        lbl.set_text("inside center")
+        vbox.add_item(lbl)
+        c.set_content(vbox)
+
+    @pytest.mark.contract
+    def test_set_content_replaces_previous(self, factory):
+        """Calling set_content() twice leaves only the second child attached."""
+        c = self.create_widget(factory)
+        first = factory.create_label()
+        first.set_text("first")
+        second = factory.create_label()
+        second.set_text("second")
+
+        c.set_content(first)
+        c.set_content(second)
+
+        assert self._only_child_is(c, second, factory)
+
+    def _only_child_is(self, center, expected, factory) -> bool:
+        """True if ``expected``'s native widget is the sole child of
+        ``center``'s native, using whichever child-inspection API this
+        backend's native widget actually has (ipywidgets' `.children`
+        tuple, NiceGUI's `.default_slot.children`, or Qt's own
+        `.children()` method - all mean different things, hence the
+        per-backend branch instead of one generic attribute check)."""
+        native = center.get_native()
+        framework = factory.__class__.__module__
+        if "jupyter" in framework:
+            return tuple(native.children) == (expected.get_native(),)
+        if "web" in framework:
+            kids = [e.get_native() if hasattr(e, "get_native") else e
+                    for e in native.default_slot.children]
+            return kids == [expected.get_native()]
+        # Qt: the layout is the source of truth for what's attached.
+        layout = native.layout()
+        widgets = [layout.itemAt(i).widget() for i in range(layout.count())]
+        return widgets == [expected.get_native()]
 
 
 class TestSplitPaneContract(WidgetContractTest):

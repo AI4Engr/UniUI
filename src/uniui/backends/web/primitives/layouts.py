@@ -291,6 +291,19 @@ class WebWrapAdapter(_WebAdapter, IWrap):
 
     def clear(self) -> None:
         self._native.clear()
+class WebCenterAdapter(_WebAdapter, ICenter):
+    """Web Center adapter — flex box centered on both axes."""
+
+    def __init__(self):
+        with ui.element("div").classes(
+            "uniui-center w-full h-full flex items-center justify-center"
+        ) as el:
+            pass
+        super().__init__(el)
+
+    def set_content(self, widget: IWidget) -> None:
+        self._native.clear()
+        widget.get_native().move(self._native)
 class WebSeparatorAdapter(_WebAdapter, ISeparator):
     """Web Separator adapter using NiceGUI's ui.separator (Quasar q-separator)."""
 

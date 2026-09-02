@@ -20,6 +20,7 @@ from .inputs import (
     JupyterSwitchAdapter, JupyterTextarea, JupyterTextAreaAdapter,
 )
 from .layouts import (
+    JupyterCenter, JupyterCenterAdapter,
     JupyterGrid, JupyterGridAdapter, JupyterHBoxAdapter, JupyterHBoxLayout,
     JupyterOverlay, JupyterOverlayAdapter, JupyterScrollView,
     JupyterScrollViewAdapter, JupyterSeparatorAdapter, JupyterSplitPane,
@@ -115,6 +116,9 @@ class _BaseJupyterWidgetFactory(IWidgetFactory):
 
     def createWrap(self) -> IWrap:
         return JupyterWrapAdapter()
+
+    def createCenter(self) -> ICenter:
+        return JupyterCenterAdapter()
 
     def createSeparator(self, orientation: str = "horizontal") -> ISeparator:
         sep = JupyterSeparatorAdapter()

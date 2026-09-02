@@ -446,6 +446,24 @@ class QtWrapAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, IWrap):
             item = self._flow.takeAt(0)
             if item and item.widget():
                 item.widget().deleteLater()
+class QtCenterAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, ICenter):
+    """Qt Center adapter: a QWidget holding a single AlignCenter'd child."""
+
+    def __init__(self):
+        self._layout = QtWidgets.QVBoxLayout()
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._container = QtWidgets.QWidget()
+        self._container.setLayout(self._layout)
+        self._content: Optional[IWidget] = None
+
+    def get_native(self):
+        return self._container
+
+    def set_content(self, widget: IWidget) -> None:
+        if self._content is not None:
+            self._layout.removeWidget(ensure_qwidget(self._content.get_native()))
+        self._content = widget
+        self._layout.addWidget(ensure_qwidget(widget.get_native()), alignment=Qt.AlignCenter)
 class QtSeparatorAdapter(VisibilityMixin, EnableMixin, SizeMixin, ClassMixin, ISeparator):
     """Qt Separator adapter using QFrame's HLine/VLine shape."""
 

@@ -172,7 +172,9 @@ def test_admin_table_uses_status_pill_delegate_and_web_density():
         native.show()
         app.processEvents()
 
-        assert native.horizontalHeaderItem(1).text() == "STATUS"
+        from PySide2 import QtCore
+
+        assert native.model().headerData(1, QtCore.Qt.Horizontal) == "STATUS"
         assert native.horizontalHeader().height() == 44
         assert native.rowHeight(0) == 52
         assert type(native.itemDelegateForColumn(1)).__name__ == "_StatusPillDelegate"

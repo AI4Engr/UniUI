@@ -540,7 +540,7 @@ class TestBackendsAgree:
 
         table = self._qt()
         aligns = [
-            table._table.item(0, c).textAlignment() & QtCore.Qt.AlignHorizontal_Mask
+            table._grid_model.index(0, c).data(QtCore.Qt.TextAlignmentRole) & QtCore.Qt.AlignHorizontal_Mask
             for c in range(3)
         ]
         assert aligns == [
@@ -548,13 +548,19 @@ class TestBackendsAgree:
         ]
 
     def test_qt_set_rows_reuses_unchanged_cell_items(self):
-        """set_rows() must update existing QTableWidgetItems in place rather
-        than rebuilding every cell — this is what makes it "update existing
-        native controls" instead of "rebuild the whole tree" on every call.
+        """set_rows() must trigger a full model reset (QTableView repaints
+        from the shared TableModel rather than diffing QTableWidgetItems in
+        place - rows have no stable identity in the shared model, see
+        _TableGridModel.refresh()'s docstring). Verify the reset signal
+        fires on every set_rows() call, and that cell values are correct
+        afterwards for an unchanged row, a changed cell, an appended row,
+        and a subsequent shrink.
         """
+        from PySide2 import QtCore
+
         table = self._qt()
-        unchanged_item = table._table.item(0, 0)
-        changed_item = table._table.item(1, 1)
+        reset_count = [0]
+        table._grid_model.modelReset.connect(lambda: reset_count.__setitem__(0, reset_count[0] + 1))
 
         new_rows = [
             dict(self.ROWS[0]),                          # row 0: identical
@@ -563,18 +569,15 @@ class TestBackendsAgree:
         ]
         table.set_rows(new_rows)
 
-        assert table._table.item(0, 0) is unchanged_item, (
-            "a cell whose text didn't change must keep the same item object"
-        )
-        assert table._table.item(1, 1) is changed_item, (
-            "a changed cell must still reuse the same item object, just with new text"
-        )
-        assert table._table.item(1, 1).text() == "999"
-        assert table._table.item(2, 0).text() == "3"
-        assert table._table.rowCount() == 3
+        assert reset_count[0] == 1, "set_rows() must fire a model reset"
+        assert table._grid_model.index(0, 0).data(QtCore.Qt.DisplayRole) == "1"
+        assert table._grid_model.index(1, 1).data(QtCore.Qt.DisplayRole) == "999"
+        assert table._grid_model.index(2, 0).data(QtCore.Qt.DisplayRole) == "3"
+        assert table._grid_model.rowCount() == 3
 
         table.set_rows(new_rows[:1])
-        assert table._table.rowCount() == 1
+        assert reset_count[0] == 2, "the shrinking set_rows() call must also fire a reset"
+        assert table._grid_model.rowCount() == 1
 
     def test_jupyter_marks_only_the_amount_column_numeric(self):
         html = self._jupyter()._table.value
@@ -642,12 +645,12 @@ class TestBackendsAgree:
         table.set_rows([{"id": "banana"}, {"id": "apple"}])
 
         table._on_header_clicked(0)
-        assert table._table.item(0, 0).text() == "apple"
+        assert table._grid_model.index(0, 0).data(QtCore.Qt.DisplayRole) == "apple"
         assert table._table.horizontalHeader().sortIndicatorSection() == 0
         assert table._table.horizontalHeader().sortIndicatorOrder() == QtCore.Qt.AscendingOrder
 
         table._on_header_clicked(0)
-        assert table._table.item(0, 0).text() == "banana"
+        assert table._grid_model.index(0, 0).data(QtCore.Qt.DisplayRole) == "banana"
         assert table._table.horizontalHeader().sortIndicatorOrder() == QtCore.Qt.DescendingOrder
 
     def test_qt_empty_rows_shows_the_overlay_and_hides_the_table(self):
@@ -682,10 +685,12 @@ class TestBackendsAgree:
         assert table._message.text == "No data"
 
     def test_qt_header_click_ignores_non_sortable_column(self):
+        from PySide2 import QtCore
+
         table = self._qt()  # COLUMNS declares none of them sortable
-        before = table._table.item(0, 0).text()
+        before = table._grid_model.index(0, 0).data(QtCore.Qt.DisplayRole)
         table._on_header_clicked(0)
-        assert table._table.item(0, 0).text() == before
+        assert table._grid_model.index(0, 0).data(QtCore.Qt.DisplayRole) == before
 
     def test_jupyter_header_click_sorts_via_bridge(self):
         table = self._jupyter()
@@ -698,10 +703,12 @@ class TestBackendsAgree:
         assert table._table.value.index("apple") < table._table.value.index("banana")
 
     def test_qt_format_reaches_the_rendered_cell(self):
+        from PySide2 import QtCore
+
         table = self._qt()
         table.set_columns([{"key": "amount", "label": "Amount", "format": lambda v: f"${v:,.2f}"}])
         table.set_rows([{"amount": 1234.5}])
-        assert table._table.item(0, 0).text() == "$1,234.50"
+        assert table._grid_model.index(0, 0).data(QtCore.Qt.DisplayRole) == "$1,234.50"
 
     def test_jupyter_format_reaches_the_rendered_cell(self):
         table = self._jupyter()
@@ -719,12 +726,14 @@ class TestBackendsAgree:
         assert table._table.rows == [{"amount": "$1,234.50"}]
 
     def test_qt_set_page_size_reaches_the_rendered_table(self):
+        from PySide2 import QtCore
+
         table = self._qt()  # 2 rows from self.ROWS
         table.set_page_size(1)
-        assert table._table.rowCount() == 1
+        assert table._grid_model.rowCount() == 1
         table.set_page(1)
-        assert table._table.rowCount() == 1
-        assert table._table.item(0, 0).text() == str(self.ROWS[1]["id"])
+        assert table._grid_model.rowCount() == 1
+        assert table._grid_model.index(0, 0).data(QtCore.Qt.DisplayRole) == str(self.ROWS[1]["id"])
 
     def test_jupyter_set_page_size_reaches_the_rendered_table(self):
         table = self._jupyter()  # 2 rows from self.ROWS
@@ -768,6 +777,8 @@ class TestBackendsAgree:
         qt_table = self._qt()._table
         # Qt upper-cases its headers; that is a Qt styling choice, not a
         # different label.
+        from PySide2 import QtCore
+
         assert [
-            qt_table.horizontalHeaderItem(i).text() for i in range(3)
+            qt_table.model().headerData(i, QtCore.Qt.Horizontal) for i in range(3)
         ] == [label.upper() for label in expected]

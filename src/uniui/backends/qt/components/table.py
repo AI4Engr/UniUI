@@ -15,7 +15,7 @@ from ..styles import scrollbar_rules
 
 def _table_style() -> str:
     return f"""
-    QTableWidget {{
+    QTableView {{
         background: {C['surface']};
         border: 1px solid {C['border']};
         border-radius: 10px;
@@ -24,17 +24,17 @@ def _table_style() -> str:
         color: {C['text']};
         outline: none;
     }}
-    QTableWidget::item {{
+    QTableView::item {{
         padding: 0 14px;
         border: none;
     }}
-    QTableWidget::item:hover {{
+    QTableView::item:hover {{
         background: {C['surface_subtle']};
     }}
-    QTableWidget::item:alternate {{
+    QTableView::item:alternate {{
         background: {C['row_alt']};
     }}
-    QTableWidget::item:selected {{
+    QTableView::item:selected {{
         background: {C['row_sel']};
         color: {C['row_sel_fg']};
     }}
@@ -95,6 +95,50 @@ class _StatusPillDelegate(QtWidgets.QStyledItemDelegate):
         painter.restore()
 
 
+class _TableGridModel(QtCore.QAbstractTableModel):
+    def __init__(self, model: TableModel):
+        super().__init__()
+        self._model = model
+
+    def rowCount(self, parent=QtCore.QModelIndex()) -> int:
+        return 0 if parent.isValid() else len(self._model.display_rows())
+
+    def columnCount(self, parent=QtCore.QModelIndex()) -> int:
+        return 0 if parent.isValid() else len(self._model.columns)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        col = self._model.columns[index.column()]
+        row = self._model.display_rows()[index.row()]
+        if role in (QtCore.Qt.DisplayRole, QtCore.Qt.EditRole):
+            return col.text_of(row)
+        if role == QtCore.Qt.TextAlignmentRole:
+            horizontal = QtCore.Qt.AlignRight if col.align == ALIGN_RIGHT else QtCore.Qt.AlignLeft
+            return int(horizontal | QtCore.Qt.AlignVCenter)
+        return None
+
+    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return self._model.header_labels()[section].upper()
+        return None
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+    def refresh(self) -> None:
+        """Call after any TableModel mutation (set_rows/set_sort/set_page/
+        set_columns) - full reset. Rows have no stable identity in the
+        shared TableModel (see its own docstring), so incremental
+        row-level dataChanged would require inventing a row-id mechanism
+        across the shared model layer used by all three backends - out of
+        scope. QTableView repaints efficiently on reset without the
+        per-cell Python object allocation QTableWidget required, so this
+        is still a real improvement, just not row-diffed."""
+        self.beginResetModel()
+        self.endResetModel()
+
+
 class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
     def __init__(self):
         self._container = QtWidgets.QWidget()
@@ -107,7 +151,7 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
 
-        self._table = QtWidgets.QTableWidget()
+        self._table = QtWidgets.QTableView()
         self._table.setStyleSheet(_table_style())
         self._table.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self._table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -140,8 +184,10 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         vbox.addWidget(self._overlay)
 
         self._model = TableModel()
+        self._grid_model = _TableGridModel(self._model)
+        self._table.setModel(self._grid_model)
         self._row_click_cb: Optional[Callable] = None
-        self._table.cellClicked.connect(self._on_cell_clicked)
+        self._table.clicked.connect(self._on_clicked)
         track_themed(self, self._container)
         self.apply_theme()
 
@@ -149,10 +195,7 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
 
     def set_columns(self, columns: List[Dict]) -> None:
         self._model.set_columns(columns)
-        self._table.setColumnCount(len(self._model.columns))
-        self._table.setHorizontalHeaderLabels(
-            [label.upper() for label in self._model.header_labels()]
-        )
+        self._grid_model.refresh()
         for i, col in enumerate(self._model.columns):
             if col.is_status:
                 self._table.setItemDelegateForColumn(i, self._status_delegate)
@@ -164,53 +207,21 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
 
     def set_rows(self, rows: List[Dict]) -> None:
         self._model.set_rows(rows)
-        self._render_rows()
+        self._grid_model.refresh()
         self._sync_overlay()
 
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         self._model.set_sort(key, reverse)
-        self._render_rows()
+        self._grid_model.refresh()
         self._sync_sort_indicator()
 
     def set_page_size(self, size: Optional[int]) -> None:
         self._model.set_page_size(size)
-        self._render_rows()
+        self._grid_model.refresh()
 
     def set_page(self, page: int) -> None:
         self._model.set_page(page)
-        self._render_rows()
-
-    def _render_rows(self) -> None:
-        """Update existing ``QTableWidgetItem``s in place instead of
-        rebuilding every cell. Rows have no stable identity in the model
-        (see ``TableModel``), so this diffs positionally: a row index that
-        existed before and still exists keeps its items, only its text is
-        touched (and only when it actually changed); rows beyond the
-        previous count are created fresh; ``setRowCount`` shrinking handles
-        removed trailing rows (Qt deletes their items automatically).
-        """
-        old_row_count = self._table.rowCount()
-        display_rows = self._model.display_rows()
-        columns = self._model.columns
-
-        self._table.setRowCount(len(display_rows))
-        for r_idx, row in enumerate(display_rows):
-            for c_idx, col in enumerate(columns):
-                text = col.text_of(row)
-                item = self._table.item(r_idx, c_idx) if r_idx < old_row_count else None
-                if item is None:
-                    item = QtWidgets.QTableWidgetItem(text)
-                    item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
-                    self._table.setItem(r_idx, c_idx, item)
-                elif item.text() != text:
-                    item.setText(text)
-                self._style_item(item, col)
-
-    def _style_item(self, item, col) -> None:
-        horizontal = (
-            QtCore.Qt.AlignRight if col.align == ALIGN_RIGHT else QtCore.Qt.AlignLeft
-        )
-        item.setTextAlignment(horizontal | QtCore.Qt.AlignVCenter)
+        self._grid_model.refresh()
 
     def apply_theme(self) -> None:
         self._container.setStyleSheet(f"background: {C['surface']};")
@@ -219,11 +230,6 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
             f"color: {C['text_muted']}; font-size: 14px; background: transparent;"
         )
         self._table.viewport().update()
-        for r_idx in range(len(self._model.rows)):
-            for c_idx, col in enumerate(self._model.columns):
-                item = self._table.item(r_idx, c_idx)
-                if item is not None:
-                    self._style_item(item, col)
 
     def set_loading(self, loading: bool) -> None:
         self._model.set_loading(loading)
@@ -252,6 +258,9 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
     def get_selected_row(self):
         return self._model.selected_row
 
+    def _on_clicked(self, index) -> None:
+        self._on_cell_clicked(index.row(), index.column())
+
     def _on_cell_clicked(self, row: int, col: int) -> None:
         clicked = self._model.row_at(row)
         self._model.select_row(clicked)
@@ -263,7 +272,7 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         if not (0 <= index < len(columns)) or not columns[index].sortable:
             return
         self._model.toggle_sort(columns[index].key)
-        self._render_rows()
+        self._grid_model.refresh()
         self._sync_sort_indicator()
 
     def _sync_sort_indicator(self) -> None:

@@ -62,7 +62,8 @@ def test_base_style_follows_the_admin_theme():
 
 
 def test_self_styled_widgets_embed_their_own_scrollbar_rules():
-    """QTableWidget calls setStyleSheet() on itself.
+    """Any self-styled QAbstractItemView subclass (the table's native widget
+    is a QTableView) calls setStyleSheet() on itself.
 
     That shadows the application stylesheet for its subtree, so the table has to
     carry scrollbar rules directly or it falls back to the native scrollbar with

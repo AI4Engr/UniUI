@@ -1,6 +1,7 @@
 """Table: a Quasar table whose status column is rendered by a Vue slot."""
 from __future__ import annotations
 
+from html import escape
 from typing import Callable, Dict, List, Optional
 
 from nicegui import ui
@@ -17,12 +18,14 @@ class WebTableAdapter(_WebAdapter, ITable):
         install_admin_css()
         self._model = TableModel()
         self._row_click_cb: Optional[Callable[[Dict], None]] = None
+        self._row_action_cb: Optional[Callable[[Dict, str], None]] = None
         root = ui.column().classes("w-full items-stretch gap-0")
         with root:
             self._table = ui.table(columns=[], rows=[], pagination={"rowsPerPage": 0}).classes("uniui-web-table")
             self._message = ui.label("").classes("self-center q-pa-lg")
         self._message.set_visibility(False)
         self._table.on("rowClick", self._on_row_event)
+        self._table.on("rowAction", self._on_row_action_event)
         super().__init__(root)
 
     def set_columns(self, columns: List[Dict]) -> None:
@@ -46,6 +49,38 @@ class WebTableAdapter(_WebAdapter, ITable):
                 </q-td>
                 """,
             )
+        if self._model.has_progress_column:
+            for col in self._model.columns:
+                if not col.is_progress:
+                    continue
+                self._table.add_slot(
+                    f"body-cell-{col.key}",
+                    """
+                    <q-td :props="props">
+                      <q-linear-progress :value="props.value/100" color="primary"
+                        class="uniui-table-progress" rounded />
+                    </q-td>
+                    """,
+                )
+        if self._model.has_action_column:
+            for col in self._model.columns:
+                if not col.is_actions:
+                    continue
+                buttons = "".join(
+                    f"""<q-btn dense flat round
+                          {f'icon="{escape(str(action["icon"]), quote=True)}"' if action.get("icon") else ""}
+                          {"" if action.get("icon") else f'label="{escape(str(action.get("label", "")), quote=True)}"'}
+                          @click="$parent.$emit('rowAction', {{row: props.row, action: '{escape(str(action["id"]), quote=True)}'}})" />"""
+                    for action in col.actions
+                )
+                self._table.add_slot(
+                    f"body-cell-{col.key}",
+                    f"""
+                    <q-td :props="props">
+                      {buttons}
+                    </q-td>
+                    """,
+                )
         self._table.update()
     def set_rows(self, rows: List[Dict]) -> None:
         self._model.set_rows(rows); self._table.rows = self._formatted_rows(); self._table.update()
@@ -104,6 +139,12 @@ class WebTableAdapter(_WebAdapter, ITable):
             if self._row_click_cb is fn:
                 self._row_click_cb = None
         return Handle(cancel)
+    def on_row_action(self, fn: Callable[[Dict, str], None]) -> Handle:
+        self._row_action_cb = fn
+        def cancel():
+            if self._row_action_cb is fn:
+                self._row_action_cb = None
+        return Handle(cancel)
     def get_selected_row(self):
         return self._model.selected_row
     def _on_row_event(self, event) -> None:
@@ -115,6 +156,15 @@ class WebTableAdapter(_WebAdapter, ITable):
             self._model.select_row(row)
         if self._row_click_cb and isinstance(row, dict):
             safe_call(self._row_click_cb, row, backend="web", component="Table", method="on_row_click")
+    def _on_row_action_event(self, event) -> None:
+        args = getattr(event, "args", None)
+        row = args.get("row") if isinstance(args, dict) else None
+        action_id = args.get("action") if isinstance(args, dict) else None
+        if self._row_action_cb and isinstance(row, dict) and action_id is not None:
+            safe_call(
+                self._row_action_cb, row, action_id,
+                backend="web", component="Table", method="on_row_action",
+            )
 
 
 def table_css() -> str:
@@ -132,6 +182,8 @@ def table_css() -> str:
         .uniui-web-table tbody td {height:52px;font-size:13px;border-color:var(--uniui-border)}
         .uniui-web-table tbody tr:hover {background:var(--uniui-surface_subtle)}
         .uniui-web-table .q-table__bottom {min-height:42px;border-top:1px solid var(--uniui-border);color:var(--uniui-text_muted);font-size:12px}
+        .uniui-web-table .uniui-table-progress {height:8px;border-radius:4px}
+        .uniui-web-table .uniui-table-progress .q-linear-progress__track {background:var(--uniui-border);opacity:1}
 """
 
 

@@ -26,6 +26,8 @@ STATUS_COLUMN_KEY = "status"
 CELL_TEXT = "text"
 CELL_NUMBER = "number"
 CELL_STATUS = "status"
+CELL_PROGRESS = "progress"
+CELL_ACTIONS = "actions"
 
 #: Semantic alignments. Backends map these to QSS flags or CSS/Quasar values.
 ALIGN_LEFT = "left"
@@ -67,14 +69,40 @@ class Column:
         return self.key == STATUS_COLUMN_KEY
 
     @property
+    def is_progress(self) -> bool:
+        return self.source.get("cell") == "progress"
+
+    @property
+    def is_actions(self) -> bool:
+        return self.source.get("cell") == "actions"
+
+    @property
+    def actions(self) -> List[Dict]:
+        """Row action-button specs for an actions column.
+
+        Each item: {"id": str, "label": str, "icon": Optional[str]}.
+        """
+        return self.source.get("actions", [])
+
+    @property
     def sortable(self) -> bool:
         return bool(self.source.get("sortable", False))
 
     @property
     def cell_kind(self) -> str:
-        """The semantic kind of every cell in this column."""
+        """The semantic kind of every cell in this column.
+
+        Status, progress, and actions are all explicit opt-ins - status via
+        the fixed "status" key name, progress/actions via the "cell" key -
+        so they're checked before the numeric key-name inference, which is
+        the only kind that's ever inferred rather than declared.
+        """
         if self.is_status:
             return CELL_STATUS
+        if self.is_progress:
+            return CELL_PROGRESS
+        if self.is_actions:
+            return CELL_ACTIONS
         if self.is_numeric:
             return CELL_NUMBER
         return CELL_TEXT
@@ -101,7 +129,16 @@ class Column:
         written for a real value has no reason to also handle "", and a
         formatter that raises falls back to the unformatted text rather than
         breaking the whole table's render.
+
+        An actions column has no meaningful text value - it only hosts
+        buttons - so it short-circuits to "". A progress column is *not*
+        short-circuited: its numeric value still has a legitimate text
+        rendering (a backend may want it as a fallback or tooltip even
+        though the primary rendering is a progress bar), so it falls
+        through to the normal formatting below.
         """
+        if self.is_actions:
+            return ""
         value = self.value_of(row)
         formatter = self.source.get("format")
         if formatter is not None and value != "":
@@ -187,6 +224,16 @@ class TableModel:
     def has_status_column(self) -> bool:
         """Whether any column needs the status-pill treatment."""
         return any(col.is_status for col in self._columns)
+
+    @property
+    def has_progress_column(self) -> bool:
+        """Whether any column needs the progress-bar treatment."""
+        return any(col.is_progress for col in self._columns)
+
+    @property
+    def has_action_column(self) -> bool:
+        """Whether any column needs the row-action-buttons treatment."""
+        return any(col.is_actions for col in self._columns)
 
     def header_labels(self) -> List[str]:
         return [col.label for col in self._columns]

@@ -193,6 +193,18 @@ class ITable(IWidget):
         ...
 
     @abstractmethod
+    def on_row_action(self, fn: Callable[[Dict, str], None]) -> Handle:
+        """Register a callback for row action-button clicks.
+
+        fn receives (row_dict, action_id) - action_id matches the "id" field
+        of whichever action spec (from a column's "actions" list) was clicked.
+        Single-slot, like on_row_click: registering a new callback replaces
+        the previous one. Returns a Handle whose dispose() clears the
+        callback (only if it's still the same one that was registered).
+        """
+        ...
+
+    @abstractmethod
     def set_sort(self, key: Optional[str], reverse: bool = False) -> None:
         """Sort displayed rows by column ``key``. ``key=None`` clears sorting.
 

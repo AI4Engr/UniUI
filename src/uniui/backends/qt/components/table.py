@@ -10,6 +10,7 @@ from ....components import ITable
 from ....models.status import classify_status, status_token_names
 from ....models.table import ALIGN_RIGHT, TableModel
 from ....state import Handle, safe_call
+from ..icons import admin_icon
 from ..runtime import C, M, track_themed
 from ..styles import scrollbar_rules
 
@@ -95,6 +96,153 @@ class _StatusPillDelegate(QtWidgets.QStyledItemDelegate):
         painter.restore()
 
 
+def _paint_cell_chrome(delegate, painter, option, index) -> None:
+    """Paint an item's background/selection/hover chrome without its text.
+
+    Custom cell delegates (progress bars, action buttons) still need the
+    normal selection highlight and alternating-row background under their
+    own painting, but must not let the base style draw the raw cell text
+    underneath. Blanking ``QStyleOptionViewItem.text`` (and even its
+    ``HasDisplay`` feature bit) is not enough - ``QStyledItemDelegate.paint()``
+    still leaves a faint ghost of the model's real DisplayRole value peeking
+    out on at least this Qt/style combination. Drawing only the
+    ``PE_PanelItemViewItem`` primitive (background/selection/hover, no text)
+    sidesteps the whole text-painting path instead of fighting it.
+    """
+    base_option = QtWidgets.QStyleOptionViewItem(option)
+    delegate.initStyleOption(base_option, index)
+    base_option.text = ""
+    style = base_option.widget.style() if base_option.widget else QtWidgets.QApplication.style()
+    style.drawPrimitive(QtWidgets.QStyle.PE_PanelItemViewItem, base_option, painter, base_option.widget)
+
+
+class _ProgressCellDelegate(QtWidgets.QStyledItemDelegate):
+    """Paint a progress-column cell as a rounded track + filled chunk.
+
+    Paint-only - a progress cell isn't interactive, so no editorEvent().
+    """
+
+    def paint(self, painter, option, index) -> None:
+        _paint_cell_chrome(self, painter, option, index)
+
+        raw = index.data(QtCore.Qt.DisplayRole)
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            value = 0.0
+        value = max(0.0, min(100.0, value))
+
+        track_height = 8
+        track = QtCore.QRect(
+            option.rect.left() + 8,
+            option.rect.center().y() - track_height // 2,
+            option.rect.width() - 16,
+            track_height,
+        )
+        if track.width() <= 0:
+            return
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.setBrush(QtGui.QColor(C["border"]))
+        radius = track_height / 2
+        painter.drawRoundedRect(track, radius, radius)
+
+        chunk_width = round(track.width() * (value / 100.0))
+        if chunk_width > 0:
+            chunk = QtCore.QRect(track.left(), track.top(), chunk_width, track.height())
+            painter.setBrush(QtGui.QColor(C["accent"]))
+            painter.drawRoundedRect(chunk, radius, radius)
+        painter.restore()
+
+
+class _ActionButtonDelegate(QtWidgets.QStyledItemDelegate):
+    """Paint row action buttons and dispatch clicks back to the adapter.
+
+    Needs the shared TableModel (to resolve a column's actions and a
+    clicked row) and a dispatch callback (to fire the adapter's
+    on_row_action callback) - both passed in rather than holding a
+    reference to the whole adapter, so this delegate doesn't need to know
+    anything about QtTableAdapter beyond what it uses.
+    """
+
+    GAP = 4
+
+    def __init__(self, model: TableModel, dispatch: Callable[[Dict, str], None], parent=None):
+        super().__init__(parent)
+        self._model = model
+        self._dispatch = dispatch
+
+    def _action_rects(self, option, actions: List[Dict]) -> List[QtCore.QRect]:
+        """One equal-width rect per action, inset from the cell edges with
+        a small gap between them. Used by both paint() and editorEvent() so
+        hit-testing and visuals never disagree."""
+        if not actions:
+            return []
+        inset = 6
+        available = QtCore.QRect(
+            option.rect.left() + inset,
+            option.rect.top() + inset,
+            option.rect.width() - 2 * inset,
+            option.rect.height() - 2 * inset,
+        )
+        count = len(actions)
+        total_gap = self.GAP * (count - 1)
+        width = max(1, (available.width() - total_gap) // count)
+        rects = []
+        x = available.left()
+        for _ in actions:
+            rects.append(QtCore.QRect(x, available.top(), width, available.height()))
+            x += width + self.GAP
+        return rects
+
+    def paint(self, painter, option, index) -> None:
+        _paint_cell_chrome(self, painter, option, index)
+
+        col = self._model.columns[index.column()]
+        actions = col.actions
+        rects = self._action_rects(option, actions)
+        painter.save()
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        for action, rect in zip(actions, rects):
+            painter.setPen(QtCore.Qt.NoPen)
+            painter.setBrush(QtGui.QColor(C["surface_subtle"]))
+            painter.drawRoundedRect(rect, 6, 6)
+
+            icon_name = action.get("icon")
+            if icon_name:
+                icon = admin_icon(icon_name, C["text"])
+                icon_size = min(16, rect.height() - 4)
+                pixmap = icon.pixmap(icon_size, icon_size)
+                x = rect.center().x() - pixmap.width() // 2
+                y = rect.center().y() - pixmap.height() // 2
+                painter.drawPixmap(x, y, pixmap)
+            else:
+                painter.setPen(QtGui.QColor(C["text"]))
+                font = QtGui.QFont(option.font)
+                font.setPixelSize(11)
+                painter.setFont(font)
+                metrics = QtGui.QFontMetrics(font)
+                label = metrics.elidedText(
+                    str(action.get("label", "")), QtCore.Qt.ElideRight, max(1, rect.width() - 8)
+                )
+                painter.drawText(rect, QtCore.Qt.AlignCenter, label)
+        painter.restore()
+
+    def editorEvent(self, event, model, option, index) -> bool:
+        if event.type() == QtCore.QEvent.MouseButtonRelease:
+            col = self._model.columns[index.column()]
+            actions = col.actions
+            rects = self._action_rects(option, actions)
+            for action, rect in zip(actions, rects):
+                if rect.contains(event.pos()):
+                    row = self._model.row_at(index.row())
+                    if row is not None:
+                        self._dispatch(row, action["id"])
+                    return True
+        return super().editorEvent(event, model, option, index)
+
+
 class _TableGridModel(QtCore.QAbstractTableModel):
     def __init__(self, model: TableModel):
         super().__init__()
@@ -172,6 +320,7 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         self._table.verticalHeader().setDefaultSectionSize(52)
         self._table.horizontalHeader().setFixedHeight(44)
         self._status_delegate = _StatusPillDelegate(self._table)
+        self._progress_delegate = _ProgressCellDelegate(self._table)
 
         self._overlay = QtWidgets.QLabel("")
         self._overlay.setAlignment(QtCore.Qt.AlignCenter)
@@ -187,6 +336,10 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         self._grid_model = _TableGridModel(self._model)
         self._table.setModel(self._grid_model)
         self._row_click_cb: Optional[Callable] = None
+        self._row_action_cb: Optional[Callable] = None
+        self._action_delegate = _ActionButtonDelegate(
+            self._model, self._dispatch_row_action, self._table
+        )
         self._table.clicked.connect(self._on_clicked)
         track_themed(self, self._container)
         self.apply_theme()
@@ -199,6 +352,10 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
         for i, col in enumerate(self._model.columns):
             if col.is_status:
                 self._table.setItemDelegateForColumn(i, self._status_delegate)
+            elif col.is_progress:
+                self._table.setItemDelegateForColumn(i, self._progress_delegate)
+            elif col.is_actions:
+                self._table.setItemDelegateForColumn(i, self._action_delegate)
             if col.width is not None:
                 self._table.setColumnWidth(i, col.width)
                 self._table.horizontalHeader().setSectionResizeMode(
@@ -254,6 +411,20 @@ class QtTableAdapter(VisibilityMixin, EnableMixin, SizeMixin, ITable):
             if self._row_click_cb is fn:
                 self._row_click_cb = None
         return Handle(cancel)
+
+    def on_row_action(self, fn: Callable[[Dict, str], None]) -> Handle:
+        self._row_action_cb = fn
+        def cancel():
+            if self._row_action_cb is fn:
+                self._row_action_cb = None
+        return Handle(cancel)
+
+    def _dispatch_row_action(self, row: Dict, action_id: str) -> None:
+        if self._row_action_cb:
+            safe_call(
+                self._row_action_cb, row, action_id,
+                backend="qt", component="Table", method="on_row_action",
+            )
 
     def get_selected_row(self):
         return self._model.selected_row

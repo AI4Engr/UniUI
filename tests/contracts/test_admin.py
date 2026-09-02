@@ -590,6 +590,18 @@ class TestTableContract(_Common):
         assert tbl._row_click_cb is None
 
     @pytest.mark.contract
+    def test_on_row_action_registers(self, factory):
+        tbl = self.create_widget(factory)
+        tbl.on_row_action(lambda row, action_id: None)
+
+    @pytest.mark.contract
+    def test_on_row_action_dispose_clears_callback(self, factory):
+        tbl = self.create_widget(factory)
+        handle = tbl.on_row_action(lambda row, action_id: None)
+        handle.dispose()
+        assert tbl._row_action_cb is None
+
+    @pytest.mark.contract
     def test_get_selected_row_starts_as_none(self, factory):
         tbl = self.create_widget(factory)
         assert tbl.get_selected_row() is None

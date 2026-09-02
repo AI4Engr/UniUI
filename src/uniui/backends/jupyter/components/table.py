@@ -8,7 +8,7 @@ import ipywidgets as widgets
 
 from ...._adapter_mixins import JupyterEnableMixin, JupyterSizeMixin, JupyterVisibilityMixin
 from ....components import ITable
-from ....models.table import CELL_NUMBER, CELL_STATUS, TableModel
+from ....models.table import CELL_ACTIONS, CELL_NUMBER, CELL_PROGRESS, CELL_STATUS, TableModel
 from ....state import Handle, safe_call
 from ..runtime import M, html
 
@@ -16,6 +16,7 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
     def __init__(self):
         self._model = TableModel()
         self._row_click_cb: Optional[Callable[[Dict], None]] = None
+        self._row_action_cb: Optional[Callable[[Dict, str], None]] = None
         self._table = html("", "uniui-table-html")
         self._message = html("", "uniui-table-message")
         self._message.layout.display = "none"
@@ -27,7 +28,13 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         self._sort_bridge.layout.display = "none"
         self._sort_bridge.add_class("uniui-table-sortbridge")
         self._sort_bridge.observe(self._on_sort_bridge, names="value")
-        self._native = widgets.VBox([self._table, self._message, self._bridge, self._sort_bridge])
+        self._action_bridge = widgets.Text(value="")
+        self._action_bridge.layout.display = "none"
+        self._action_bridge.add_class("uniui-table-actionbridge")
+        self._action_bridge.observe(self._on_action_bridge, names="value")
+        self._native = widgets.VBox([
+            self._table, self._message, self._bridge, self._sort_bridge, self._action_bridge,
+        ])
         self._native.add_class("uniui-admin-table")
 
     def get_native(self): return self._native
@@ -67,6 +74,18 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
         )
         return f'<th class="uniui-sortable" onclick="{click}">{label}{arrow}</th>'
 
+    def _action_click_js(self, index: int, action_id: str) -> str:
+        """JS for a row-action button's onclick: writes "row:action" to the
+        action bridge and stops the click from also bubbling up to the row
+        (which would otherwise also fire the row-click bridge)."""
+        payload = escape(f"{index}:{action_id}", quote=True)
+        return (
+            "event.stopPropagation();"
+            "const root=this.closest('.uniui-admin-table'),input=root.querySelector("
+            "'.uniui-table-actionbridge input');if(input){input.value='" + payload +
+            "';input.dispatchEvent(new Event('change',{bubbles:true}));}"
+        )
+
     def _render(self) -> None:
         headers = "".join(self._header_cell(col) for col in self._model.columns)
         rendered_rows = []
@@ -84,6 +103,27 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
                         f'uniui-status-{col.status_of(row)}">'
                         f"{rendered_value}</span>"
                     )
+                elif kind == CELL_PROGRESS:
+                    value = col.value_of(row)
+                    try:
+                        pct = max(0.0, min(100.0, float(value)))
+                    except (TypeError, ValueError):
+                        pct = 0.0
+                    rendered_value = (
+                        f'<progress class="uniui-table-progress" value="{pct}" '
+                        f'max="100"></progress>'
+                    )
+                elif kind == CELL_ACTIONS:
+                    buttons = []
+                    for action in col.actions:
+                        action_id = str(action.get("id", ""))
+                        label = escape(str(action.get("label", "")))
+                        click = self._action_click_js(index, action_id)
+                        buttons.append(
+                            f'<button type="button" class="uniui-table-action-btn" '
+                            f'onclick="{click}">{label}</button>'
+                        )
+                    rendered_value = "".join(buttons)
                 class_attr = f' class="{" ".join(classes)}"' if classes else ""
                 cells.append(f"<td{class_attr}>{rendered_value}</td>")
             click = (
@@ -122,8 +162,33 @@ class JupyterTableAdapter(JupyterVisibilityMixin, JupyterEnableMixin, JupyterSiz
                 self._row_click_cb = None
         return Handle(cancel)
 
+    def on_row_action(self, fn: Callable[[Dict, str], None]) -> Handle:
+        self._row_action_cb = fn
+        def cancel():
+            if self._row_action_cb is fn:
+                self._row_action_cb = None
+        return Handle(cancel)
+
     def get_selected_row(self):
         return self._model.selected_row
+
+    def _on_action_bridge(self, change) -> None:
+        value = change["new"]
+        if not value:
+            return
+        index_str, _, action_id = value.partition(":")
+        try:
+            index = int(index_str)
+        except ValueError:
+            self._action_bridge.value = ""
+            return
+        row = self._model.row_at(index)
+        if row is not None and self._row_action_cb:
+            safe_call(
+                self._row_action_cb, row, action_id,
+                backend="jupyter", component="Table", method="on_row_action",
+            )
+        self._action_bridge.value = ""
 
     def _on_bridge(self, change) -> None:
         index = int(change["new"])
@@ -167,4 +232,14 @@ def table_css() -> str:
 .uniui-status-pill.uniui-status-warn {{color:var(--uniui-status_warn_fg);background:var(--uniui-status_warn_bg)}}
 .uniui-status-pill.uniui-status-error {{color:var(--uniui-status_error_fg);background:var(--uniui-status_error_bg)}}
 .uniui-status-pill.uniui-status-neutral {{color:var(--uniui-status_neutral_fg);background:var(--uniui-status_neutral_bg)}}
+.uniui-table-progress {{width:100%; height:8px; -webkit-appearance:none; -moz-appearance:none; appearance:none;
+  border:none; border-radius:4px; overflow:hidden; vertical-align:middle}}
+.uniui-table-progress::-webkit-progress-bar {{background:var(--uniui-border); border-radius:4px}}
+.uniui-table-progress::-webkit-progress-value {{background:var(--uniui-accent); border-radius:4px}}
+.uniui-table-progress::-moz-progress-bar {{background:var(--uniui-accent); border-radius:4px}}
+.uniui-table-action-btn {{
+  cursor:pointer; border:none; border-radius:6px; padding:4px 10px; margin-right:6px;
+  font-size:12px; font-weight:600; color:var(--uniui-text); background:var(--uniui-surface_subtle);
+}}
+.uniui-table-action-btn:hover {{background:var(--uniui-border)}}
 .uniui-table-message, .uniui-table-message p {{margin:20px 0;text-align:center;color:var(--uniui-text_muted)}}"""

@@ -4,7 +4,9 @@ import pytest
 from uniui.models.table import (
     ALIGN_LEFT,
     ALIGN_RIGHT,
+    CELL_ACTIONS,
     CELL_NUMBER,
+    CELL_PROGRESS,
     CELL_STATUS,
     CELL_TEXT,
     EMPTY_TEXT,
@@ -57,6 +59,48 @@ class TestColumn:
         assert col.is_status
         assert col.align == ALIGN_LEFT
         assert col.cell_kind == CELL_STATUS
+
+    def test_progress_column_is_opted_in_via_cell_key(self):
+        col = Column({"key": "completion", "cell": "progress"})
+        assert col.is_progress
+        assert not col.is_actions
+        assert col.cell_kind == CELL_PROGRESS
+
+    def test_non_progress_column_is_not_progress(self):
+        assert not Column({"key": "completion"}).is_progress
+
+    def test_actions_column_is_opted_in_via_cell_key(self):
+        col = Column({"key": "row_actions", "cell": "actions"})
+        assert col.is_actions
+        assert not col.is_progress
+        assert col.cell_kind == CELL_ACTIONS
+
+    def test_non_actions_column_is_not_actions(self):
+        assert not Column({"key": "row_actions"}).is_actions
+
+    def test_actions_defaults_to_empty_list(self):
+        assert Column({"key": "row_actions", "cell": "actions"}).actions == []
+
+    def test_actions_reads_source_dict(self):
+        specs = [{"id": "edit", "label": "Edit", "icon": "pencil"}]
+        col = Column({"key": "row_actions", "cell": "actions", "actions": specs})
+        assert col.actions == specs
+
+    def test_actions_column_text_of_is_always_blank(self):
+        """An actions column has no meaningful text value - only buttons."""
+        col = Column({"key": "row_actions", "cell": "actions"})
+        assert col.text_of({"row_actions": "whatever"}) == ""
+
+    def test_progress_column_text_of_still_returns_the_value(self):
+        """Unlike actions, a progress column's text_of() is not
+        short-circuited - the numeric value is still a legitimate fallback
+        even though the primary rendering is a bar."""
+        col = Column({"key": "completion", "cell": "progress"})
+        assert col.text_of({"completion": 42}) == "42"
+
+    def test_progress_column_honors_a_formatter(self):
+        col = Column({"key": "completion", "cell": "progress", "format": lambda v: f"{v}%"})
+        assert col.text_of({"completion": 42}) == "42%"
 
     def test_missing_cell_renders_blank_not_none(self):
         """A missing key must not print the string "None" in the cell."""
@@ -140,6 +184,20 @@ class TestTableModel:
         assert not model.has_status_column
         model.set_columns(COLUMNS)
         assert model.has_status_column
+
+    def test_has_progress_column(self):
+        model = TableModel()
+        model.set_columns([{"key": "id"}])
+        assert not model.has_progress_column
+        model.set_columns([{"key": "completion", "cell": "progress"}])
+        assert model.has_progress_column
+
+    def test_has_action_column(self):
+        model = TableModel()
+        model.set_columns([{"key": "id"}])
+        assert not model.has_action_column
+        model.set_columns([{"key": "row_actions", "cell": "actions"}])
+        assert model.has_action_column
 
     def test_set_rows_copies_the_sequence(self):
         """Mutating the caller's list must not change the table."""
@@ -782,3 +840,198 @@ class TestBackendsAgree:
         assert [
             qt_table.model().headerData(i, QtCore.Qt.Horizontal) for i in range(3)
         ] == [label.upper() for label in expected]
+
+
+class TestQtProgressAndActionCells:
+    """Direct Qt tests for the progress-bar and row-action-button cell
+    delegates - not part of TestBackendsAgree because these two cell kinds
+    have no Web/Jupyter-equivalent assertion to keep in lockstep with."""
+
+    PROGRESS_COLUMNS = [{"key": "id", "label": "ID"}, {"key": "done", "label": "Done", "cell": "progress"}]
+    ACTIONS = [{"id": "edit", "label": "Edit"}, {"id": "delete", "label": "Delete"}]
+    ACTION_COLUMNS = [{"key": "id", "label": "ID"}, {"key": "row_actions", "label": "Actions", "cell": "actions", "actions": ACTIONS}]
+    ROWS = [{"id": 1, "done": 40}, {"id": 2, "done": 90}]
+
+    @pytest.fixture
+    def qapp(self):
+        pytest.importorskip("PySide2")
+        pytest.importorskip("PySide2.QtWidgets")
+        from PySide2 import QtWidgets
+
+        if QtWidgets.QApplication.instance() is None:
+            QtWidgets.QApplication([])
+        return QtWidgets.QApplication.instance()
+
+    def _table(self, qapp, columns):
+        from uniui import qt_components
+
+        table = qt_components.QtTableAdapter()
+        table.set_columns(columns)
+        table.set_rows(self.ROWS)
+        return table
+
+    def test_progress_column_gets_the_progress_delegate(self, qapp):
+        from uniui.backends.qt.components.table import _ProgressCellDelegate
+
+        table = self._table(qapp, self.PROGRESS_COLUMNS)
+        delegate = table._table.itemDelegateForColumn(1)
+        assert isinstance(delegate, _ProgressCellDelegate)
+
+    def test_actions_column_gets_the_action_delegate(self, qapp):
+        from uniui.backends.qt.components.table import _ActionButtonDelegate
+
+        table = self._table(qapp, self.ACTION_COLUMNS)
+        delegate = table._table.itemDelegateForColumn(1)
+        assert isinstance(delegate, _ActionButtonDelegate)
+
+    def _fire_action_click(self, qapp, table, row_index, action_index):
+        """Build a real QMouseEvent at the actual computed rect for
+        ``action_index`` in ``row_index``, and run it through the delegate's
+        editorEvent() - proving the hit-testing rects are correct rather
+        than calling the dispatch internals directly."""
+        from PySide2 import QtCore, QtGui, QtWidgets
+
+        index = table._grid_model.index(row_index, 1)
+        rect = table._table.visualRect(index)
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = rect
+        delegate = table._table.itemDelegateForColumn(1)
+        rects = delegate._action_rects(option, self.ACTIONS)
+        point = rects[action_index].center()
+        event = QtGui.QMouseEvent(
+            QtCore.QEvent.MouseButtonRelease, point,
+            QtCore.Qt.LeftButton, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier,
+        )
+        return delegate.editorEvent(event, table._grid_model, option, index)
+
+    def test_action_button_click_fires_the_row_action_callback(self, qapp):
+        table = self._table(qapp, self.ACTION_COLUMNS)
+        seen = []
+        table.on_row_action(lambda row, action_id: seen.append((row, action_id)))
+
+        handled = self._fire_action_click(qapp, table, row_index=1, action_index=0)
+
+        assert handled is True
+        assert seen == [(self.ROWS[1], "edit")]
+
+    def test_clicking_a_different_action_reports_its_own_id(self, qapp):
+        table = self._table(qapp, self.ACTION_COLUMNS)
+        seen = []
+        table.on_row_action(lambda row, action_id: seen.append((row, action_id)))
+
+        self._fire_action_click(qapp, table, row_index=0, action_index=1)
+
+        assert seen == [(self.ROWS[0], "delete")]
+
+    def test_click_outside_any_action_rect_does_not_fire_the_callback(self, qapp):
+        """A click that misses every button rect must fall through to
+        super().editorEvent() (normal selection), not dispatch anything."""
+        from PySide2 import QtCore, QtGui, QtWidgets
+
+        table = self._table(qapp, self.ACTION_COLUMNS)
+        seen = []
+        table.on_row_action(lambda row, action_id: seen.append((row, action_id)))
+
+        index = table._grid_model.index(0, 1)
+        rect = table._table.visualRect(index)
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = rect
+        delegate = table._table.itemDelegateForColumn(1)
+        # A point just outside the cell entirely - guaranteed to miss every
+        # action rect regardless of layout.
+        point = QtCore.QPoint(rect.right() + 50, rect.center().y())
+        event = QtGui.QMouseEvent(
+            QtCore.QEvent.MouseButtonRelease, point,
+            QtCore.Qt.LeftButton, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier,
+        )
+        delegate.editorEvent(event, table._grid_model, option, index)
+
+        assert seen == []
+
+    def test_sabotaged_action_rects_makes_the_click_test_fail(self, qapp, monkeypatch):
+        """Sabotage check: if _action_rects() is broken (returns a rect that
+        can never contain a real click), the "click fires callback" behavior
+        must genuinely stop working - proving the passing test above is not
+        vacuous. The click point is computed from the *real* geometry first,
+        then _action_rects() is patched to return an empty rect at the
+        origin - so the click's own coordinates are unaffected by the
+        sabotage, only the delegate's hit-testing is."""
+        from PySide2 import QtCore, QtGui, QtWidgets
+        from uniui.backends.qt.components.table import _ActionButtonDelegate
+
+        table = self._table(qapp, self.ACTION_COLUMNS)
+        seen = []
+        table.on_row_action(lambda row, action_id: seen.append((row, action_id)))
+
+        index = table._grid_model.index(1, 1)
+        rect = table._table.visualRect(index)
+        option = QtWidgets.QStyleOptionViewItem()
+        option.rect = rect
+        delegate = table._table.itemDelegateForColumn(1)
+        real_rects = delegate._action_rects(option, self.ACTIONS)
+        point = real_rects[0].center()  # a point that genuinely hits action 0
+
+        monkeypatch.setattr(
+            _ActionButtonDelegate, "_action_rects",
+            lambda self, option, actions: [QtCore.QRect(0, 0, 0, 0) for _ in actions],
+        )
+
+        event = QtGui.QMouseEvent(
+            QtCore.QEvent.MouseButtonRelease, point,
+            QtCore.Qt.LeftButton, QtCore.Qt.LeftButton, QtCore.Qt.NoModifier,
+        )
+        handled = delegate.editorEvent(event, table._grid_model, option, index)
+
+        assert handled is not True
+        assert seen == []
+
+
+class TestJupyterProgressAndActionCells:
+    """Direct Jupyter tests for progress/actions HTML rendering and the
+    action bridge."""
+
+    PROGRESS_COLUMNS = [{"key": "id", "label": "ID"}, {"key": "done", "label": "Done", "cell": "progress"}]
+    ACTIONS = [{"id": "edit", "label": "Edit"}, {"id": "delete", "label": "Delete"}]
+    ACTION_COLUMNS = [{"key": "id", "label": "ID"}, {"key": "row_actions", "label": "Actions", "cell": "actions", "actions": ACTIONS}]
+    ROWS = [{"id": 1, "done": 40}, {"id": 2, "done": 90}]
+
+    def _table(self, columns):
+        pytest.importorskip("ipywidgets")
+        from uniui.jupyter_components import JupyterTableAdapter
+
+        table = JupyterTableAdapter()
+        table.set_columns(columns)
+        table.set_rows(self.ROWS)
+        return table
+
+    def test_progress_column_renders_a_progress_tag(self):
+        table = self._table(self.PROGRESS_COLUMNS)
+        html = table._table.value
+        assert '<progress class="uniui-table-progress" value="40.0" max="100">' in html
+        assert '<progress class="uniui-table-progress" value="90.0" max="100">' in html
+
+    def test_actions_column_renders_a_button_per_action(self):
+        table = self._table(self.ACTION_COLUMNS)
+        html = table._table.value
+        assert html.count('class="uniui-table-action-btn"') == len(self.ACTIONS) * len(self.ROWS)
+        assert ">Edit<" in html
+        assert ">Delete<" in html
+
+    def test_action_bridge_resolves_row_and_action(self):
+        table = self._table(self.ACTION_COLUMNS)
+        seen = []
+        table.on_row_action(lambda row, action_id: seen.append((row, action_id)))
+
+        table._action_bridge.value = "1:delete"
+
+        assert seen == [(self.ROWS[1], "delete")]
+        assert table._action_bridge.value == ""
+
+    def test_action_bridge_out_of_range_row_does_not_fire(self):
+        table = self._table(self.ACTION_COLUMNS)
+        seen = []
+        table.on_row_action(lambda row, action_id: seen.append((row, action_id)))
+
+        table._action_bridge.value = "99:delete"
+
+        assert seen == []
